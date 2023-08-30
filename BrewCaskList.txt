@@ -2,3 +2,4 @@ Brew cask list:
 
 brew install --cask audio-hijack
 brew install --cask keepassxc
+brew install --cask vlc
