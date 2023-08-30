@@ -1,5 +1,25 @@
 Brew cask list:
 
-brew install --cask audio-hijack
+brew install --cask brave-browser
+
 brew install --cask keepassxc
+brew install --cask appcleaner
+brew install --cask bettertouchtool
+brew install --cask ilok-license-manager
+brew install --cask imageoptim
+brew install --cask obsidian
+
 brew install --cask vlc
+brew install --cask audio-hijack
+brew install --cask ableton-live-suite
+brew install --cask midi-monitor
+
+brew install --cask rider
+brew install --cask visual-studio-code
+brew install --cask github
+brew install --cask sublime-text
+brew install --cask blender
+brew install --cask unity
+brew install --cask ogdesign-eagle
+
+brew install --cask fantasy-grounds
