@@ -1,7 +1,5 @@
 Brew cask list:
 
-brew install --cask brave-browser
-
 brew install --cask keepassxc
 brew install --cask appcleaner
 brew install --cask bettertouchtool
