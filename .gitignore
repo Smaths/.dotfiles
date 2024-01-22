@@ -1,0 +1,19 @@
+*.log
+*.pid
+*.seed
+*.swp
+*.swo 
+.DS_Store
+.vscode/
+
+# Zsh files
+.zcompdump
+.zsh_sessions
+.zsh_history
+.zshrc
+.zshenv
+.zsh-plugins/*/
+
+# Exception for git directories (git itself and submodules)
+!.git/
+!.gitmodules/

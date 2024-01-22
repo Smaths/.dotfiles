@@ -1,0 +1,7 @@
+brew "gh" # GitHub CLI
+brew "nvm" # Node Version Manager
+brew "node" # JavaScript runtime
+brew "fzf" # Command-line fuzzy finder
+brew "zsh-autocomplete" # Zsh auto-complete plugin
+brew "zsh-completions" # Additional Zsh completions
+brew "zsh-syntax-highlighting" # Syntax highlighting for Zsh
