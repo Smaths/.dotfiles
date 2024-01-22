@@ -3,7 +3,7 @@
 
 ## Description
 
-My configuration for my standard development and media creation osx machines.
+🛠️ WIP. My configuration for my standard development and media creation osx machines.
 
 ## Getting Started
 
@@ -19,7 +19,7 @@ My configuration for my standard development and media creation osx machines.
 
 ### Installing
 
-Clone into your `$HOME` directory. Install homebrew and associated packages. Set Alfred preferences to point at `.alfredpreferences`.
+Clone into your `$HOME` directory. Install homebrew and associated packages.
 
 ## References
 
