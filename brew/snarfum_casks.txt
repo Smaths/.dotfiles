@@ -1,0 +1,10 @@
+ableton-live-suite
+audio-hijack
+blender
+fantasy-grounds
+ilok-license-manager
+keepassxc
+midi-monitor
+ogdesign-eagle
+rider
+unity
