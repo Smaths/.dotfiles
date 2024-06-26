@@ -1,0 +1,16 @@
+appcleaner
+cyberduck
+fleet
+github
+google-chrome
+hiddenbar
+imageoptim
+imageoptim
+istat-menus
+iterm2
+jetbrains-toolbox
+keka
+mamp
+obsidian
+sublime-text
+vlc
