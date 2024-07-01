@@ -10,5 +10,6 @@ iterm2
 jetbrains-toolbox
 keka
 obsidian
+shottr
 sublime-text
 vlc
