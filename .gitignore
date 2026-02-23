@@ -1,19 +1,22 @@
+# OS metadata
+.DS_Store
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Common temp files
 *.log
 *.pid
 *.seed
 *.swp
-*.swo 
-.DS_Store
-.vscode/
+*.swo
 
-# Zsh files
-.zcompdump
-.zsh_sessions
+# Local-only zsh overrides (template is tracked)
+config/zsh/local.zsh
+
+# Zsh runtime artifacts (if generated in repo)
+.zcompdump*
+.zsh_sessions/
 .zsh_history
-.zshrc
-.zshenv
-.zsh-plugins/*/
-
-# Exception for git directories (git itself and submodules)
-!.git/
-!.gitmodules/
+.zsh-plugins/

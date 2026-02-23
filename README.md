@@ -1,96 +1,103 @@
+# Dotfiles
 
-# Dot Files
+macOS-focused dotfiles for fast, repeatable machine setup.
 
-🛠️ WIP. My configuration for my standard development and media creation OSX machines.
+## What This Repo Manages
 
-## OSX Settings
+- Homebrew packages and apps via `brew/Brewfile`
+- Zsh config under `config/zsh`
+- GitHub CLI config under `config/gh`
+- Interactive macOS preference setup in `install/macos.zsh`
 
-- **Trackpad**
-  - Revert "Natural Scrolling".
-- **Keyboard**
-  - Change **Caps-Lock** modifier to **CTRL**.
-- **Finder** (in descending order of use frequency)
-  - Default view to list.
-  - Hide all tags.
-  - Show full path.
-  - Set sidebar order:
-    1. User directory
-    2. Downloads
-    3. Applications
-    4. Developer _(needs to be created/added)_
-    5. Audio Production _(needs to be created/added)_
-    6. Design _(needs to be created/added)_
-    7. Movies
-    8. Music
-    9. Pictures
-    10. Recents
-    11. Airdrop
-  - Set new search window to search this folder.
-- **Dock**
-  - Enable auto-hide.
-  - Minimize using _Scale_ effect.
-- **Web Browser**
-  - Extensions: Ad-Block Plus, Dark-Reader
-  - Set file download location to _Ask for each download_.
+## Quick Start (Fresh or Existing Mac)
 
-## Homebrew Packages & Installing Apps via Cask
-
-Use Homebrew and the included lists in the `brew` directory to install packages for development and core applications.
-Make sure to install [Homebrew](https://brew.sh) before proceeding.
-
-## ZSH Configuration
-
-The ZSH setup is managed in the `zsh` directory and includes:
-
-- **Prompt Customization**: Uses `prompt_purification` for a clean, informative prompt.
-- **Navigation Enhancements**: Directory stack, auto-cd, typo correction, and advanced globbing for efficient movement and path handling.
-- **Completion System**: Loads completions from Homebrew and custom sources, with menu selection and improved matching.
-- **History Management**: Shares history across sessions, removes duplicates, and records command timestamps.
-- **Plugins**: Integrates `zsh-bd`, `zsh-autocomplete`, `fzf`, and OpenClaw completions for productivity.
-- **Aliases**: Loads custom aliases from the `aliases` directory and provides GitHub Copilot shell helpers if `gh` and Copilot extension are installed.
-- **Environment Setup**: Configures Node (NVM), PHP (Herd), and updates PATH for development tools.
-- **Syntax Highlighting**: Enables syntax highlighting for better command visibility.
-
-To use this configuration, source `.zshrc` and `.zprofile` from the `zsh` directory in your shell startup files.
-
-### Core Brew Packages
-
-- [fzf](https://github.com/junegunn/fzf): Fuzzy finder for terminal.
-- gh: GitHub command line tool.
-- node: Install node.
-- nvm: Node version manager.
-- [zsh-autocomplete](https://github.com/marlonrichert/zsh-autocomplete): Auto-complete commands for convenience.
-- [zsh-completions](https://github.com/zsh-users/zsh-completions): Addtional completion defintions for Zsh.
-- [zsh-syntax-highlights](https://github.com/zsh-users/zsh-syntax-highlighting): Color syntax highlighting.
-
-## Installation
-
-Clone into your `$HOME` directory. Install homebrew and associated packages.
-
-### Install Homebrew Content
-
-Locate files in `brew` folder. Open terminal and run the following command for each file in the `brew` folder.
-
-Install Brews from File
+Clone into `$HOME`:
 
 ```zsh
-xargs brew install < brews_core.txt
+cd ~
+git clone <your-repo-url> .dotfiles
 ```
 
-Install Casks from File
+Run bootstrap:
 
 ```zsh
-xargs brew install --cask < casks_core.txt
+~/.dotfiles/install/bootstrap.zsh
 ```
 
-## References
+## Bootstrap
 
-This project is inspired by Matthieu Cneude's writing and dotfiles.
+`install/bootstrap.zsh` runs this process:
 
-- [Configuring Zsh Without Dependencies](https://thevaluable.dev/zsh-install-configure-mouseless/)
-- [Phantas0s dotfiles GitHub](https://github.com/Phantas0s/.dotfiles)
+1. Install Homebrew if missing.
+2. Load Homebrew into the current shell (`brew shellenv`).
+3. Install formulae and casks from `brew/Brewfile`.
+4. Create symlinks:
+   - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
+   - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
+5. Back up existing `~/.zshrc` / `~/.zprofile` before relinking using:
+   - `~/.zshrc.bak.<timestamp>`
+   - `~/.zprofile.bak.<timestamp>`
+6. Call `install/macos.zsh` for interactive macOS settings prompts.
+
+## Interactive macOS Setup
+
+`install/macos.zsh` prompts `Y/N` for each change, including:
+
+- Disable natural scrolling
+- Map Caps Lock to Control (session-level `hidutil`)
+- Finder list view
+- Finder full path in title
+- Finder search current folder
+- Dock auto-hide
+- Dock minimize effect (`scale`)
+- Restart Finder and Dock
+
+Run it directly:
+
+```zsh
+~/.dotfiles/install/macos.zsh
+```
+
+## Zsh Layout
+
+Main entry points:
+
+- `config/zsh/.zshrc`
+- `config/zsh/.zprofile`
+
+Supporting files:
+
+- `config/zsh/options.zsh`
+- `config/zsh/path.zsh`
+- `config/zsh/env.zsh`
+- `config/zsh/completion.zsh`
+- `config/zsh/plugins.zsh`
+- `config/zsh/aliases.zsh`
+- `config/zsh/functions/*.zsh`
+
+> [!NOTE] Machine-local overrides
+> Want to override something without affecting the core settings. Use the `local.zsh` file. `local.zsh` is intentionally ignored by Git.
+>
+> ```zsh
+> cp ~/.dotfiles/config/zsh/local.example.zsh ~/.dotfiles/config/zsh/local.zsh
+> ```
+
+## Re-running Safely
+
+Running bootstrap again is expected and safe:
+
+- `brew bundle` skips already installed items.
+- Existing shell files are only replaced after backup.
+- macOS settings only change when you answer `y`.
+
+Optional pre-check before full run:
+
+```zsh
+brew bundle check --file ~/.dotfiles/brew/Brewfile
+```
 
 ## Notes
 
-> [!WARNING]
-> All files are configured for ARM chips. Homebrew installation differs between x86 (Intel) and ARM (Apple Silicon), so the `.zshrc` and other files may need their locations corrected if installing these config files onto a different chipset than the one that was used to create these config files.
+- Built for macOS.
+- Supports both Apple Silicon (`/opt/homebrew`) and Intel (`/usr/local`) Homebrew paths.
+- Some keyboard remaps may require logout/reboot to fully persist, depending on macOS behavior.

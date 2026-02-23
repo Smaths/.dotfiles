@@ -20,9 +20,6 @@ alias xpropc='xprop | grep WM_CLASS' # display xprop class
 # | Zsh |
 # +-----+
 
-alias d='dirs -v'
-for index ({1..9}) alias "$index"="cd +${index} > /dev/null"; unset index # directory stack
-
 alias kitty='kitty -o allow_remote_control=yes --single-instance --listen-on unix:@mykitty'
 
 # +----+
@@ -54,7 +51,7 @@ alias la='ls -alh'
 # | grep |
 # +------+
 
-#alias grep="grep -P -i --color=auto"
+alias grep="grep -P -i --color=auto"
 
 # +------+
 # | xlip |
@@ -139,7 +136,7 @@ alias wifi='sudo wifi-menu -o'
 # +--------+
 
 alias gob="go build"
-alias gor="go run" 
+alias gor="go run"
 alias goc="go clean -i"
 alias gta="go test ./..."       # go test all
 alias gia="go install ./..."    # go install all
@@ -172,7 +169,7 @@ alias svim='sudoedit'
 alias dvim="vim -u /usr/share/nvim/archlinux.vim" # nvim with default config
 alias nvimc='rm -I $VIMCONFIG/swap/*'             # clean nvim swap file
 alias nvimcu='rm -I $VIMCONFIG/undo/*'            # clean the vim undo
-alias nviml='nvim -w $VIMCONFIG/vimlog "$@"'      # log the keystrokes 
+alias nviml='nvim -w $VIMCONFIG/vimlog "$@"'      # log the keystrokes
 alias nvimd='nvim --noplugin -u NONE'             # launch nvim without any plugin or config (nvim debug)
 alias nvimfr='nvim +e /tmp/scratchpad.md -c "set spelllang=fr"'
 alias lvim='\vim -c "set nowrap|syntax off"'        # fast vim for big files / big oneliner
@@ -271,7 +268,7 @@ alias nvidia-settings='nvidia-settings --config="$XDG_CONFIG_HOME"/nvidia/settin
 alias work="cd $HOME/workspace"
 alias doc="cd $HOME/Documents"
 alias dow="cd $HOME/Downloads"
-alias dot="cd $HOME/.dotfiles"
+alias config="cd $HOME/.config"
 alias icloud="cd $HOME/Library/Mobile\ Documents/com~apple~CloudDocs/"
 
 # Mindmaps
@@ -279,7 +276,7 @@ alias freebrain="freemind $CLOUD/knowledge_base/_BRAINSTORMING/*.mm &> /dev/null
 alias freelists="freemind $CLOUD/knowledge_base/_LISTS/*.mm &> /dev/null &"
 alias freepain="freemind $CLOUD/knowledge_base/_PROBLEMS/*.mm &> /dev/null &"
 alias freeproj="freemind $CLOUD/knowledge_base/_PROJECTS/*.mm &> /dev/null &"
- 
+
 # Golang
 alias gosrc="$GOPATH/src/" # golang src
 alias gobin="$GOPATH/bin/" # golang bin

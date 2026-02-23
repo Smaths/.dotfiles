@@ -1,8 +1,0 @@
-1password
-datagrip
-fleet
-gather
-mamp
-microsoft-teams
-phpstorm
-webstorm
