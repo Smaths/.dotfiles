@@ -24,6 +24,13 @@ Run bootstrap:
 ~/.dotfiles/install/bootstrap.zsh
 ```
 
+Useful options:
+
+```zsh
+~/.dotfiles/install/bootstrap.zsh --dry-run
+~/.dotfiles/install/bootstrap.zsh --skip-macos
+```
+
 ## Bootstrap
 
 `install/bootstrap.zsh` runs this process:
@@ -31,13 +38,20 @@ Run bootstrap:
 1. Install Homebrew if missing.
 2. Load Homebrew into the current shell (`brew shellenv`).
 3. Install formulae and casks from `brew/Brewfile`.
-4. Create symlinks:
+4. Install `git` via Homebrew when missing.
+5. Create symlinks:
    - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
    - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
-5. Back up existing `~/.zshrc` / `~/.zprofile` before relinking using:
+6. Back up existing `~/.zshrc` / `~/.zprofile` before relinking using:
    - `~/.zshrc.bak.<timestamp>`
    - `~/.zprofile.bak.<timestamp>`
-6. Call `install/macos.zsh` for interactive macOS settings prompts.
+7. Call `install/macos.zsh` for interactive macOS settings prompts.
+
+Supported flags:
+
+- `--dry-run`: print actions without making changes.
+- `--skip-macos`: skip interactive macOS settings.
+- `--skip-macros`: alias for `--skip-macos`.
 
 ## Interactive macOS Setup
 
