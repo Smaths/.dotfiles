@@ -7,7 +7,7 @@ elif command -v starship >/dev/null 2>&1; then
 fi
 
 # Navigation
-DIRSTACKSIZE=10            # Keep up to 10 entries in the directory stack.
+DIRSTACKSIZE=11            # Keep up to 10 entries in the directory stack.
 setopt AUTO_CD             # Entering a directory name alone runs `cd <dir>`.
 setopt AUTO_PUSHD          # `cd` pushes previous directory onto the directory stack.
 setopt PUSHD_IGNORE_DUPS   # Do not store duplicate directories in the stack.

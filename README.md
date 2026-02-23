@@ -36,16 +36,17 @@ Useful options:
 `install/bootstrap.zsh` runs this process:
 
 1. Install Homebrew if missing.
-2. Load Homebrew into the current shell (`brew shellenv`).
-3. Install formulae and casks from `brew/Brewfile`.
+2. Resolve and print which Homebrew binary is used (supports `/opt/homebrew/bin/brew` and `/usr/local/bin/brew`).
+3. Load Homebrew into the current shell (`brew shellenv`).
 4. Install `git` via Homebrew when missing.
-5. Create symlinks:
+5. Install formulae and casks from `brew/Brewfile` using verbose output.
+6. Create symlinks:
    - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
    - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
-6. Back up existing `~/.zshrc` / `~/.zprofile` before relinking using:
+7. Back up existing `~/.zshrc` / `~/.zprofile` before relinking using:
    - `~/.zshrc.bak.<timestamp>`
    - `~/.zprofile.bak.<timestamp>`
-7. Call `install/macos.zsh` for interactive macOS settings prompts.
+8. Call `install/macos.zsh` for interactive macOS settings prompts.
 
 Supported flags:
 
@@ -109,6 +110,26 @@ Optional pre-check before full run:
 ```zsh
 brew bundle check --file ~/.dotfiles/brew/Brewfile
 ```
+
+## Troubleshooting
+
+- `brew: command not found`:
+  - Run `eval "$(/opt/homebrew/bin/brew shellenv)"` in the current shell.
+  - Bootstrap also resolves Homebrew directly from standard paths.
+
+- Bootstrap appears stuck at "Installing from Brewfile":
+  - This is usually a long download/cask install.
+  - Re-run manually to inspect progress:
+    ```zsh
+    /opt/homebrew/bin/brew bundle install --verbose --file ~/.dotfiles/brew/Brewfile
+    ```
+
+- Cask conflict error (example: "existing App is different from the one being installed"):
+  - Move or remove the existing app bundle from `/Applications`.
+  - Re-run the cask install:
+    ```zsh
+    brew install --cask <app-name>
+    ```
 
 ## Notes
 

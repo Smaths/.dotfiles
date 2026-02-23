@@ -148,7 +148,7 @@ if [[ ! -f "$ZPROFILE_TARGET" ]]; then
 fi
 
 echo "==> Installing from Brewfile"
-run_cmd brew bundle --file="$BREWFILE"
+run_cmd brew bundle install --verbose --file="$BREWFILE"
 
 # Install git only when missing to keep reruns minimal.
 if (( INSTALL_GIT )); then
