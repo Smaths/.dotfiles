@@ -90,6 +90,49 @@ Supporting files:
 - `config/zsh/aliases.zsh`
 - `config/zsh/functions/*.zsh`
 
+### Startup Performance Decisions
+
+This repo intentionally separates login-shell and interactive-shell concerns:
+
+- `.zprofile` only loads `path.zsh` (minimal login setup).
+- `.zshrc` loads `options.zsh`, `env.zsh`, completions, plugins, and aliases.
+
+Why:
+
+- Avoid duplicated startup work by preventing `env.zsh` from being sourced twice.
+- Keep login startup minimal and predictable.
+
+Node/NVM is configured for lazy loading:
+
+- `nvm` is not fully initialized at shell startup.
+- On first use of `nvm`, `node`, `npm`, `npx`, or `corepack`, `nvm.sh` is loaded with `--no-use`.
+
+Why:
+
+- Startup profile time showed `nvm_auto`/`nvm` as the dominant shell startup cost.
+- Lazy loading keeps startup fast while preserving Node workflows.
+
+If you need NVM loaded immediately in a shell session:
+
+```zsh
+nvm current
+```
+
+### Measured Improvement
+
+From profiling before/after this change:
+
+- Before lazy loading: `nvm_auto` / `nvm` dominated startup (about `~467ms`, ~99% of startup profile).
+- After lazy loading with `--no-use`: `nvm_auto` is effectively negligible on startup (`~0.01ms` in profile output), and NVM work happens only when Node tooling is used.
+
+Important: use a clean startup measurement to compare shell init performance:
+
+```zsh
+ZSH_PROFILE_STARTUP=1 zsh -i -c exit
+```
+
+If you profile after interactive usage in the same shell, zprof output will include completion/widget runtime (for example `zsh-autocomplete`), which can make totals look much higher than actual startup cost.
+
 > [!NOTE] Machine-local overrides
 > Want to override something without affecting the core settings. Use the `local.zsh` file. `local.zsh` is intentionally ignored by Git.
 >
