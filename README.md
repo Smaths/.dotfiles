@@ -1,6 +1,6 @@
 # Dotfiles
 
-macOS-focused dotfiles for fast, repeatable machine setup.
+macOS-focused dotfiles for fast, repeatable, smaths-able machine setup.
 
 ## What This Repo Manages
 
