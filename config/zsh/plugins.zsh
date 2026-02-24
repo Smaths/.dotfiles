@@ -1,4 +1,9 @@
 # fzf
+# Use ripgrep for fzf file listings (default and CTRL-T).
+if command -v rg >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND="rg --files --hidden --follow --glob '!.git/*'"
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+fi
 [[ -f "$HOME/.fzf.zsh" ]] && source "$HOME/.fzf.zsh"
 
 # zsh-autocomplete (brew)

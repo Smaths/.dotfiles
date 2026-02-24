@@ -8,6 +8,7 @@ macOS dotfiles for fast, repeatable snarfum machine setup.
 
 - Installs Homebrew (if missing) and packages/apps from `brew/Brewfile`
 - Ensures `git` is available
+- Installs `fzf` + `ripgrep` and configures `fzf` to source files via `rg`
 - Symlinks shell configs:
   - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
   - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
