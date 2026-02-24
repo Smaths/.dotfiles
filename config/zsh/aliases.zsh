@@ -21,7 +21,7 @@ alias dev='cd $HOME/Developer'
 alias doc='cd $HOME/Documents'
 alias dow='cd $HOME/Downloads'
 alias config='cd $HOME/.config'
-alias icloud='cd $HOME/Library/Mobile\ Documents/com~apple~CloudDocs/'
+alias icloud='cd $HOME/Library/Mobile\ Documents/'
 alias work='cd $HOME/workspace'
 
 # Directory stack (recent dirs)
