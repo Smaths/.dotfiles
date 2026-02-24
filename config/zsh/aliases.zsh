@@ -17,11 +17,12 @@ alias time='/usr/bin/time'
 # -----------------------------------------------------------------------------
 # Directory navigation
 # -----------------------------------------------------------------------------
-alias work='cd $HOME/workspace'
+alias dev='cd $HOME/Developer'
 alias doc='cd $HOME/Documents'
 alias dow='cd $HOME/Downloads'
 alias config='cd $HOME/.config'
 alias icloud='cd $HOME/Library/Mobile\ Documents/com~apple~CloudDocs/'
+alias work='cd $HOME/workspace'
 
 # Directory stack (recent dirs)
 alias d='dirs -v | sed -n "1,10p"'
