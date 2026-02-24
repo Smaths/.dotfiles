@@ -7,6 +7,12 @@ if command -v brew >/dev/null 2>&1; then
   [[ -f "$autocomplete_script" ]] && source "$autocomplete_script"
 fi
 
+# zsh-autosuggestions (brew)
+if command -v brew >/dev/null 2>&1; then
+  autosuggest_script="$(brew --prefix zsh-autosuggestions 2>/dev/null)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  [[ -f "$autosuggest_script" ]] && source "$autosuggest_script"
+fi
+
 # zsh-syntax-highlighting should be loaded near the end of zsh init.
 if command -v brew >/dev/null 2>&1; then
   zsh_sh="$(brew --prefix zsh-syntax-highlighting 2>/dev/null)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"

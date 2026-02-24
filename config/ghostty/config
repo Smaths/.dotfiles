@@ -1,0 +1,14 @@
+# Window
+window-save-state = never
+# clamp to right edge
+window-position-x = 4000
+# padding for menu bar
+window-position-y = 36
+window-width = 100
+window-height = 100
+
+# Look
+background-opacity = 0.97
+
+# Font
+font-family = JetBrainsMono Nerd Font

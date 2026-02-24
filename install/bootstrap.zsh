@@ -26,6 +26,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 BREWFILE="$DOTFILES_DIR/brew/Brewfile"
 ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
+GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
 DRY_RUN=0
 SKIP_MACOS=0
 INSTALL_GIT=0
@@ -40,6 +41,18 @@ Options:
   --skip-macos      Skip install/macos.zsh execution
   --skip-macros     Alias of --skip-macos
   -h, --help        Show this help
+EOF
+}
+
+print_header() {
+  cat <<'EOF'
++--------------------------------------+
+|   ____                  _   _        |
+|  / ___| _ __ ___   __ _| |_| |__  ___|
+|  \___ \| '_ ` _ \ / _` | __| '_ \/ __|
+|   ___) | | | | | | (_| | |_| | | \__ \
+|  |____/|_| |_| |_|\__,_|\__|_| |_|___/|
++--------------------------------------+
 EOF
 }
 
@@ -66,6 +79,55 @@ run_cmd() {
   else
     "$@"
   fi
+}
+
+run_with_peek() {
+  # Run noisy commands quietly while periodically showing a compact progress peek.
+  local label="$1"
+  shift
+
+  if (( DRY_RUN )); then
+    echo "[dry-run] $label: $*"
+    return 0
+  fi
+
+  local log_file
+  log_file="$(mktemp "/tmp/bootstrap.${label// /_}.XXXXXX.log")"
+
+  echo "==> $label"
+  "$@" >"$log_file" 2>&1 &
+  local pid=$!
+  local elapsed=0
+
+  while kill -0 "$pid" >/dev/null 2>&1; do
+    sleep 3
+    elapsed=$((elapsed + 3))
+    if [[ -s "$log_file" ]]; then
+      local peek
+      peek="$(tail -n 1 "$log_file" | tr -d '\r')"
+      if [[ -n "$peek" ]]; then
+        echo "   ... ${peek}"
+      else
+        echo "   ... running (${elapsed}s)"
+      fi
+    else
+      echo "   ... running (${elapsed}s)"
+    fi
+  done
+
+  set +e
+  wait "$pid"
+  local status=$?
+  set -e
+
+  if (( status != 0 )); then
+    echo "ERROR: $label failed (exit $status). Recent output:"
+    tail -n 40 "$log_file"
+    echo "Full log: $log_file"
+    return "$status"
+  fi
+
+  rm -f "$log_file"
 }
 
 resolve_brew_bin() {
@@ -95,6 +157,7 @@ require_cmd() {
   fi
 }
 
+print_header
 echo "==> Dotfiles bootstrap starting"
 
 # This bootstrap is intentionally macOS-only.
@@ -113,7 +176,9 @@ if ! BREW_BIN="$(resolve_brew_bin)"; then
   if (( DRY_RUN )); then
     echo "[dry-run] /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
   else
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    run_with_peek \
+      "Installing Homebrew" \
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
   BREW_BIN="$(resolve_brew_bin)"
 fi
@@ -147,27 +212,30 @@ if [[ ! -f "$ZPROFILE_TARGET" ]]; then
   exit 1
 fi
 
-echo "==> Installing from Brewfile"
-run_cmd brew bundle install --verbose --file="$BREWFILE"
+run_with_peek "Installing Brewfile packages" brew bundle install --file="$BREWFILE"
 
 # Install git only when missing to keep reruns minimal.
 if (( INSTALL_GIT )); then
-  echo "==> Installing git"
-  run_cmd brew install git
+  run_with_peek "Installing git" brew install git
 fi
 
 # Symlink helper:
 # - If the link already points to the right target, do nothing.
 # - If a file exists, move it to a timestamped backup before linking.
 link_with_backup() {
-  local target="$1"
-  local link_path="$2"
+  local link_target="${1:-}"
+  local link_path="${2:-}"
+
+  if [[ -z "$link_target" || -z "$link_path" ]]; then
+    echo "ERROR: link_with_backup requires target and link path" >&2
+    return 1
+  fi
 
   if [[ -L "$link_path" ]]; then
     local current_target
     current_target="$(readlink "$link_path")"
-    if [[ "$current_target" == "$target" ]]; then
-      echo "==> Symlink already correct: $link_path -> $target"
+    if [[ "$current_target" == "$link_target" ]]; then
+      echo "==> Symlink already correct: $link_path -> $link_target"
       return
     fi
   elif [[ -e "$link_path" ]]; then
@@ -181,17 +249,23 @@ link_with_backup() {
   fi
 
   if (( DRY_RUN )); then
-    echo "==> Would link: $link_path -> $target"
-    run_cmd ln -sfn "$target" "$link_path"
+    echo "==> Would link: $link_path -> $link_target"
+    run_cmd ln -sfn "$link_target" "$link_path"
   else
-    run_cmd ln -sfn "$target" "$link_path"
-    echo "==> Linked: $link_path -> $target"
+    run_cmd ln -sfn "$link_target" "$link_path"
+    echo "==> Linked: $link_path -> $link_target"
   fi
 }
 
 echo "==> Creating shell config symlinks"
 link_with_backup "$ZSHRC_TARGET" "$HOME/.zshrc"
 link_with_backup "$ZPROFILE_TARGET" "$HOME/.zprofile"
+
+# Link Ghostty config to XDG default path when present.
+if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
+  run_cmd mkdir -p "$HOME/.config/ghostty"
+  link_with_backup "$GHOSTTY_CONFIG_TARGET" "$HOME/.config/ghostty/config"
+fi
 
 # Run interactive macOS settings unless explicitly skipped.
 MACOS_SCRIPT="$DOTFILES_DIR/install/macos.zsh"

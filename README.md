@@ -39,14 +39,17 @@ Useful options:
 2. Resolve and print which Homebrew binary is used (supports `/opt/homebrew/bin/brew` and `/usr/local/bin/brew`).
 3. Load Homebrew into the current shell (`brew shellenv`).
 4. Install `git` via Homebrew when missing.
-5. Install formulae and casks from `brew/Brewfile` using verbose output.
+5. Install formulae and casks from `brew/Brewfile`.
 6. Create symlinks:
    - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
    - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
+   - `~/.config/ghostty/config` -> `~/.dotfiles/config/ghostty/config` (when the target exists)
 7. Back up existing `~/.zshrc` / `~/.zprofile` before relinking using:
    - `~/.zshrc.bak.<timestamp>`
    - `~/.zprofile.bak.<timestamp>`
 8. Call `install/macos.zsh` for interactive macOS settings prompts.
+
+Homebrew-heavy steps are run in quiet mode with a small periodic status "peek" instead of full command spam. On failure, bootstrap prints recent log lines and the full temporary log path.
 
 Supported flags:
 
@@ -89,6 +92,13 @@ Supporting files:
 - `config/zsh/plugins.zsh`
 - `config/zsh/aliases.zsh`
 - `config/zsh/functions/*.zsh`
+
+Plugin highlights in `plugins.zsh`:
+
+- `zsh-autocomplete`
+- `zsh-autosuggestions`
+- `zsh-syntax-highlighting`
+- `fzf` init (when installed)
 
 ### Startup Performance Decisions
 
@@ -162,9 +172,10 @@ brew bundle check --file ~/.dotfiles/brew/Brewfile
 
 - Bootstrap appears stuck at "Installing from Brewfile":
   - This is usually a long download/cask install.
-  - Re-run manually to inspect progress:
+  - Bootstrap now shows periodic progress peeks while capturing detailed logs internally.
+  - To inspect full live output manually:
     ```zsh
-    /opt/homebrew/bin/brew bundle install --verbose --file ~/.dotfiles/brew/Brewfile
+    /opt/homebrew/bin/brew bundle install --file ~/.dotfiles/brew/Brewfile
     ```
 
 - Cask conflict error (example: "existing App is different from the one being installed"):

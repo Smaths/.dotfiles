@@ -13,7 +13,7 @@ ask_yes_no() {
   local prompt="$1"
   local answer
   while true; do
-    read -r "?$prompt [y/N]: " answer
+    read -r "?$prompt [y/n]: " answer
     case "${answer:l}" in
       y|yes) return 0 ;;
       n|no|"") return 1 ;;
