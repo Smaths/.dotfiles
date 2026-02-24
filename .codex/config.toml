@@ -1,0 +1,5 @@
+# Repo-scoped Codex defaults.
+# Keep aligned with user-level config unless this project needs overrides.
+
+model = "gpt-5.3-codex"
+model_reasoning_effort = "medium"

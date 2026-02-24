@@ -1,28 +1,29 @@
 # Dotfiles
 
-![Bootstrap Screenshot](assets/screenshot_1.png)
+![Bootstrap Screenshot](docs/assets/screenshot_1.png)
 
-macOS dotfiles for fast, repeatable snarfum machine setup.
+Personal dotfiles for reproducible shell and workstation setup, centered on macOS.
 
-## What This Does
+## Purpose
 
-- Installs Homebrew (if missing) and packages/apps from `brew/Brewfile`
-- Ensures `git` is available
-- Installs `fzf` + `ripgrep` and configures `fzf` to source files via `rg`
-- Symlinks shell configs:
-  - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
-  - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
-- Symlinks Ghostty config using XDG path:
-  - `$XDG_CONFIG_HOME/ghostty/config` (fallback: `~/.config/ghostty/config`)
-- Optionally runs interactive macOS tweaks via `install/macos.zsh`
+This repo bootstraps a machine with Homebrew packages, shell config, and a small set
+of app configs while preserving existing user files via timestamped backups.
 
-## Run
+## Supported Platforms
+
+- Primary: macOS 13+ (Ventura/Sonoma/Sequoia style setup with Homebrew).
+- Secondary: Linux for raw config reuse only; `install/bootstrap.zsh` is macOS-only.
+
+See [Platform Notes](docs/platforms.md) for details and prerequisites.
+
+## Quick Install
 
 ```zsh
+git clone <repo-url> ~/.dotfiles
 zsh ~/.dotfiles/install/bootstrap.zsh
 ```
 
-## Common Flags
+Common flags:
 
 ```zsh
 zsh ~/.dotfiles/install/bootstrap.zsh --dry-run
@@ -30,8 +31,44 @@ zsh ~/.dotfiles/install/bootstrap.zsh --verbose
 zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos
 ```
 
-## Notes
+## Safe Defaults
 
-- Safe to rerun: existing files are backed up before relinking.
-- Brew steps run quietly with periodic progress peeks.
-- On brew failure, recent logs are shown and full log path is printed.
+- Idempotent intent: reruns should be safe and mostly no-op when already configured.
+- Before relinking `~/.zshrc` or `~/.zprofile`, existing files are moved to
+  timestamped backups (`.bak.YYYYmmddHHMMSS`).
+- `install/macos.zsh` is interactive and opt-out via `--skip-macos`.
+- `fzf` defaults are wired to `rg` (`FZF_DEFAULT_COMMAND`, `FZF_CTRL_T_COMMAND`)
+  for fast file discovery with hidden files included and `.git/` excluded.
+
+## What Gets Managed
+
+- Homebrew packages and casks from `brew/Brewfile` (includes `fzf` and `ripgrep`).
+- Symlinks:
+  - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
+  - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
+  - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
+- Optional interactive macOS defaults in `install/macos.zsh`.
+
+## Rollback / Uninstall
+
+1. Remove symlinks if present:
+   - `rm ~/.zshrc ~/.zprofile`
+   - `rm ${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config`
+2. Restore backups created by bootstrap (`*.bak.<timestamp>`) as needed.
+3. Optionally uninstall brew-managed packages with:
+   - `brew bundle cleanup --file ~/.dotfiles/brew/Brewfile --force`
+4. Remove repo clone:
+   - `rm -rf ~/.dotfiles`
+
+## Off-Limits and Invariants
+
+- Scripts should not delete user files by default.
+- No secret material (tokens/keys/passwords) should be committed.
+- Network installs are limited to explicit bootstrap dependencies (Homebrew, git/curl).
+
+See:
+
+- [Architecture](docs/architecture.md)
+- [Operations](docs/operations.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)

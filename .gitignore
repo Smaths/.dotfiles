@@ -20,3 +20,7 @@ config/zsh/local.zsh
 .zsh_sessions/
 .zsh_history
 .zsh-plugins/
+
+# Codex local/runtime artifacts (keep project config tracked)
+.codex/*
+!.codex/config.toml

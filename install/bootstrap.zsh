@@ -236,7 +236,7 @@ fi
 
 # Preflight requirements before network/package steps.
 require_cmd uname "Install core system tools and retry."
-require_cmd curl "Install curl (for example via Xcode Command Line Tools) and retry."
+require_cmd curl "curl is expected to be present on macOS. If it's missing, your PATH/environment is broken or the OS install is atypical. Fix PATH or reinstall base system tools and retry."
 
 # Install Homebrew if absent.
 step_start "Resolve Homebrew"
@@ -341,14 +341,14 @@ link_with_backup() {
 step_start "Link shell config files"
 link_with_backup "$ZSHRC_TARGET" "$HOME/.zshrc"
 link_with_backup "$ZPROFILE_TARGET" "$HOME/.zprofile"
-step_ok "already linked"
+step_ok "linked/verified
 
 # Link Ghostty config to XDG default path when present.
 step_start "Link Ghostty config"
 if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
   run_cmd mkdir -p "$XDG_CONFIG_HOME/ghostty"
   link_with_backup "$GHOSTTY_CONFIG_TARGET" "$GHOSTTY_CONFIG_LINK_PATH"
-  step_ok "already linked"
+  step_ok "linked/verified"
 else
   step_skip "target missing"
 fi
