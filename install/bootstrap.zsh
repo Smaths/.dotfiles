@@ -23,14 +23,24 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 BREWFILE="$DOTFILES_DIR/brew/Brewfile"
 ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
 GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
+GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
 DRY_RUN=0
 SKIP_MACOS=0
 INSTALL_GIT=0
+VERBOSE=0
 BREW_BIN=""
+TOTAL_STEPS=5
+CURRENT_STEP=0
+CURRENT_STEP_LABEL=""
+OK_COUNT=0
+SKIP_COUNT=0
+START_TS="$(date +%s)"
+typeset -a TMP_LOG_FILES=()
 
 usage() {
   cat <<'EOF'
@@ -38,6 +48,7 @@ Usage: bootstrap.zsh [options]
 
 Options:
   --dry-run         Print actions without changing anything
+  --verbose         Show more command details
   --skip-macos      Skip install/macos.zsh execution
   --skip-macros     Alias of --skip-macos
   -h, --help        Show this help
@@ -46,19 +57,18 @@ EOF
 
 print_header() {
   cat <<'EOF'
-+--------------------------------------+
-|   ____                  _   _        |
-|  / ___| _ __ ___   __ _| |_| |__  ___|
-|  \___ \| '_ ` _ \ / _` | __| '_ \/ __|
-|   ___) | | | | | | (_| | |_| | | \__ \
-|  |____/|_| |_| |_|\__,_|\__|_| |_|___/|
-+--------------------------------------+
+   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+   ┃   s  n  a  r  f  u  m            ┃
+   ┃   ───────────────────            ┃
+   ┃   dotfiles bootstrap (macOS)     ┃
+   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 EOF
 }
 
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
+    --verbose) VERBOSE=1 ;;
     --skip-macos|--skip-macros) SKIP_MACOS=1 ;;
     -h|--help)
       usage
@@ -81,6 +91,54 @@ run_cmd() {
   fi
 }
 
+cleanup_temp_logs() {
+  local log_file
+  for log_file in "${TMP_LOG_FILES[@]}"; do
+    if [[ -n "$log_file" && -f "$log_file" ]]; then
+      rm -f "$log_file"
+    fi
+  done
+}
+
+on_interrupt() {
+  cleanup_temp_logs
+  echo
+  echo "Interrupted. Temporary logs cleaned." >&2
+  exit 130
+}
+
+on_exit() {
+  local exit_code=$?
+  if (( exit_code == 0 )); then
+    cleanup_temp_logs
+  fi
+}
+
+on_error() {
+  local exit_code="$1"
+  local line_no="$2"
+  local command="$3"
+  echo
+  echo "ERROR: bootstrap failed at line $line_no: $command (exit $exit_code)" >&2
+}
+
+step_start() {
+  CURRENT_STEP=$((CURRENT_STEP + 1))
+  CURRENT_STEP_LABEL="$1"
+}
+
+step_ok() {
+  local detail="$1"
+  OK_COUNT=$((OK_COUNT + 1))
+  printf '[%d/%d] %-28s ✓ %s\n' "$CURRENT_STEP" "$TOTAL_STEPS" "$CURRENT_STEP_LABEL" "$detail"
+}
+
+step_skip() {
+  local detail="$1"
+  SKIP_COUNT=$((SKIP_COUNT + 1))
+  printf '[%d/%d] %-28s ↷ %s\n' "$CURRENT_STEP" "$TOTAL_STEPS" "$CURRENT_STEP_LABEL" "$detail"
+}
+
 run_with_peek() {
   # Run noisy commands quietly while periodically showing a compact progress peek.
   local label="$1"
@@ -92,9 +150,12 @@ run_with_peek() {
   fi
 
   local log_file
-  log_file="$(mktemp "/tmp/bootstrap.${label// /_}.XXXXXX.log")"
+  log_file="$(mktemp -t "bootstrap.${label// /_}.XXXXXX")"
+  TMP_LOG_FILES+=("$log_file")
 
-  echo "==> $label"
+  if (( VERBOSE )); then
+    echo "  running: $label"
+  fi
   "$@" >"$log_file" 2>&1 &
   local pid=$!
   local elapsed=0
@@ -117,14 +178,18 @@ run_with_peek() {
 
   set +e
   wait "$pid"
-  local status=$?
+  local exit_code=$?
   set -e
 
-  if (( status != 0 )); then
-    echo "ERROR: $label failed (exit $status). Recent output:"
+  if (( exit_code != 0 )); then
+    echo "  FAIL: $label (exit $exit_code). Recent output:"
     tail -n 40 "$log_file"
     echo "Full log: $log_file"
-    return "$status"
+    return "$exit_code"
+  fi
+
+  if (( VERBOSE )); then
+    echo "  done: $label"
   fi
 
   rm -f "$log_file"
@@ -158,7 +223,10 @@ require_cmd() {
 }
 
 print_header
-echo "==> Dotfiles bootstrap starting"
+echo
+trap 'on_error $? $LINENO "$ZSH_COMMAND"' ERR
+trap 'on_interrupt' INT TERM
+trap 'on_exit' EXIT
 
 # This bootstrap is intentionally macOS-only.
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -171,8 +239,11 @@ require_cmd uname "Install core system tools and retry."
 require_cmd curl "Install curl (for example via Xcode Command Line Tools) and retry."
 
 # Install Homebrew if absent.
+step_start "Resolve Homebrew"
 if ! BREW_BIN="$(resolve_brew_bin)"; then
-  echo "==> Homebrew not found. Installing Homebrew..."
+  if (( VERBOSE )); then
+    echo "  Homebrew not found, installing..."
+  fi
   if (( DRY_RUN )); then
     echo "[dry-run] /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
   else
@@ -183,7 +254,7 @@ if ! BREW_BIN="$(resolve_brew_bin)"; then
   BREW_BIN="$(resolve_brew_bin)"
 fi
 
-echo "==> Using brew at: $BREW_BIN"
+step_ok "$BREW_BIN"
 
 # Load brew into this shell so subsequent brew commands work immediately.
 if [[ -n "$BREW_BIN" ]]; then
@@ -193,7 +264,9 @@ fi
 # If git is missing, install it after brew is available.
 if ! command -v git >/dev/null 2>&1; then
   INSTALL_GIT=1
-  echo "==> git not found. It will be installed with Homebrew."
+  if (( VERBOSE )); then
+    echo "  git missing; will install"
+  fi
 fi
 
 # Validate required project files before applying changes.
@@ -212,12 +285,14 @@ if [[ ! -f "$ZPROFILE_TARGET" ]]; then
   exit 1
 fi
 
+step_start "Install Brewfile packages"
 run_with_peek "Installing Brewfile packages" brew bundle install --file="$BREWFILE"
 
 # Install git only when missing to keep reruns minimal.
 if (( INSTALL_GIT )); then
   run_with_peek "Installing git" brew install git
 fi
+step_ok "Brew dependencies complete"
 
 # Symlink helper:
 # - If the link already points to the right target, do nothing.
@@ -235,49 +310,67 @@ link_with_backup() {
     local current_target
     current_target="$(readlink "$link_path")"
     if [[ "$current_target" == "$link_target" ]]; then
-      echo "==> Symlink already correct: $link_path -> $link_target"
+      if (( VERBOSE )); then
+        echo "  link: already correct ($link_path -> $link_target)"
+      fi
       return
     fi
   elif [[ -e "$link_path" ]]; then
     local backup="${link_path}.bak.$(date +%Y%m%d%H%M%S)"
     if (( DRY_RUN )); then
-      echo "==> Would back up existing file: $link_path -> $backup"
+      echo "  link: would back up $link_path -> $backup"
     else
       run_cmd mv "$link_path" "$backup"
-      echo "==> Backed up existing file: $link_path -> $backup"
+      if (( VERBOSE )); then
+        echo "  link: backed up $link_path -> $backup"
+      fi
     fi
   fi
 
   if (( DRY_RUN )); then
-    echo "==> Would link: $link_path -> $link_target"
+    echo "  link: would create $link_path -> $link_target"
     run_cmd ln -sfn "$link_target" "$link_path"
   else
     run_cmd ln -sfn "$link_target" "$link_path"
-    echo "==> Linked: $link_path -> $link_target"
+    if (( VERBOSE )); then
+      echo "  link: created $link_path -> $link_target"
+    fi
   fi
 }
 
-echo "==> Creating shell config symlinks"
+step_start "Link shell config files"
 link_with_backup "$ZSHRC_TARGET" "$HOME/.zshrc"
 link_with_backup "$ZPROFILE_TARGET" "$HOME/.zprofile"
+step_ok "already linked"
 
 # Link Ghostty config to XDG default path when present.
+step_start "Link Ghostty config"
 if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
-  run_cmd mkdir -p "$HOME/.config/ghostty"
-  link_with_backup "$GHOSTTY_CONFIG_TARGET" "$HOME/.config/ghostty/config"
+  run_cmd mkdir -p "$XDG_CONFIG_HOME/ghostty"
+  link_with_backup "$GHOSTTY_CONFIG_TARGET" "$GHOSTTY_CONFIG_LINK_PATH"
+  step_ok "already linked"
+else
+  step_skip "target missing"
 fi
 
 # Run interactive macOS settings unless explicitly skipped.
+step_start "Apply macOS settings"
 MACOS_SCRIPT="$DOTFILES_DIR/install/macos.zsh"
 if (( SKIP_MACOS )); then
-  echo "==> Skipping macOS setup (--skip-macos)"
+  step_skip "skipped (--skip-macos)"
 elif [[ -f "$MACOS_SCRIPT" ]]; then
-  echo "==> Running macOS setup script"
+  if (( VERBOSE )); then
+    echo "  running: $MACOS_SCRIPT"
+  fi
   run_cmd zsh "$MACOS_SCRIPT"
+  step_ok "done"
 else
-  echo "==> Skipping macOS setup (script not found: $MACOS_SCRIPT)"
+  step_skip "script missing"
 fi
 
-echo "==> Bootstrap complete"
+local_end_ts="$(date +%s)"
+elapsed="$((local_end_ts - START_TS))"
+echo
+echo "Completed in ${elapsed}s  •  ${OK_COUNT} succeeded  •  ${SKIP_COUNT} skipped"
 echo "Optional local overrides:"
-echo "  cp \"$DOTFILES_DIR/config/zsh/local.example.zsh\" \"$DOTFILES_DIR/config/zsh/local.zsh\""
+echo "  cp ~/.dotfiles/config/zsh/local.example.zsh ~/.dotfiles/config/zsh/local.zsh"
