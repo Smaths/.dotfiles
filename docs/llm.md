@@ -10,9 +10,11 @@
 
 1. Manifest layer:
    - `brew/Brewfile`
+   - `install/winget-packages.txt`
    - tracked config files under `config/`
 2. Step scripts:
    - `install/bootstrap.zsh`
+   - `install/bootstrap-windows.ps1`
    - `install/macos.zsh`
 3. Documentation:
    - `README.md`
@@ -56,4 +58,4 @@ If a `dot doctor` command exists in the local environment, run that too.
 
 - Never commit secrets.
 - Do not assume Linux bootstrap support exists; `install/bootstrap.zsh` is macOS-only.
-- Do not silently expand network dependencies beyond documented tools (`brew`, `git`, `curl`).
+- Do not silently expand network dependencies beyond documented tools (`brew`, `winget`, `git`, `curl`).

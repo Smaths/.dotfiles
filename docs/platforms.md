@@ -15,6 +15,24 @@ Behavior:
 - Uses `brew bundle install --file=brew/Brewfile`.
 - Runs optional interactive system defaults via `install/macos.zsh`.
 
+## Windows (Secondary)
+
+Windows bootstrap is available for config linking and optional winget package installs.
+
+Prerequisites:
+
+- PowerShell 5.1+ or PowerShell 7+.
+- Symlink permissions (Developer Mode enabled, or elevated shell).
+- `winget` available for package automation from `install/winget-packages.txt`.
+
+Behavior:
+
+- `install/bootstrap-windows.ps1` validates Windows runtime.
+- Uses `install/winget-packages.txt` when `winget` is available.
+- Validates winget package IDs and symlink capability before mutation.
+- Backs up then links `~/.zshrc` and `~/.zprofile`.
+- If `winget` is missing, package installation is skipped (non-destructive default).
+
 ## Linux (Secondary)
 
 Linux is not a first-class bootstrap target in this repo today.

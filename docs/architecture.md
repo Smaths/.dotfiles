@@ -10,7 +10,8 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/zsh/.zshrc` -> `~/.zshrc` (symlink)
 - `config/zsh/.zprofile` -> `~/.zprofile` (symlink)
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
-- `brew/Brewfile` is consumed by `brew bundle` during bootstrap.
+- `brew/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
+- `install/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 
 Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
 
@@ -28,11 +29,11 @@ This preserves user state and enables safe reruns.
 
 - Managed by this repo:
   - symlink targets listed above
-  - package set in `brew/Brewfile`
+  - package sets in `brew/Brewfile` and `install/winget-packages.txt`
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - arbitrary files in `$HOME` not explicitly linked
-  - non-Homebrew package managers
+  - package managers outside `brew` and `winget`
 
 ## Idempotency Goals
 
@@ -42,6 +43,6 @@ This preserves user state and enables safe reruns.
 
 ## Invariants
 
-- Bootstrap is macOS-only (`Darwin` check).
-- `brew/Brewfile` and symlink targets must exist before mutation.
+- Bootstrap entrypoints are platform-specific (`install/bootstrap.zsh` for macOS, `install/bootstrap-windows.ps1` for Windows).
+- Required package manifest and symlink targets must exist before mutation.
 - `install/macos.zsh` is interactive and optional via `--skip-macos`.
