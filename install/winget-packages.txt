@@ -1,6 +1,8 @@
 # Windows package IDs for install/bootstrap-windows.ps1
 # Verified with `winget search --id <ID> -e` on 2026-03-01.
 
+Microsoft.WSL
+Microsoft.WindowsTerminal
 Git.Git
 GitHub.cli
 BurntSushi.ripgrep.MSVC

@@ -2,10 +2,23 @@
 export NVM_DIR="$HOME/.nvm"
 
 # Lazy-load nvm and node tooling on first use to improve shell startup time.
+NVM_BREW_PREFIX=""
+NVM_SH=""
+NVM_COMPLETION_SH=""
+
 if command -v brew >/dev/null 2>&1; then
   NVM_BREW_PREFIX="$(brew --prefix nvm 2>/dev/null || true)"
-  NVM_SH="${NVM_BREW_PREFIX:+$NVM_BREW_PREFIX/nvm.sh}"
-  NVM_COMPLETION_SH="${NVM_BREW_PREFIX:+$NVM_BREW_PREFIX/etc/bash_completion.d/nvm}"
+fi
+
+if [[ -n "$NVM_BREW_PREFIX" ]]; then
+  NVM_SH="$NVM_BREW_PREFIX/nvm.sh"
+  NVM_COMPLETION_SH="$NVM_BREW_PREFIX/etc/bash_completion.d/nvm"
+elif [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  NVM_SH="$NVM_DIR/nvm.sh"
+  NVM_COMPLETION_SH="$NVM_DIR/bash_completion"
+fi
+
+if [[ -n "$NVM_SH" ]]; then
 
   __load_nvm_once() {
     if [[ -n "${__NVM_LOADED:-}" ]]; then
@@ -30,5 +43,7 @@ if command -v brew >/dev/null 2>&1; then
 fi
 
 # Optional Herd support.
-export HERD_PHP_83_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/83/"
-export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
+if [[ "$OSTYPE" == darwin* ]]; then
+  export HERD_PHP_83_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/83/"
+  export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
+fi

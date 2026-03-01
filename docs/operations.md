@@ -20,6 +20,7 @@ Useful flags:
 - `--verbose`: show extra command detail.
 - `--skip-macos`: skip interactive defaults prompts.
 - `--skip-packages` (Windows only): skip `winget` installs.
+- `--link-windows-shell` (Windows only): also link Windows `~/.zshrc` and `~/.zprofile` (default is WSL-first skip).
 
 ## Update (Existing Machine)
 
@@ -60,11 +61,13 @@ Windows equivalents:
 Get-Item $HOME/.zshrc | Select-Object FullName, LinkType, Target
 Get-Item $HOME/.zprofile | Select-Object FullName, LinkType, Target
 Get-Content $HOME/.dotfiles/install/winget-packages.txt | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { winget list --id $_ -e --accept-source-agreements }
+wsl -l -q
 ```
 
 Expected:
 
-- `~/.zshrc` and `~/.zprofile` point to this repo.
+- WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes the WSL shell/tmux setup commands.
+- Windows `~/.zshrc` and `~/.zprofile` are linked only if `--link-windows-shell` was used.
 - `winget list --id ... -e` resolves each configured package.
 - `FZF_DEFAULT_COMMAND` uses `rg --files ...`.
 

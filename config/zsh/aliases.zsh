@@ -1,7 +1,13 @@
 # -----------------------------------------------------------------------------
 # Core shell / listing
 # -----------------------------------------------------------------------------
-alias ls='ls -G'
+_has() { command -v "$1" >/dev/null 2>&1; }
+
+if [[ "$OSTYPE" == darwin* ]]; then
+  alias ls='ls -G'
+else
+  alias ls='ls --color=auto'
+fi
 alias l='ls -l'
 alias ll='ls -lahF'
 alias lls='ls -lahFtr'
@@ -12,7 +18,9 @@ alias cp='cp -iv'
 alias mv='mv -iv'
 alias rm='rm -iv'
 alias grep='grep -E -i --color=auto'
-alias time='/usr/bin/time'
+if [[ -x /usr/bin/time ]]; then
+  alias time='/usr/bin/time'
+fi
 
 # -----------------------------------------------------------------------------
 # Directory navigation
@@ -22,7 +30,9 @@ alias doc='cd $HOME/Documents'
 alias dow='cd $HOME/Downloads'
 alias dotfiles='cd $HOME/.dotfiles'
 alias config='cd $HOME/.config'
-alias icloud='cd $HOME/Library/Mobile\ Documents/'
+if [[ "$OSTYPE" == darwin* ]]; then
+  alias icloud='cd $HOME/Library/Mobile\ Documents/'
+fi
 alias work='cd $HOME/workspace'
 
 # Directory stack (recent dirs)
@@ -72,7 +82,9 @@ alias gblog="git for-each-ref --sort=committerdate refs/heads/ --format='%(HEAD)
 alias vim='nvim'
 alias vi='nvim'
 alias svim='sudoedit'
-alias dvim='vim -u /usr/share/nvim/archlinux.vim'
+if [[ -f /usr/share/nvim/archlinux.vim ]]; then
+  alias dvim='vim -u /usr/share/nvim/archlinux.vim'
+fi
 alias nvimc='rm -I $VIMCONFIG/swap/*'
 alias nvimcu='rm -I $VIMCONFIG/undo/*'
 alias nviml='nvim -w $VIMCONFIG/vimlog "$@"'
@@ -87,41 +99,59 @@ alias batl='bat --paging=never -l log'
 # -----------------------------------------------------------------------------
 alias shutdown='sudo shutdown now'
 alias restart='sudo reboot'
-alias suspend='sudo pm-suspend'
+if _has pm-suspend; then
+  alias suspend='sudo pm-suspend'
+elif _has systemctl; then
+  alias suspend='systemctl suspend'
+fi
 alias bigf='find / -xdev -type f -size +500M'
-alias xpropc='xprop | grep WM_CLASS'
-alias cb='xclip -sel clip'
+if _has xprop; then
+  alias xpropc='xprop | grep WM_CLASS'
+fi
+if _has xclip; then
+  alias cb='xclip -sel clip'
+fi
 alias dust='du -sh * | sort -hr'
 alias pg='ping 8.8.8.8'
 alias port='netstat -tulpn | grep'
-alias fonts='fc-cache -f -v'
-alias wifi='sudo wifi-menu -o'
-alias nvidia-settings='nvidia-settings --config="$XDG_CONFIG_HOME"/nvidia/settings'
+if _has fc-cache; then
+  alias fonts='fc-cache -f -v'
+fi
+if _has wifi-menu; then
+  alias wifi='sudo wifi-menu -o'
+fi
+if _has nvidia-settings; then
+  alias nvidia-settings='nvidia-settings --config="$XDG_CONFIG_HOME"/nvidia/settings'
+fi
 
 # -----------------------------------------------------------------------------
 # Package managers (Linux-centric legacy)
 # -----------------------------------------------------------------------------
-alias paci='sudo pacman -S'
-alias pachi='sudo pacman -Ql'
-alias pacs='sudo pacman -Ss'
-alias pacu='sudo pacman -Syu'
-alias pacr='sudo pacman -R'
-alias pacrr='sudo pacman -Rs'
-alias pacrc='sudo pacman -Sc'
-alias pacro='pacman -Rns $(pacman -Qtdq)'
-alias pacrl='rm /var/lib/pacman/db.lck'
-alias pacls='sudo pacman -Qe'
-alias pacc='sudo pacman -Sc'
-alias paccc='sudo pacman -Scc'
+if _has pacman; then
+  alias paci='sudo pacman -S'
+  alias pachi='sudo pacman -Ql'
+  alias pacs='sudo pacman -Ss'
+  alias pacu='sudo pacman -Syu'
+  alias pacr='sudo pacman -R'
+  alias pacrr='sudo pacman -Rs'
+  alias pacrc='sudo pacman -Sc'
+  alias pacro='pacman -Rns $(pacman -Qtdq)'
+  alias pacrl='rm /var/lib/pacman/db.lck'
+  alias pacls='sudo pacman -Qe'
+  alias pacc='sudo pacman -Sc'
+  alias paccc='sudo pacman -Scc'
+fi
 
-alias yayi='yay -S'
-alias yayhi='yay -Ql'
-alias yays='yay -Ss'
-alias yayu='yay -Syu'
-alias yayr='yay -R'
-alias yayrr='yay -Rs'
-alias yayrc='yay -Sc'
-alias yayls='yay -Qe'
+if _has yay; then
+  alias yayi='yay -S'
+  alias yayhi='yay -Ql'
+  alias yays='yay -Ss'
+  alias yayu='yay -Syu'
+  alias yayr='yay -R'
+  alias yayrr='yay -Rs'
+  alias yayrc='yay -Sc'
+  alias yayls='yay -Qe'
+fi
 
 alias wget='wget --hsts-file="$XDG_DATA_HOME/wget-hsts"'
 
@@ -149,9 +179,15 @@ alias dockRr='docker rm $(docker ps -a -q)'
 alias dockstats='docker stats $(docker ps -q)'
 alias dockimg='docker images'
 alias dockprune='docker system prune -a'
-alias dockceu='docker-compose run --rm -u $(id -u):$(id -g)'
-alias dockce='docker-compose run --rm'
-alias docker-compose-dev='docker-compose -f docker-compose-dev.yml'
+if _has docker-compose; then
+  alias dockceu='docker-compose run --rm -u $(id -u):$(id -g)'
+  alias dockce='docker-compose run --rm'
+  alias docker-compose-dev='docker-compose -f docker-compose-dev.yml'
+elif _has docker && docker compose version >/dev/null 2>&1; then
+  alias dockceu='docker compose run --rm -u $(id -u):$(id -g)'
+  alias dockce='docker compose run --rm'
+  alias docker-compose-dev='docker compose -f docker-compose-dev.yml'
+fi
 
 # -----------------------------------------------------------------------------
 # Tmux / session tools
@@ -171,12 +207,16 @@ alias freebrain='freemind $CLOUD/knowledge_base/_BRAINSTORMING/*.mm &> /dev/null
 alias freelists='freemind $CLOUD/knowledge_base/_LISTS/*.mm &> /dev/null &'
 alias freepain='freemind $CLOUD/knowledge_base/_PROBLEMS/*.mm &> /dev/null &'
 alias freeproj='freemind $CLOUD/knowledge_base/_PROJECTS/*.mm &> /dev/null &'
-alias obsn='prime-run obs&'
+if _has prime-run; then
+  alias obsn='prime-run obs&'
+fi
 alias mke='mkextract'
 alias ex='extract'
 alias ddg='duckduckgo'
 alias wiki='wikipedia'
 alias calc='noglob calcul'
+
+unset -f _has
 
 # -----------------------------------------------------------------------------
 # Optional GitHub Copilot shortcuts

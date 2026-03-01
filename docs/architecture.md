@@ -12,6 +12,7 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `brew/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
+- Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
 
 Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
 

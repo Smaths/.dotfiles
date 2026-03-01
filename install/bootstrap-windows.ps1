@@ -8,12 +8,14 @@ $ErrorActionPreference = "Stop"
 # Purpose:
 # - Set up a fresh or existing Windows machine using this dotfiles repo.
 # - Keep reruns safe (idempotent where possible, with backups before relinking).
+# - Prefer WSL for shell tooling; keep Windows-host shell linking opt-in.
 #
 # What this script does:
 # 1) Validates runtime platform
 # 2) Resolves winget
 # 3) Optionally installs packages from install/winget-packages.txt
-# 4) Safely links ~/.zshrc and ~/.zprofile to this repo
+# 4) Prints WSL-first shell guidance (including tmux install)
+# 5) Optionally links Windows ~/.zshrc and ~/.zprofile to this repo
 #
 # Safety behavior:
 # - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
@@ -29,8 +31,9 @@ $HomePath = [Environment]::GetFolderPath("UserProfile")
 
 $DryRun = $false
 $SkipPackages = $false
+$LinkWindowsShell = $false
 $VerboseOutput = $false
-$TotalSteps = 5
+$TotalSteps = 6
 $CurrentStep = 0
 $CurrentStepLabel = ""
 $OkCount = 0
@@ -45,6 +48,8 @@ Options:
   --dry-run         Print actions without changing anything
   --verbose         Show more command details
   --skip-packages   Skip winget package installation
+  --link-windows-shell
+                    Also link Windows ~/.zshrc and ~/.zprofile (WSL-first default is skip)
   -h, --help        Show this help
 "@
 }
@@ -54,6 +59,7 @@ foreach ($arg in $args) {
     "--dry-run" { $DryRun = $true }
     "--verbose" { $VerboseOutput = $true }
     "--skip-packages" { $SkipPackages = $true }
+    "--link-windows-shell" { $LinkWindowsShell = $true }
     "--help" {
       Show-Usage
       exit 0
@@ -237,6 +243,33 @@ function Assert-ExpectedLink {
   }
 }
 
+function Convert-ToWslPath {
+  param([Parameter(Mandatory = $true)][string]$WindowsPath)
+
+  $normalized = $WindowsPath.Replace("\", "/")
+  if ($normalized -match "^([A-Za-z]):/(.*)$") {
+    $drive = $matches[1].ToLowerInvariant()
+    $tail = $matches[2]
+    return "/mnt/$drive/$tail"
+  }
+
+  return $normalized
+}
+
+function Get-WslDistros {
+  $wslCommand = Get-Command wsl.exe -ErrorAction SilentlyContinue
+  if (-not $wslCommand) {
+    return @()
+  }
+
+  $output = (& $wslCommand.Source "-l" "-q" 2>$null)
+  if ($LASTEXITCODE -ne 0 -or $null -eq $output) {
+    return @()
+  }
+
+  return @($output | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
 function Link-WithBackup {
   param(
     [Parameter(Mandatory = $true)][string]$LinkTarget,
@@ -323,8 +356,12 @@ Step-Start "Run preflight checks"
 if (-not (Test-Path -LiteralPath $DotfilesDir)) {
   throw "Dotfiles directory not found at $DotfilesDir"
 }
-Assert-SymlinkCapability
-Step-Ok "environment ready"
+if ($LinkWindowsShell) {
+  Assert-SymlinkCapability
+  Step-Ok "environment ready (Windows shell linking enabled)"
+} else {
+  Step-Ok "environment ready (WSL-first mode)"
+}
 
 $WingetBin = $null
 
@@ -359,13 +396,34 @@ if ($SkipPackages) {
   }
 }
 
-Step-Start "Link shell config files"
-Link-WithBackup -LinkTarget $ZshrcTarget -LinkPath (Join-Path $HomePath ".zshrc")
-Link-WithBackup -LinkTarget $ZprofileTarget -LinkPath (Join-Path $HomePath ".zprofile")
-Step-Ok "linked/verified"
+Step-Start "Show WSL-first guidance"
+$wslDistros = Get-WslDistros
+if ($wslDistros.Count -eq 0) {
+  Step-Skip "no WSL distro found; run 'wsl --install -d Ubuntu' then rerun"
+} else {
+  $wslDotfilesPath = Convert-ToWslPath -WindowsPath $DotfilesDir
+  Write-Info "Detected WSL distro(s): $($wslDistros -join ', ')"
+  Write-Info "Recommended next steps (inside WSL):"
+  Write-Info "  sudo apt update && sudo apt install -y zsh tmux ripgrep fzf"
+  Write-Info "  ln -sfn '$wslDotfilesPath/config/zsh/.zshrc' ~/.zshrc"
+  Write-Info "  ln -sfn '$wslDotfilesPath/config/zsh/.zprofile' ~/.zprofile"
+  Write-Info "  exec zsh"
+  Step-Ok "printed WSL shell/tmux setup commands"
+}
+
+Step-Start "Link Windows shell files"
+if (-not $LinkWindowsShell) {
+  Step-Skip "skipped by default (pass --link-windows-shell to enable)"
+} else {
+  Link-WithBackup -LinkTarget $ZshrcTarget -LinkPath (Join-Path $HomePath ".zshrc")
+  Link-WithBackup -LinkTarget $ZprofileTarget -LinkPath (Join-Path $HomePath ".zprofile")
+  Step-Ok "linked/verified"
+}
 
 Step-Start "Verify linked files"
-if ($DryRun) {
+if (-not $LinkWindowsShell) {
+  Step-Skip "skipped (Windows shell links not requested)"
+} elseif ($DryRun) {
   Step-Skip "skipped in dry-run"
 } else {
   Assert-ExpectedLink -LinkPath (Join-Path $HomePath ".zshrc") -ExpectedTarget $ZshrcTarget

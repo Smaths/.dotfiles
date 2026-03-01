@@ -12,7 +12,7 @@ configs while preserving existing user files via timestamped backups.
 ## Supported Platforms
 
 - Primary: macOS 13+ (Ventura/Sonoma/Sequoia style setup with Homebrew).
-- Secondary: Windows for config linking via `install/bootstrap-windows.ps1`.
+- Secondary: Windows (WSL-first) via `install/bootstrap-windows.ps1`.
 - Secondary: Linux for raw config reuse only; `install/bootstrap.zsh` is macOS-only.
 
 See [Platform Notes](docs/platforms.md) for details and prerequisites.
@@ -45,6 +45,7 @@ Windows flags:
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --dry-run
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --verbose
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --skip-packages
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --link-windows-shell
 ```
 
 ## Safe Defaults
@@ -52,7 +53,7 @@ powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windo
 - Idempotent intent: reruns should be safe and mostly no-op when already configured.
 - Before relinking `~/.zshrc` or `~/.zprofile`, existing files are moved to
   timestamped backups (`.bak.YYYYmmddHHMMSS`).
-- Windows bootstrap validates symlink capability and winget package IDs before applying changes.
+- Windows bootstrap validates winget package IDs before applying changes, and checks symlink capability when `--link-windows-shell` is requested.
 - `install/macos.zsh` is interactive and opt-out via `--skip-macos`.
 - `fzf` defaults are wired to `rg` (`FZF_DEFAULT_COMMAND`, `FZF_CTRL_T_COMMAND`)
   for fast file discovery with hidden files included and `.git/` excluded.
@@ -67,6 +68,7 @@ powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windo
   - macOS bootstrap: `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
 - Optional interactive macOS defaults in `install/macos.zsh`.
 - Windows package install in `install/bootstrap-windows.ps1` runs when `winget` is available.
+- Windows bootstrap is WSL-first: it prints WSL shell/tmux setup commands and skips Windows-host zsh links unless `--link-windows-shell` is passed.
 
 ## Rollback / Uninstall
 
