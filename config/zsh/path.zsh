@@ -5,6 +5,7 @@ typeset -U path PATH
 path=(
   "$HOME/.local/bin"
   "$HOME/bin"
+  "$HOME/Library/Python/3.9/bin"
   $path
 )
 
