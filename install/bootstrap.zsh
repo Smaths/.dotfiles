@@ -444,7 +444,7 @@ fi
 
 local_end_ts="$(date +%s)"
 elapsed="$((local_end_ts - START_TS))"
-summary_line="Done in ${elapsed}s • ${OK_COUNT}/${TOTAL_STEPS} completeda cod • ${SKIP_COUNT} skipped"
+summary_line="Done in ${elapsed}s • ${OK_COUNT}/${TOTAL_STEPS} completed • ${SKIP_COUNT} skipped"
 summary_width=$(( ${#summary_line} + 2 ))
 summary_border="$(printf '%*s' "$summary_width" '' | tr ' ' '─')"
 echo
