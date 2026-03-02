@@ -25,8 +25,8 @@ alias config='cd $HOME/.config'
 alias icloud='cd $HOME/Library/Mobile\ Documents/'
 alias work='cd $HOME/workspace'
 
-# Directory stack (recent dirs)
-alias d='dirs -v | sed -n "1,10p"'
+# Directory stack (fuzzy picker)
+alias d='fstack'
 
 # After running `d`, type `0`..`9` as the next command to jump to that entry.
 # Note: `0` is current directory, so it is effectively a no-op.

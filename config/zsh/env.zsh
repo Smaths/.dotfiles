@@ -34,7 +34,9 @@ export HERD_PHP_83_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/p
 export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
 
 # fzf
-export FZF_DEFAULT_COMMAND='fd -H --exclude .git --exclude node_modules'
+export FZF_FD_EXCLUDE_ARGS='--exclude .git --exclude node_modules --exclude .cache --exclude dist --exclude build --exclude .next --exclude .turbo --exclude coverage --exclude target'
+export FZF_DEFAULT_COMMAND="fd -H -t f $FZF_FD_EXCLUDE_ARGS"
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_DEFAULT_OPTS='
   --height 70%
   --layout=reverse
@@ -43,5 +45,7 @@ export FZF_DEFAULT_OPTS='
   --cycle
   --info=inline
   --preview-window=right:60%:wrap
-  --preview "bat --style=numbers --color=always --line-range :160 {} 2>/dev/null || sed -n \"1,160p\" {}"
+  --preview 'p=$([ -e {} ] && realpath {} || printf "%s" "{}"); printf "%s\n\n" "$p"; [ -f {} ] && (bat --style=numbers --color=always --line-range :160 {} 2>/dev/null || sed -n "1,160p" {})' \
+  --header-first \
+  --header 'enter: open • ctrl-y: copy path'
 '

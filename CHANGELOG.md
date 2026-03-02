@@ -16,3 +16,7 @@ All notable changes to this dotfiles repo should be documented in this file.
   - quick install flow
   - rollback/uninstall guidance
   - explicit safety defaults and off-limits notes
+- `install/macos.zsh` now starts with prompt mode selection:
+  - use recommended defaults
+  - customize prompt defaults, then continue
+  - manual prompts (default No), preserving prior behavior

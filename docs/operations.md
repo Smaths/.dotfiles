@@ -13,6 +13,12 @@ Useful flags:
 - `--verbose`: show extra command detail.
 - `--skip-macos`: skip interactive defaults prompts.
 
+During `install/macos.zsh`, choose one startup mode before the setting prompts:
+
+- `1) Use recommended defaults`: each prompt uses repo-provided defaults.
+- `2) Customize defaults, then continue prompts`: you set per-prompt defaults first.
+- `3) Manual prompts`: preserves previous behavior (default No for each prompt).
+
 ## Update (Existing Machine)
 
 ```zsh
@@ -36,13 +42,24 @@ test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
 brew bundle check --file ~/.dotfiles/brew/Brewfile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
+zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
+zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
 ```
 
 Expected:
 
 - `~/.zshrc` and `~/.zprofile` point to this repo.
 - `brew bundle check` exits clean.
-- `FZF_DEFAULT_COMMAND` uses `rg --files ...`.
+- `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`.
+
+Smoke-test navigation helpers in an interactive shell:
+
+```zsh
+fcd
+ffcd
+fview
+fstack
+```
 
 ## Backup
 

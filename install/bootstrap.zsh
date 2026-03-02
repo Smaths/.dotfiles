@@ -40,6 +40,10 @@ CURRENT_STEP_LABEL=""
 OK_COUNT=0
 SKIP_COUNT=0
 START_TS="$(date +%s)"
+STEP_LABEL_WIDTH=34
+COLOR_OK=""
+COLOR_SKIP=""
+COLOR_RESET=""
 typeset -a TMP_LOG_FILES=()
 
 usage() {
@@ -57,12 +61,19 @@ EOF
 
 print_header() {
   cat <<'EOF'
-   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-   ┃   s  n  a  r  f  u  m            ┃
-   ┃   ───────────────────            ┃
-   ┃   dotfiles bootstrap (macOS)     ┃
-   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+
+snarfum dotfiles bootstrap
+──────────────────────────────────
 EOF
+}
+
+init_colors() {
+  if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]]; then
+    COLOR_OK=$'\033[32m'
+    COLOR_SKIP=$'\033[33m'
+    COLOR_RESET=$'\033[0m'
+  fi
 }
 
 for arg in "$@"; do
@@ -117,7 +128,14 @@ on_exit() {
 on_error() {
   local exit_code="$1"
   local line_no="$2"
-  local command="$3"
+  local command="${3:-unknown command}"
+
+  # Ctrl+C / signal-driven exits can still trigger ERR in zsh.
+  # Keep interrupt output clean and avoid a misleading failure line.
+  if (( exit_code == 130 || exit_code == 143 || exit_code == -3 || exit_code == 20 )); then
+    return 0
+  fi
+
   echo
   echo "ERROR: bootstrap failed at line $line_no: $command (exit $exit_code)" >&2
 }
@@ -127,16 +145,49 @@ step_start() {
   CURRENT_STEP_LABEL="$1"
 }
 
+format_step_label() {
+  local label="$1"
+  local dot_count=$((STEP_LABEL_WIDTH - ${#label}))
+  if (( dot_count < 3 )); then
+    dot_count=3
+  fi
+  printf '%s %s' "$label" "$(printf '%*s' "$dot_count" '' | tr ' ' '.')"
+}
+
 step_ok() {
   local detail="$1"
   OK_COUNT=$((OK_COUNT + 1))
-  printf '[%d/%d] %-28s ✓ %s\n' "$CURRENT_STEP" "$TOTAL_STEPS" "$CURRENT_STEP_LABEL" "$detail"
+  printf '%d/%d ┤ %s %b✓%b %s\n' \
+    "$CURRENT_STEP" \
+    "$TOTAL_STEPS" \
+    "$(format_step_label "$CURRENT_STEP_LABEL")" \
+    "$COLOR_OK" \
+    "$COLOR_RESET" \
+    "$detail"
 }
 
 step_skip() {
   local detail="$1"
   SKIP_COUNT=$((SKIP_COUNT + 1))
-  printf '[%d/%d] %-28s ↷ %s\n' "$CURRENT_STEP" "$TOTAL_STEPS" "$CURRENT_STEP_LABEL" "$detail"
+  printf '%d/%d │ %s %b↷%b %s\n' \
+    "$CURRENT_STEP" \
+    "$TOTAL_STEPS" \
+    "$(format_step_label "$CURRENT_STEP_LABEL")" \
+    "$COLOR_SKIP" \
+    "$COLOR_RESET" \
+    "$detail"
+}
+
+step_skip_user() {
+  local detail="$1"
+  SKIP_COUNT=$((SKIP_COUNT + 1))
+  printf '%d/%d │ %s %b⏭%b %s\n' \
+    "$CURRENT_STEP" \
+    "$TOTAL_STEPS" \
+    "$(format_step_label "$CURRENT_STEP_LABEL")" \
+    "$COLOR_SKIP" \
+    "$COLOR_RESET" \
+    "$detail"
 }
 
 run_with_peek() {
@@ -163,16 +214,18 @@ run_with_peek() {
   while kill -0 "$pid" >/dev/null 2>&1; do
     sleep 3
     elapsed=$((elapsed + 3))
-    if [[ -s "$log_file" ]]; then
-      local peek
-      peek="$(tail -n 1 "$log_file" | tr -d '\r')"
-      if [[ -n "$peek" ]]; then
-        echo "   ... ${peek}"
+    if (( VERBOSE )); then
+      if [[ -s "$log_file" ]]; then
+        local peek
+        peek="$(tail -n 1 "$log_file" | tr -d '\r')"
+        if [[ -n "$peek" ]]; then
+          echo "   ... ${peek}"
+        else
+          echo "   ... running (${elapsed}s)"
+        fi
       else
         echo "   ... running (${elapsed}s)"
       fi
-    else
-      echo "   ... running (${elapsed}s)"
     fi
   done
 
@@ -224,7 +277,10 @@ require_cmd() {
 
 print_header
 echo
-trap 'on_error $? $LINENO "$ZSH_COMMAND"' ERR
+init_colors
+echo "Starting bootstrap: ${TOTAL_STEPS} steps"
+echo
+trap 'on_error $? $LINENO "${ZSH_COMMAND:-}"' ERR
 trap 'on_interrupt' INT TERM
 trap 'on_exit' EXIT
 
@@ -292,7 +348,7 @@ run_with_peek "Installing Brewfile packages" brew bundle install --file="$BREWFI
 if (( INSTALL_GIT )); then
   run_with_peek "Installing git" brew install git
 fi
-step_ok "Brew dependencies complete"
+step_ok "brew bundle complete"
 
 # Symlink helper:
 # - If the link already points to the right target, do nothing.
@@ -341,7 +397,7 @@ link_with_backup() {
 step_start "Link shell config files"
 link_with_backup "$ZSHRC_TARGET" "$HOME/.zshrc"
 link_with_backup "$ZPROFILE_TARGET" "$HOME/.zprofile"
-step_ok "linked/verified
+step_ok "linked/verified"
 
 # Link Ghostty config to XDG default path when present.
 step_start "Link Ghostty config"
@@ -356,21 +412,44 @@ fi
 # Run interactive macOS settings unless explicitly skipped.
 step_start "Apply macOS settings"
 MACOS_SCRIPT="$DOTFILES_DIR/install/macos.zsh"
+MACOS_SETUP_SKIPPED_EXIT=20
 if (( SKIP_MACOS )); then
   step_skip "skipped (--skip-macos)"
 elif [[ -f "$MACOS_SCRIPT" ]]; then
+  echo
+  echo "macOS interactive setup"
+  echo "───────────────────────"
   if (( VERBOSE )); then
     echo "  running: $MACOS_SCRIPT"
   fi
-  run_cmd zsh "$MACOS_SCRIPT"
-  step_ok "done"
+  if (( DRY_RUN )); then
+    run_cmd zsh "$MACOS_SCRIPT"
+    step_ok "dry-run"
+  else
+    set +e
+    zsh "$MACOS_SCRIPT"
+    macos_exit=$?
+    set -e
+    if (( macos_exit == 0 )); then
+      step_ok "done"
+    elif (( macos_exit == MACOS_SETUP_SKIPPED_EXIT )); then
+      step_skip_user "skipped (user selected Skip)"
+    else
+      return "$macos_exit"
+    fi
+  fi
 else
   step_skip "script missing"
 fi
 
 local_end_ts="$(date +%s)"
 elapsed="$((local_end_ts - START_TS))"
+summary_line="Done in ${elapsed}s • ${OK_COUNT}/${TOTAL_STEPS} completeda cod • ${SKIP_COUNT} skipped"
+summary_width=$(( ${#summary_line} + 2 ))
+summary_border="$(printf '%*s' "$summary_width" '' | tr ' ' '─')"
 echo
-echo "Completed in ${elapsed}s  •  ${OK_COUNT} succeeded  •  ${SKIP_COUNT} skipped"
+echo "┌${summary_border}┐"
+echo "│ ${summary_line} │"
+echo "└${summary_border}┘"
 echo "Optional local overrides:"
 echo "  cp ~/.dotfiles/config/zsh/local.example.zsh ~/.dotfiles/config/zsh/local.zsh"

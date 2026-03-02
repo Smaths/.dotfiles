@@ -14,7 +14,7 @@ of app configs while preserving existing user files via timestamped backups.
 - Primary: macOS 13+ (Ventura/Sonoma/Sequoia style setup with Homebrew).
 - Secondary: Linux for raw config reuse only; `install/bootstrap.zsh` is macOS-only.
 
-See [Platform Notes](docs/platforms.md) for details and prerequisites.
+See [Platform Notes](docs/PLATFORMS.md) for details and prerequisites.
 
 ## Quick Install
 
@@ -37,17 +37,30 @@ zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos
 - Before relinking `~/.zshrc` or `~/.zprofile`, existing files are moved to
   timestamped backups (`.bak.YYYYmmddHHMMSS`).
 - `install/macos.zsh` is interactive and opt-out via `--skip-macos`.
-- `fzf` defaults are wired to `rg` (`FZF_DEFAULT_COMMAND`, `FZF_CTRL_T_COMMAND`)
-  for fast file discovery with hidden files included and `.git/` excluded.
+- macOS setup prompts now support startup modes:
+  - recommended defaults
+  - custom defaults (set your prompt defaults first)
+  - manual prompts (default No for each question)
+- `fzf` defaults are wired to `fd` (`FZF_DEFAULT_COMMAND`, `FZF_CTRL_T_COMMAND`)
+  with hidden files included and shared excludes for heavy paths (for example:
+  `.git`, `node_modules`, `.cache`, `dist`, `build`, `.next`, `.turbo`,
+  `coverage`, `target`).
+
+## Fuzzy Navigation Helpers
+
+- `fcd [root]`: fuzzy-select a directory and change into it.
+- `ffcd [root]`: fuzzy-select a file and change into that file's directory.
+- `fview [root]`: fuzzy-select a file and view it in-terminal (`bat`/`less`).
+- `fstack`: fuzzy-select a `dirs -v` stack entry and jump to it.
 
 ## What Gets Managed
 
-- Homebrew packages and casks from `brew/Brewfile` (includes `fzf` and `ripgrep`).
+- Homebrew packages and casks from `brew/Brewfile` (includes `fd`, `fzf`, and `ripgrep`).
 - Symlinks:
   - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
   - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
   - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
-- Optional interactive macOS defaults in `install/macos.zsh`.
+- Optional interactive macOS defaults in `install/macos.zsh` with preset/custom/manual prompt modes.
 
 ## Rollback / Uninstall
 
@@ -68,7 +81,7 @@ zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos
 
 See:
 
-- [Architecture](docs/architecture.md)
-- [Operations](docs/operations.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Operations](docs/OPERATIONS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)

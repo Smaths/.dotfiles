@@ -1,0 +1,57 @@
+# Architecture
+
+## Overview
+
+This repo defines a small, explicit mapping from tracked files to paths in `$HOME`.
+The design goal is predictable bootstrap behavior with minimal surprise.
+
+## File-to-Home Mapping
+
+- `config/zsh/.zshrc` -> `~/.zshrc` (symlink)
+- `config/zsh/.zprofile` -> `~/.zprofile` (symlink)
+- `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
+- `brew/Brewfile` is consumed by `brew bundle` during bootstrap.
+
+Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
+
+## Zsh Module Boundaries
+
+- `config/zsh/options.zsh`: shell options, history behavior, and directory-stack options.
+- `config/zsh/path.zsh`: `PATH` and path-like variable setup.
+- `config/zsh/env.zsh`: exported environment variables, including `FZF_*` defaults.
+- `config/zsh/completion.zsh`: completion system configuration.
+- `config/zsh/plugins.zsh`: plugin/keybinding sourcing only (for example `~/.fzf.zsh`).
+- `config/zsh/functions/*.zsh`: interactive helper functions (for example `fcd`, `ffcd`, `fview`, `fstack`).
+- `config/zsh/aliases.zsh`: aliases and short shell convenience commands.
+
+## Symlink Strategy
+
+`install/bootstrap.zsh` uses `link_with_backup()`:
+
+- If the link already targets the expected file, no change.
+- If a non-link file exists, it is moved to `*.bak.<timestamp>`.
+- Then `ln -sfn` creates/updates the symlink.
+
+This preserves user state and enables safe reruns.
+
+## Ownership and Scope
+
+- Managed by this repo:
+  - symlink targets listed above
+  - package set in `brew/Brewfile`
+- Not managed by this repo:
+  - user secrets, keychains, tokens
+  - arbitrary files in `$HOME` not explicitly linked
+  - non-Homebrew package managers
+
+## Idempotency Goals
+
+- Running bootstrap repeatedly should converge to one valid state.
+- Existing valid symlinks should remain unchanged.
+- Re-run noise should be minimal; destructive operations require explicit opt-in.
+
+## Invariants
+
+- Bootstrap is macOS-only (`Darwin` check).
+- `brew/Brewfile` and symlink targets must exist before mutation.
+- `install/macos.zsh` is interactive and optional via `--skip-macos`.
