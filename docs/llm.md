@@ -48,6 +48,8 @@ brew bundle check --file ~/.dotfiles/brew/Brewfile
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
+zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
+zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
 ```
 
 If a `dot doctor` command exists in the local environment, run that too.
