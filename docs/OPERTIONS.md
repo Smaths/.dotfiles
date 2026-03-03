@@ -24,9 +24,9 @@ Useful flags:
 
 During `install/macos.zsh`, choose one startup mode before the setting prompts:
 
-- `1) Use recommended defaults`: each prompt uses repo-provided defaults.
-- `2) Customize defaults, then continue prompts`: you set per-prompt defaults first.
-- `3) Manual prompts`: preserves previous behavior (default No for each prompt).
+- `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
+- `2) Choose settings`: set defaults for each setting, then proceed.
+- `3) Skip`: exits macOS tuning without applying defaults.
 
 ## Update (Existing Machine)
 
@@ -57,7 +57,7 @@ Manual checks:
 ```zsh
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
-brew bundle check --file ~/.dotfiles/brew/Brewfile
+brew bundle check --file ~/.dotfiles/install/Brewfile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
 zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'

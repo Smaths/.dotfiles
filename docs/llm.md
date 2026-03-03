@@ -9,7 +9,7 @@
 ## Edit Order (Preferred)
 
 1. Manifest layer:
-   - `brew/Brewfile`
+   - `install/Brewfile`
    - `install/winget-packages.txt`
    - tracked config files under `config/`
 2. Step scripts:
@@ -34,7 +34,7 @@ Do:
 
 Don't:
 
-- Reorder `brew/Brewfile` entries without a concrete reason.
+- Reorder `install/Brewfile` entries without a concrete reason.
 - Inline secrets/tokens/credentials in tracked files.
 - Add unreviewed `curl|sh` patterns beyond the explicit Homebrew bootstrap path.
 - Add destructive operations without an explicit `--force` style gate.
@@ -46,7 +46,7 @@ Run from repo root:
 ```zsh
 shellcheck install/*.zsh config/zsh/*.zsh
 shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
-brew bundle check --file ~/.dotfiles/brew/Brewfile
+brew bundle check --file ~/.dotfiles/install/Brewfile
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
