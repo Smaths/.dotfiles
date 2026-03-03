@@ -2,16 +2,17 @@
 
 ![Bootstrap Screenshot](docs/assets/screenshot_1.png)
 
-Personal dotfiles for reproducible shell and workstation setup, centered on macOS.
+Personal dotfiles for reproducible shell and workstation setup, centered on macOS with a Windows bootstrap entrypoint.
 
 ## Purpose
 
-This repo bootstraps a machine with Homebrew packages, shell config, and a small set
-of app configs while preserving existing user files via timestamped backups.
+This repo bootstraps a machine with packages, shell config, and a small set of app
+configs while preserving existing user files via timestamped backups.
 
 ## Supported Platforms
 
 - Primary: macOS 13+ (Ventura/Sonoma/Sequoia style setup with Homebrew).
+- Secondary: Windows (WSL-first) via `install/bootstrap-windows.ps1`.
 - Secondary: Linux for raw config reuse only; `install/bootstrap.zsh` is macOS-only.
 
 See [Platform Notes](docs/PLATFORMS.md) for details and prerequisites.
@@ -23,6 +24,13 @@ git clone <repo-url> ~/.dotfiles
 zsh ~/.dotfiles/install/bootstrap.zsh
 ```
 
+Windows (PowerShell):
+
+```powershell
+git clone <repo-url> $HOME/.dotfiles
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1
+```
+
 Common flags:
 
 ```zsh
@@ -31,11 +39,21 @@ zsh ~/.dotfiles/install/bootstrap.zsh --verbose
 zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos
 ```
 
+Windows flags:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --dry-run
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --verbose
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --skip-packages
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1 --link-windows-shell
+```
+
 ## Safe Defaults
 
 - Idempotent intent: reruns should be safe and mostly no-op when already configured.
 - Before relinking `~/.zshrc` or `~/.zprofile`, existing files are moved to
   timestamped backups (`.bak.YYYYmmddHHMMSS`).
+- Windows bootstrap validates winget package IDs before applying changes, and checks symlink capability when `--link-windows-shell` is requested.
 - `install/macos.zsh` is interactive and opt-out via `--skip-macos`.
 - macOS setup prompts now support startup modes:
   - recommended defaults
@@ -55,12 +73,17 @@ zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos
 
 ## What Gets Managed
 
+- macOS packages and casks from `brew/Brewfile`.
+- Windows packages from `install/winget-packages.txt` via `winget`.
 - Homebrew packages and casks from `brew/Brewfile` (includes `fd`, `fzf`, and `ripgrep`).
+
 - Symlinks:
   - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
   - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
-  - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
+  - macOS bootstrap: `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
 - Optional interactive macOS defaults in `install/macos.zsh` with preset/custom/manual prompt modes.
+- Windows package install in `install/bootstrap-windows.ps1` runs when `winget` is available.
+- Windows bootstrap is WSL-first: it prints WSL shell/tmux setup commands and skips Windows-host zsh links unless `--link-windows-shell` is passed.
 
 ## Rollback / Uninstall
 
@@ -77,7 +100,7 @@ zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos
 
 - Scripts should not delete user files by default.
 - No secret material (tokens/keys/passwords) should be committed.
-- Network installs are limited to explicit bootstrap dependencies (Homebrew, git/curl).
+- Network installs are limited to explicit bootstrap dependencies (`brew`, `winget`, `git`, `curl`).
 
 See:
 
