@@ -7,11 +7,20 @@ git clone <repo-url> ~/.dotfiles
 zsh ~/.dotfiles/install/bootstrap.zsh
 ```
 
+Windows:
+
+```powershell
+git clone <repo-url> $HOME/.dotfiles
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1
+```
+
 Useful flags:
 
 - `--dry-run`: print intended actions without mutating.
 - `--verbose`: show extra command detail.
 - `--skip-macos`: skip interactive defaults prompts.
+- `--skip-packages` (Windows only): skip `winget` installs.
+- `--link-windows-shell` (Windows only): also link Windows `~/.zshrc` and `~/.zprofile` (default is WSL-first skip).
 
 During `install/macos.zsh`, choose one startup mode before the setting prompts:
 
@@ -25,6 +34,14 @@ During `install/macos.zsh`, choose one startup mode before the setting prompts:
 cd ~/.dotfiles
 git pull --ff-only
 zsh install/bootstrap.zsh --skip-macos
+```
+
+Windows update flow:
+
+```powershell
+Set-Location $HOME/.dotfiles
+git pull --ff-only
+powershell -ExecutionPolicy Bypass -File install/bootstrap-windows.ps1 --skip-packages
 ```
 
 Re-enable interactive defaults only when needed:
@@ -46,10 +63,20 @@ zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
 ```
 
+Windows equivalents:
+
+```powershell
+Get-Item $HOME/.zshrc | Select-Object FullName, LinkType, Target
+Get-Item $HOME/.zprofile | Select-Object FullName, LinkType, Target
+Get-Content $HOME/.dotfiles/install/winget-packages.txt | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { winget list --id $_ -e --accept-source-agreements }
+wsl -l -q
+```
+
 Expected:
 
-- `~/.zshrc` and `~/.zprofile` point to this repo.
-- `brew bundle check` exits clean.
+- WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes the WSL shell/tmux setup commands.
+- Windows `~/.zshrc` and `~/.zprofile` are linked only if `--link-windows-shell` was used.
+- `winget list --id ... -e` resolves each configured package.
 - `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`.
 
 Smoke-test navigation helpers in an interactive shell:
@@ -67,7 +94,7 @@ Bootstrap automatically creates timestamped backups before relinking:
 
 - `~/.zshrc.bak.<timestamp>`
 - `~/.zprofile.bak.<timestamp>`
-- `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>` (if replaced)
+- `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>` (macOS bootstrap only, if replaced)
 
 You can additionally snapshot the repo:
 

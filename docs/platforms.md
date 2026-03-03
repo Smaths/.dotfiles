@@ -15,6 +15,27 @@ Behavior:
 - Uses `brew bundle install --file=brew/Brewfile`.
 - Runs optional interactive system defaults via `install/macos.zsh`.
 
+## Windows (Secondary, WSL-First)
+
+Windows bootstrap is available for optional winget package installs and WSL-first shell setup guidance.
+
+Prerequisites:
+
+- PowerShell 5.1+ or PowerShell 7+.
+- Symlink permissions (Developer Mode enabled, or elevated shell).
+- `winget` available for package automation from `install/winget-packages.txt`.
+
+Behavior:
+
+- `install/bootstrap-windows.ps1` validates Windows runtime.
+- Uses `install/winget-packages.txt` when `winget` is available.
+- Includes `Microsoft.WSL` and `Microsoft.WindowsTerminal` in the winget package set.
+- Validates winget package IDs before mutation.
+- Validates symlink capability only when `--link-windows-shell` is used.
+- Prints recommended WSL commands to install `zsh`, `tmux`, `ripgrep`, and `fzf`, then link shell files in WSL.
+- Skips Windows-host `~/.zshrc` and `~/.zprofile` links by default; enable with `--link-windows-shell`.
+- If `winget` is missing, package installation is skipped (non-destructive default).
+
 ## Linux (Secondary)
 
 Linux is not a first-class bootstrap target in this repo today.
