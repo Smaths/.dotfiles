@@ -11,7 +11,7 @@ set -euo pipefail
 # What this script does:
 # 1) Validates runtime prerequisites and platform
 # 2) Installs Homebrew if missing
-# 3) Installs packages/apps from brew/Brewfile
+# 3) Installs packages/apps from Brewfile
 # 4) Installs git via Homebrew when missing
 # 5) Safely links ~/.zshrc and ~/.zprofile to this repo
 # 6) Optionally runs install/macos.zsh for interactive macOS settings
@@ -24,7 +24,7 @@ set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-BREWFILE="$DOTFILES_DIR/brew/Brewfile"
+BREWFILE="$DOTFILES_DIR/install/Brewfile"
 ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
 GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"

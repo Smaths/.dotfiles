@@ -12,7 +12,7 @@ Prerequisites:
 Behavior:
 
 - `install/bootstrap.zsh` installs Homebrew if missing.
-- Uses `brew bundle install --file=brew/Brewfile`.
+- Uses `brew bundle install --file=install/Brewfile`.
 - Runs optional interactive system defaults via `install/macos.zsh`.
 
 ## Windows (Secondary, WSL-First)
@@ -48,7 +48,7 @@ Linux is not a first-class bootstrap target in this repo today.
 
 - Several aliases are legacy Linux-centric (pacman/yay/system commands).
 - Homebrew paths differ by architecture (`/opt/homebrew` vs `/usr/local`).
-- GUI app casks in `brew/Brewfile` are macOS-specific.
+- GUI app casks in `install/Brewfile` are macOS-specific.
 
 ## Future Expansion
 

@@ -10,7 +10,7 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/zsh/.zshrc` -> `~/.zshrc` (symlink)
 - `config/zsh/.zprofile` -> `~/.zprofile` (symlink)
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
-- `brew/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
+- `install/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
 
@@ -40,7 +40,7 @@ This preserves user state and enables safe reruns.
 
 - Managed by this repo:
   - symlink targets listed above
-  - package sets in `brew/Brewfile` and `install/winget-packages.txt`
+  - package sets in `install/Brewfile` and `install/winget-packages.txt`
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - arbitrary files in `$HOME` not explicitly linked

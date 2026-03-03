@@ -24,3 +24,4 @@ config/zsh/local.zsh
 # Codex local/runtime artifacts (keep project config tracked)
 .codex/*
 !.codex/config.toml
+AGENTS.md

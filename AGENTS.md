@@ -15,7 +15,7 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Install/bootstrap: `install/bootstrap.zsh`
 - Windows install/bootstrap: `install/bootstrap-windows.ps1`
 - Optional macOS tuning: `install/macos.zsh`
-- Package manifest: `brew/Brewfile`
+- Package manifest: `install/Brewfile`
 - Windows package manifest: `install/winget-packages.txt`
 - Shell entrypoint chain: `config/zsh/.zshrc` -> `config/zsh/*.zsh`
 
@@ -28,19 +28,19 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 
 ## Change Workflow
 
-1. Update manifest/config source of truth (`brew/Brewfile`, `install/winget-packages.txt`, `config/*`).
+1. Update manifest/config source of truth (`install/Brewfile`, `install/winget-packages.txt`, `config/*`).
 2. Update automation step scripts (`install/*.zsh`, `install/*.ps1`) if behavior changed.
 3. Update docs (`README.md`, `docs/*.md`, `CHANGELOG.md`).
 4. Run required checks:
    - `shellcheck install/*.zsh config/zsh/*.zsh`
    - `shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh`
-   - `brew bundle check --file ~/.dotfiles/brew/Brewfile`
+   - `brew bundle check --file ~/.dotfiles/install/Brewfile`
    - `winget search --id <ID> -e` for each `install/winget-packages.txt` entry
    - If available: `dot doctor`
 
 ## Pointers
 
-- Architecture: `docs/architecture.md`
+- Architecture: `docs/ARCHITECTURE.md`
 - Platforms/prereqs: `docs/platforms.md`
 - Operations: `docs/operations.md`
 - LLM operating notes: `docs/llm.md`

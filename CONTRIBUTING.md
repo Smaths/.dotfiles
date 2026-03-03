@@ -44,6 +44,6 @@ shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
 Behavior-changing PRs should update:
 
 - `README.md` (if user-facing behavior changes)
-- `docs/architecture.md` (if mapping/symlink strategy changes)
+- `docs/ARCHITECTURE.md` (if mapping/symlink strategy changes)
 - `docs/operations.md` (if install/update/recovery flows change)
 - `CHANGELOG.md` (`[Unreleased]`)
