@@ -37,14 +37,7 @@ alias work='cd $HOME/workspace'
 
 # Directory stack (fuzzy picker)
 alias d='fstack'
-
-# After running `d`, type `0`..`9` as the next command to jump to that entry.
-# Note: `0` is current directory, so it is effectively a no-op.
-for i in {0..9}; do
-  # PUSHD_MINUS is enabled in options.zsh, so use -N to match dirs -v indices.
-  eval "$i() { builtin cd '-$i' >/dev/null; }"
-done
-unset i
+# Use `d` to fuzzy-pick from `dirs -v`, or `d <index>` to jump directly (no max).
 
 # -----------------------------------------------------------------------------
 # Git

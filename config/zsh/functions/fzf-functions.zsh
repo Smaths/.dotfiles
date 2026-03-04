@@ -90,6 +90,13 @@ fview() {
 fstack() {
   local line idx
 
+  if [[ $# -gt 0 ]]; then
+    idx="$1"
+    [[ "$idx" == <-> ]] || { print -u2 "Usage: d [stack-index]"; return 2; }
+    builtin cd "-$idx" >/dev/null
+    return
+  fi
+
   __fzf_require_cmd fzf || return $?
 
   line="$(
