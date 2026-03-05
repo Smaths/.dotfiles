@@ -59,7 +59,7 @@ export FZF_DEFAULT_OPTS="
   --extended
   --cycle
   --info=inline
-  --preview-window=right:60%:wrap
+  --preview-window=down:60%:wrap
   --preview 'p=\$([ -e {} ] && realpath {} || printf \"%s\" \"{}\"); printf \"%s\n\n\" \"\$p\"; [ -f {} ] && (bat --style=numbers --color=always --line-range :160 {} 2>/dev/null || sed -n \"1,160p\" {})'
   --header-first
   --header 'enter: open | ctrl-y: copy path'
