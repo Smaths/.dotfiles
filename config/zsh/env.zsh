@@ -67,3 +67,12 @@ export FZF_DEFAULT_OPTS="
 
 # MCP servers
 export PATH="$HOME/.config/mcp/bin:$PATH"
+
+# 1Password SSH agent.
+# Export only when the agent socket exists so non-1Password environments degrade safely.
+_ONEPASSWORD_SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+if [[ -S "$_ONEPASSWORD_SSH_AUTH_SOCK" ]]; then
+  export SSH_AUTH_SOCK="$_ONEPASSWORD_SSH_AUTH_SOCK"
+fi
+unset _ONEPASSWORD_SSH_AUTH_SOCK
+

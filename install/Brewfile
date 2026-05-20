@@ -40,8 +40,9 @@ cask "synology-drive"
 cask "vlc"
 
 # Developer apps
+cask "docker-desktop"
 cask "datagrip"
-cask"font-jetbrains-mono-nerd-font"
+cask "font-jetbrains-mono-nerd-font"
 cask "github"
 cask "ghostty"
 cask "herd"
