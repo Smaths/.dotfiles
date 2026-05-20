@@ -84,6 +84,7 @@ Windows-only:
     `.git`, `node_modules`, `.cache`, `dist`, `build`, `.next`, `.turbo`,
     `coverage`, `target`).
   - 1Password SSH agent routing is configured in `config/zsh/env.zsh` via `SSH_AUTH_SOCK` when the socket exists; keep app-injected shell snippets in `config/zsh/local.zsh` instead of tracked entrypoints.
+  - Alias modules load from `config/zsh/aliases/*.zsh` in lexical order; keep project/machine-specific overrides in `config/zsh/local.zsh`.
 
 ## Features
 

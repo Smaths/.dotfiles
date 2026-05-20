@@ -221,3 +221,13 @@ if command -v gh >/dev/null 2>&1 && gh extension list 2>/dev/null | grep -q 'git
   alias 'git?'='copilot git'
   alias 'gh?'='copilot gh'
 fi
+
+# -----------------------------------------------------------------------------
+# Additional alias modules
+# -----------------------------------------------------------------------------
+# Keep core aliases in this file. Load optional/project modules from aliases/.
+_alias_modules_dir="${ZSH_CONFIG_DIR:-$HOME/.dotfiles/config/zsh}/aliases"
+for f in "$_alias_modules_dir"/*.zsh(N); do
+  [[ -r "$f" ]] && source "$f"
+done
+unset _alias_modules_dir
