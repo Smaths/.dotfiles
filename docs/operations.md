@@ -73,6 +73,11 @@ git pull --ff-only
 bash install/bootstrap-debian.sh --skip-packages
 ```
 
+Without `--skip-packages`, Debian bootstrap checks `install/apt-packages.txt`
+first and skips `apt-get update`/`apt-get install` when every manifest package
+is already installed. If packages are missing, it updates apt metadata and
+installs only the missing package names.
+
 Re-enable interactive defaults only when needed:
 
 ```zsh
@@ -116,6 +121,7 @@ Expected:
 - `winget list --id ... -e` resolves each configured package.
 - `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`.
 - Debian `~/.bashrc` links to `~/.dotfiles/config/bash/.bashrc`.
+- Debian package step reports skipped when all apt manifest packages are already installed.
 - Debian login shell is unchanged unless `--force-shell` was used.
 
 Smoke-test navigation helpers in an interactive shell:

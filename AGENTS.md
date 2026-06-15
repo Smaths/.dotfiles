@@ -2,40 +2,47 @@
 
 ## Goal
 
-Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstation setup.
+Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstation and Debian server setup.
 
 ## Supported Platforms
 
 - Primary: macOS 13+
 - Secondary: Windows bootstrap via PowerShell
-- Secondary: Linux config reuse only
+- Secondary: Debian server bootstrap via bash
+- Secondary: Other Linux config reuse only
 
 ## Canonical Entrypoints
 
 - Install/bootstrap: `install/bootstrap.zsh`
 - Windows install/bootstrap: `install/bootstrap-windows.ps1`
+- Debian install/bootstrap: `install/bootstrap-debian.sh`
 - Optional macOS tuning: `install/macos.zsh`
 - Package manifest: `install/Brewfile`
 - Windows package manifest: `install/winget-packages.txt`
+- Debian package manifest: `install/apt-packages.txt`
 - Shell entrypoint chain: `config/zsh/.zshrc` -> `config/zsh/*.zsh`
+- Debian bash entrypoint: `config/bash/.bashrc`
 
 ## Non-Negotiables
 
 - Idempotency first: reruns should converge and avoid duplicate state.
 - No destructive operations without explicit `--force` style opt-in.
 - Never commit secrets, tokens, keys, or credentials.
-- Do not expand network behavior beyond documented tools (`brew`, `winget`, `git`, `curl`) without explicit documentation updates.
+- Do not expand network behavior beyond documented tools (`brew`, `winget`, `apt-get`, `git`, `curl`) without explicit documentation updates.
 
 ## Change Workflow
 
-1. Update manifest/config source of truth (`install/Brewfile`, `install/winget-packages.txt`, `config/*`).
-2. Update automation step scripts (`install/*.zsh`, `install/*.ps1`) if behavior changed.
+1. Update manifest/config source of truth (`install/Brewfile`, `install/winget-packages.txt`, `install/apt-packages.txt`, `config/*`).
+2. Update automation step scripts (`install/*.zsh`, `install/*.ps1`, `install/*.sh`) if behavior changed.
 3. Update docs (`README.md`, `docs/*.md`, `CHANGELOG.md`).
 4. Run required checks:
    - `shellcheck install/*.zsh config/zsh/*.zsh`
+   - `shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc`
    - `shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh`
+   - `bash -n install/bootstrap-debian.sh config/bash/.bashrc`
    - `brew bundle check --file ~/.dotfiles/install/Brewfile`
    - `winget search --id <ID> -e` for each `install/winget-packages.txt` entry
+   - On Debian: `bash ~/.dotfiles/install/bootstrap-debian.sh --dry-run --skip-packages`
    - If available: `dot doctor`
 
 ## Pointers

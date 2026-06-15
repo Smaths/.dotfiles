@@ -21,6 +21,7 @@ preserve idempotency and avoid unexpected side effects.
 Allowed by default:
 
 - `brew` (package management)
+- `apt-get` (Debian package management)
 - `git` (source sync)
 - `curl` (bootstrap/downloads)
 
@@ -36,7 +37,9 @@ Suggested local checks:
 
 ```zsh
 shellcheck install/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
 shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+bash -n install/bootstrap-debian.sh config/bash/.bashrc
 ```
 
 ## Documentation Requirements

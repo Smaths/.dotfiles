@@ -11,10 +11,12 @@
 1. Manifest layer:
    - `install/Brewfile`
    - `install/winget-packages.txt`
+   - `install/apt-packages.txt`
    - tracked config files under `config/`
 2. Step scripts:
    - `install/bootstrap.zsh`
    - `install/bootstrap-windows.ps1`
+   - `install/bootstrap-debian.sh`
    - `install/macos.zsh`
 3. Documentation:
    - `README.md`
@@ -45,7 +47,9 @@ Run from repo root:
 
 ```zsh
 shellcheck install/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
 shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+bash -n install/bootstrap-debian.sh config/bash/.bashrc
 brew bundle check --file ~/.dotfiles/install/Brewfile
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
@@ -59,5 +63,6 @@ If a `dot doctor` command exists in the local environment, run that too.
 ## Off-Limits
 
 - Never commit secrets.
-- Do not assume Linux bootstrap support exists; `install/bootstrap.zsh` is macOS-only.
-- Do not silently expand network dependencies beyond documented tools (`brew`, `winget`, `git`, `curl`).
+- Do not assume generic Linux bootstrap support exists; Debian is the supported Linux server bootstrap target.
+- `install/bootstrap.zsh` is macOS-only; use `install/bootstrap-debian.sh` for Debian servers.
+- Do not silently expand network dependencies beyond documented tools (`brew`, `winget`, `apt-get`, `git`, `curl`).
