@@ -2,7 +2,7 @@
 
 ![Bootstrap Screenshot](docs/assets/screenshot_1.png)
 
-Personal dotfiles for reproducible shell and workstation setup, centered on macOS with a Windows bootstrap entrypoint.
+Personal dotfiles for reproducible shell and workstation setup, centered on macOS with secondary Windows and Debian server bootstrap entrypoints.
 
 ## Purpose
 
@@ -13,7 +13,8 @@ configs while preserving existing user files via timestamped backups.
 
 - **Primary**: macOS 13+ (Homebrew-based bootstrap).
 - **Secondary**: Windows (WSL-first) via `install/bootstrap-windows.ps1`.
-- **Unsupported**: Linux for config reuse only; no Linux bootstrap entrypoint.
+- **Secondary**: Debian server via `install/bootstrap-debian.sh`.
+- **Unsupported**: Other Linux distributions for config reuse only; no generic Linux bootstrap entrypoint.
 
 See [Platform Notes](docs/platforms.md) for details and prerequisites.
 
@@ -33,13 +34,20 @@ git clone <repo-url> $HOME/.dotfiles
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1
 ```
 
+Debian server:
+
+```bash
+git clone <repo-url> ~/.dotfiles
+bash ~/.dotfiles/install/bootstrap-debian.sh
+```
+
 > [!WARNING]
 > Review and understand the bootstrap scripts before execution. The dotfiles repo will modify shell configuration files and install packages. Ensure backups exist and you have rollback understanding (see [Rollback / Uninstall](#rollback--uninstall)).
 
 Linux:
 
-- No Linux bootstrap script currently.
-- Reuse config modules under `config/zsh/` manually.
+- Debian servers are supported through `install/bootstrap-debian.sh`.
+- Other Linux distributions can reuse config modules manually.
 
 ### Flags
 
@@ -54,6 +62,7 @@ macOS-only:
 
 ```zsh
 zsh --skip-macos
+zsh --upgrade-packages
 ```
 
 Windows-only:
@@ -61,6 +70,13 @@ Windows-only:
 ```powershell
 --skip-packages
 --link-windows-shell
+```
+
+Debian-only:
+
+```bash
+--skip-packages
+--force-shell
 ```
 
 ## Safe Defaults
@@ -71,6 +87,7 @@ Windows-only:
     timestamped backups (`.bak.YYYYmmddHHMMSS`).
 - macOS:
   - `install/macos.zsh` is interactive and opt-out via `--skip-macos`.
+  - Homebrew package upgrades require explicit `--upgrade-packages` opt-in.
   - macOS setup prompt modes:
     - use defaults (no per-setting prompts)
     - choose settings (set defaults, then proceed)
@@ -78,6 +95,10 @@ Windows-only:
 - Windows:
   - Validates `winget` package IDs before installation.
   - Checks symlink capability only when `--link-windows-shell` is requested.
+- Debian:
+  - Uses apt packages from `install/apt-packages.txt`.
+  - Links `~/.bashrc` to `config/bash/.bashrc` with timestamped backup behavior.
+  - Leaves the login shell unchanged unless `--force-shell` is passed.
 - Shell config:
   - `fzf` defaults are wired to `fd` (`FZF_DEFAULT_COMMAND`, `FZF_CTRL_T_COMMAND`)
     with hidden files included and shared excludes for heavy paths (for example:
@@ -104,6 +125,7 @@ Windows-only:
   - Zsh module chain via `config/zsh/.zshrc` -> `config/zsh/*.zsh`.
 - macOS:
   - Homebrew packages and casks from `install/Brewfile` (includes `fd`, `fzf`, and `ripgrep`).
+  - Bootstrap installs missing Brewfile entries without upgrading existing packages by default; pass `--upgrade-packages` to upgrade outdated entries.
   - Ghostty symlink:
     - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
   - Optional interactive system defaults in `install/macos.zsh`.
@@ -111,8 +133,11 @@ Windows-only:
   - Packages from `install/winget-packages.txt` via `winget` (when available).
   - WSL-first guidance output (installs/linking commands for WSL shell environment).
   - Windows-host zsh linking only when `--link-windows-shell` is passed.
-- Linux:
-  - No package/bootstrap automation managed today.
+- Debian:
+  - Packages from `install/apt-packages.txt` via `apt-get`.
+  - Bash symlink:
+    - `~/.bashrc` -> `~/.dotfiles/config/bash/.bashrc`
+  - Optional login shell update to bash via `--force-shell`.
 
 ## Rollback / Uninstall
 
@@ -138,19 +163,30 @@ Remove-Item $HOME\.zshrc,$HOME\.zprofile -Force -ErrorAction SilentlyContinue
 Remove-Item $HOME\.dotfiles -Recurse -Force
 ```
 
-Linux cleanup:
+Debian cleanup:
+
+```bash
+rm -f ~/.bashrc
+# Restore ~/.bashrc.bak.<timestamp> if needed.
+rm -rf ~/.dotfiles
+```
+
+Other Linux cleanup:
 
 - Remove any manual symlinks you created.
-- Remove repo clone.
+- Remove the repo clone.
 
 ## Entry Points
 
 - macOS bootstrap: `install/bootstrap.zsh`
 - Windows bootstrap: `install/bootstrap-windows.ps1`
+- Debian bootstrap: `install/bootstrap-debian.sh`
 - macOS tuning (optional): `install/macos.zsh`
 - macOS package manifest: `install/Brewfile`
 - Windows package manifest: `install/winget-packages.txt`
+- Debian package manifest: `install/apt-packages.txt`
 - Shell entrypoint chain: `config/zsh/.zshrc` -> `config/zsh/*.zsh`
+- Debian bash entrypoint: `config/bash/.bashrc`
 
 ## Validation Commands
 
@@ -158,8 +194,16 @@ Run after changing install/config behavior:
 
 ```zsh
 shellcheck install/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
 shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+bash -n install/bootstrap-debian.sh config/bash/.bashrc
 brew bundle check --file ~/.dotfiles/install/Brewfile
+```
+
+Debian dry-run check:
+
+```bash
+bash ~/.dotfiles/install/bootstrap-debian.sh --dry-run --skip-packages
 ```
 
 Windows package manifest check:
@@ -178,7 +222,7 @@ If available:
 
 - Scripts should not delete user files by default.
 - No secret material (tokens/keys/passwords) should be committed.
-- Network installs are limited to explicit bootstrap dependencies (`brew`, `winget`, `git`, `curl`).
+- Network installs are limited to explicit bootstrap dependencies (`brew`, `winget`, `apt-get`, `git`, `curl`).
 
 See:
 

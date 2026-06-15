@@ -1,0 +1,17 @@
+# Debian server packages managed by install/bootstrap-debian.sh.
+# Keep this list CLI-only and broadly available in Debian stable.
+
+bash
+bat
+ca-certificates
+curl
+fd-find
+fzf
+git
+iproute2
+iputils-ping
+less
+neovim
+ripgrep
+sudo
+tmux

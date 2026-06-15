@@ -9,12 +9,17 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 
 - `config/zsh/.zshrc` -> `~/.zshrc` (symlink)
 - `config/zsh/.zprofile` -> `~/.zprofile` (symlink)
+- `config/bash/.bashrc` -> `~/.bashrc` (symlink on Debian)
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `install/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
+- `install/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install`.
 - Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
 
 Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
+
+`config/bash/.bashrc` is intentionally standalone for Debian servers. It mirrors
+only portable shell defaults and small aliases instead of sourcing zsh modules.
 
 ## Zsh Module Boundaries
 
@@ -36,11 +41,15 @@ Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
 
 This preserves user state and enables safe reruns.
 
+`install/bootstrap-debian.sh` uses the same backup-before-symlink strategy for
+`~/.bashrc`.
+
 ## Ownership and Scope
 
 - Managed by this repo:
   - symlink targets listed above
   - package sets in `install/Brewfile` and `install/winget-packages.txt`
+  - Debian package set in `install/apt-packages.txt`
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - arbitrary files in `$HOME` not explicitly linked
@@ -54,6 +63,7 @@ This preserves user state and enables safe reruns.
 
 ## Invariants
 
-- Bootstrap entrypoints are platform-specific (`install/bootstrap.zsh` for macOS, `install/bootstrap-windows.ps1` for Windows).
+- Bootstrap entrypoints are platform-specific (`install/bootstrap.zsh` for macOS, `install/bootstrap-windows.ps1` for Windows, `install/bootstrap-debian.sh` for Debian).
 - Required package manifest and symlink targets must exist before mutation.
 - `install/macos.zsh` is interactive and optional via `--skip-macos`.
+- Debian login shell changes require explicit `--force-shell`.
