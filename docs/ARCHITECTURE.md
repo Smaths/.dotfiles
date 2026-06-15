@@ -13,7 +13,7 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `install/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
-- `install/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install`.
+- `install/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
 - Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
 
 Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
@@ -53,7 +53,7 @@ This preserves user state and enables safe reruns.
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - arbitrary files in `$HOME` not explicitly linked
-  - package managers outside `brew` and `winget`
+  - package managers outside `brew`, `winget`, and `apt-get`
 
 ## Idempotency Goals
 
@@ -66,4 +66,5 @@ This preserves user state and enables safe reruns.
 - Bootstrap entrypoints are platform-specific (`install/bootstrap.zsh` for macOS, `install/bootstrap-windows.ps1` for Windows, `install/bootstrap-debian.sh` for Debian).
 - Required package manifest and symlink targets must exist before mutation.
 - `install/macos.zsh` is interactive and optional via `--skip-macos`.
+- Debian package installation skips `apt-get update` and `apt-get install` when the apt manifest is already satisfied.
 - Debian login shell changes require explicit `--force-shell`.

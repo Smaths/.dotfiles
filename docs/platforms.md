@@ -52,7 +52,8 @@ Prerequisites:
 Behavior:
 
 - `install/bootstrap-debian.sh` validates the platform before mutation.
-- Installs packages from `install/apt-packages.txt` unless `--skip-packages` is passed.
+- Installs missing packages from `install/apt-packages.txt` unless `--skip-packages` is passed.
+- Skips `apt-get update` and `apt-get install` when all manifest packages are already installed.
 - Links `~/.bashrc` to `config/bash/.bashrc` after backing up an existing file.
 - Keeps the current login shell unchanged unless `--force-shell` is passed.
 - Does not install GUI packages or apply desktop settings.
