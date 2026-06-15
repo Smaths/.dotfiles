@@ -14,13 +14,23 @@ git clone <repo-url> $HOME/.dotfiles
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1
 ```
 
+Debian server:
+
+```bash
+git clone <repo-url> ~/.dotfiles
+bash ~/.dotfiles/install/bootstrap-debian.sh
+```
+
 Useful flags:
 
 - `--dry-run`: print intended actions without mutating.
 - `--verbose`: show extra command detail.
 - `--skip-macos`: skip interactive defaults prompts.
+- `--upgrade-packages` (macOS only): upgrade outdated Brewfile entries during bootstrap.
 - `--skip-packages` (Windows only): skip `winget` installs.
 - `--link-windows-shell` (Windows only): also link Windows `~/.zshrc` and `~/.zprofile` (default is WSL-first skip).
+- `--skip-packages` (Debian only): skip `apt-get` installs.
+- `--force-shell` (Debian only): change the current user's login shell to bash.
 
 During `install/macos.zsh`, choose one startup mode before the setting prompts:
 
@@ -36,12 +46,31 @@ git pull --ff-only
 zsh install/bootstrap.zsh --skip-macos
 ```
 
+The macOS bootstrap checks the Brewfile first and skips `brew bundle install`
+when all entries are already present. When installation is needed, it uses
+`brew bundle install --no-upgrade --jobs=auto` so reruns install missing entries
+without turning every bootstrap into a full Homebrew upgrade pass.
+
+To intentionally upgrade outdated Homebrew packages and casks during bootstrap:
+
+```zsh
+zsh install/bootstrap.zsh --skip-macos --upgrade-packages
+```
+
 Windows update flow:
 
 ```powershell
 Set-Location $HOME/.dotfiles
 git pull --ff-only
 powershell -ExecutionPolicy Bypass -File install/bootstrap-windows.ps1 --skip-packages
+```
+
+Debian update flow:
+
+```bash
+cd ~/.dotfiles
+git pull --ff-only
+bash install/bootstrap-debian.sh --skip-packages
 ```
 
 Re-enable interactive defaults only when needed:
@@ -72,12 +101,22 @@ Get-Content $HOME/.dotfiles/install/winget-packages.txt | Where-Object { $_ -and
 wsl -l -q
 ```
 
+Debian equivalents:
+
+```bash
+test -L ~/.bashrc && readlink ~/.bashrc
+bash -n ~/.dotfiles/config/bash/.bashrc
+bash ~/.dotfiles/install/bootstrap-debian.sh --dry-run --skip-packages
+```
+
 Expected:
 
 - WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes the WSL shell/tmux setup commands.
 - Windows `~/.zshrc` and `~/.zprofile` are linked only if `--link-windows-shell` was used.
 - `winget list --id ... -e` resolves each configured package.
 - `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`.
+- Debian `~/.bashrc` links to `~/.dotfiles/config/bash/.bashrc`.
+- Debian login shell is unchanged unless `--force-shell` was used.
 
 Smoke-test navigation helpers in an interactive shell:
 
@@ -95,6 +134,7 @@ Bootstrap automatically creates timestamped backups before relinking:
 - `~/.zshrc.bak.<timestamp>`
 - `~/.zprofile.bak.<timestamp>`
 - `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>` (macOS bootstrap only, if replaced)
+- `~/.bashrc.bak.<timestamp>` (Debian bootstrap only, if replaced)
 
 You can additionally snapshot the repo:
 
@@ -115,4 +155,12 @@ Example:
 rm -f ~/.zshrc
 mv ~/.zshrc.bak.20260224010101 ~/.zshrc
 exec zsh
+```
+
+Debian bash example:
+
+```bash
+rm -f ~/.bashrc
+mv ~/.bashrc.bak.20260224010101 ~/.bashrc
+exec bash
 ```

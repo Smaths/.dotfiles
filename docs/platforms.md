@@ -12,7 +12,8 @@ Prerequisites:
 Behavior:
 
 - `install/bootstrap.zsh` installs Homebrew if missing.
-- Uses `brew bundle install --file=install/Brewfile`.
+- Installs missing entries from `install/Brewfile` without upgrading existing packages by default.
+- Pass `--upgrade-packages` to intentionally upgrade outdated Brewfile entries during bootstrap.
 - Runs optional interactive system defaults via `install/macos.zsh`.
 
 ## Windows (Secondary, WSL-First)
@@ -36,21 +37,43 @@ Behavior:
 - Skips Windows-host `~/.zshrc` and `~/.zprofile` links by default; enable with `--link-windows-shell`.
 - If `winget` is missing, package installation is skipped (non-destructive default).
 
-## Linux (Secondary)
+## Debian Server (Secondary)
 
-Linux is not a first-class bootstrap target in this repo today.
+Debian server bootstrap is available for bash-first, CLI-only server setup.
+
+Supported target: Debian stable or Debian-like systems with `apt-get`.
+
+Prerequisites:
+
+- `bash`, `apt-get`, and core GNU userland.
+- Root access for package installation, either directly or through `sudo`.
+- Internet access for apt repositories when package installation is enabled.
+
+Behavior:
+
+- `install/bootstrap-debian.sh` validates the platform before mutation.
+- Installs packages from `install/apt-packages.txt` unless `--skip-packages` is passed.
+- Links `~/.bashrc` to `config/bash/.bashrc` after backing up an existing file.
+- Keeps the current login shell unchanged unless `--force-shell` is passed.
+- Does not install GUI packages or apply desktop settings.
+
+## Other Linux (Config Reuse Only)
+
+Other Linux distributions are not first-class bootstrap targets in this repo today.
 
 - `install/bootstrap.zsh` exits on non-Darwin systems.
-- You can still reuse parts of `config/zsh/` manually.
-- Package and desktop automation are not implemented for Linux here.
+- `install/bootstrap-debian.sh` is intended for Debian and Debian-like systems only.
+- You can still reuse parts of `config/zsh/` or `config/bash/` manually.
+- Generic package and desktop automation are not implemented for Linux here.
 
 ## Cross-Platform Caveats
 
-- Several aliases are legacy Linux-centric (pacman/yay/system commands).
+- Zsh aliases include legacy Linux-centric helpers (pacman/yay/system commands).
+- Debian bash config intentionally keeps aliases server-safe and minimal.
 - Homebrew paths differ by architecture (`/opt/homebrew` vs `/usr/local`).
 - GUI app casks in `install/Brewfile` are macOS-specific.
 
 ## Future Expansion
 
-If Linux bootstrap is added, keep it in a separate explicit entrypoint
-(`install/bootstrap-linux.sh`) rather than weakening current macOS guarantees.
+If support expands beyond Debian, keep each platform in a separate explicit
+entrypoint rather than weakening current macOS guarantees.

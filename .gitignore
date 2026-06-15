@@ -1,5 +1,6 @@
 # OS metadata
 .DS_Store
+Icon?
 
 # Editor/IDE
 .vscode/
@@ -14,6 +15,9 @@
 
 # Local-only zsh overrides (template is tracked)
 config/zsh/local.zsh
+
+# Local-only bash overrides (template is tracked)
+config/bash/local.bash
 
 # Zsh runtime artifacts (if generated in repo)
 .zcompdump*

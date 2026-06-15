@@ -32,9 +32,11 @@ GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
 DRY_RUN=0
 SKIP_MACOS=0
 INSTALL_GIT=0
+UPGRADE_PACKAGES=0
 VERBOSE=0
 BREW_BIN=""
-TOTAL_STEPS=5
+BREWFILE_PACKAGE_COUNT=0
+TOTAL_STEPS=6
 CURRENT_STEP=0
 CURRENT_STEP_LABEL=""
 OK_COUNT=0
@@ -51,11 +53,12 @@ usage() {
 Usage: bootstrap.zsh [options]
 
 Options:
-  --dry-run         Print actions without changing anything
-  --verbose         Show more command details
-  --skip-macos      Skip install/macos.zsh execution
-  --skip-macros     Alias of --skip-macos
-  -h, --help        Show this help
+  --dry-run            Print actions without changing anything
+  --verbose            Show more command details
+  --skip-macos         Skip install/macos.zsh execution
+  --skip-macros        Alias of --skip-macos
+  --upgrade-packages   Upgrade outdated Brewfile packages during bootstrap
+  -h, --help           Show this help
 EOF
 }
 
@@ -81,6 +84,7 @@ for arg in "$@"; do
     --dry-run) DRY_RUN=1 ;;
     --verbose) VERBOSE=1 ;;
     --skip-macos|--skip-macros) SKIP_MACOS=1 ;;
+    --upgrade-packages) UPGRADE_PACKAGES=1 ;;
     -h|--help)
       usage
       exit 0
@@ -265,6 +269,14 @@ resolve_brew_bin() {
   return 1
 }
 
+count_brewfile_packages() {
+  # Count active Brewfile dependency declarations for progress output.
+  awk '
+    /^[[:space:]]*(brew|cask|tap|mas|vscode|go|cargo|uv|npm)[[:space:]]/ { count++ }
+    END { print count + 0 }
+  ' "$BREWFILE"
+}
+
 require_cmd() {
   # Hard fail with a contextual message when a required command is missing.
   local cmd="$1"
@@ -294,23 +306,35 @@ fi
 require_cmd uname "Install core system tools and retry."
 require_cmd curl "curl is expected to be present on macOS. If it's missing, your PATH/environment is broken or the OS install is atypical. Fix PATH or reinstall base system tools and retry."
 
-# Install Homebrew if absent.
 step_start "Resolve Homebrew"
-if ! BREW_BIN="$(resolve_brew_bin)"; then
-  if (( VERBOSE )); then
-    echo "  Homebrew not found, installing..."
-  fi
+if BREW_BIN="$(resolve_brew_bin)"; then
+  step_ok "$BREW_BIN"
+else
+  step_skip "not installed"
+fi
+
+# Install Homebrew if absent.
+step_start "Install Homebrew"
+if [[ -z "$BREW_BIN" ]]; then
   if (( DRY_RUN )); then
-    echo "[dry-run] /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+    echo "[dry-run] /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'"
   else
     run_with_peek \
       "Installing Homebrew" \
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'
   fi
-  BREW_BIN="$(resolve_brew_bin)"
+  if ! BREW_BIN="$(resolve_brew_bin)"; then
+    if (( DRY_RUN )); then
+      BREW_BIN="<homebrew path after install>"
+    else
+      echo "ERROR: Homebrew installer completed but brew could not be resolved." >&2
+      exit 1
+    fi
+  fi
+  step_ok "$BREW_BIN"
+else
+  step_skip "already installed"
 fi
-
-step_ok "$BREW_BIN"
 
 # Load brew into this shell so subsequent brew commands work immediately.
 if [[ -n "$BREW_BIN" ]]; then
@@ -341,14 +365,41 @@ if [[ ! -f "$ZPROFILE_TARGET" ]]; then
   exit 1
 fi
 
-step_start "Install Brewfile packages"
-run_with_peek "Installing Brewfile packages" brew bundle install --file="$BREWFILE"
-
-# Install git only when missing to keep reruns minimal.
-if (( INSTALL_GIT )); then
-  run_with_peek "Installing git" brew install git
+BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages)"
+step_start "Install Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
+BREWFILE_READY=0
+if (( UPGRADE_PACKAGES )); then
+  if brew bundle check --file="$BREWFILE" >/dev/null 2>&1; then
+    BREWFILE_READY=1
+  fi
+else
+  if env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file="$BREWFILE" >/dev/null 2>&1; then
+    BREWFILE_READY=1
+  fi
 fi
-step_ok "brew bundle complete"
+
+if (( BREWFILE_READY && ! INSTALL_GIT )); then
+  if (( UPGRADE_PACKAGES )); then
+    step_skip "already installed/up to date"
+  else
+    step_skip "already installed"
+  fi
+else
+  if (( ! BREWFILE_READY )); then
+    if (( UPGRADE_PACKAGES )); then
+      run_with_peek "Installing/upgrading Brewfile packages" brew bundle install --file="$BREWFILE" --jobs=auto
+    else
+      run_with_peek "Installing Brewfile packages" brew bundle install --file="$BREWFILE" --no-upgrade --jobs=auto
+    fi
+  fi
+
+  # Install git only when missing to keep reruns minimal.
+  if (( INSTALL_GIT )); then
+    run_with_peek "Installing git" brew install git
+  fi
+
+  step_ok "brew bundle complete"
+fi
 
 # Symlink helper:
 # - If the link already points to the right target, do nothing.
@@ -453,3 +504,5 @@ echo "│ ${summary_line} │"
 echo "└${summary_border}┘"
 echo "Optional local overrides:"
 echo "  cp ~/.dotfiles/config/zsh/local.example.zsh ~/.dotfiles/config/zsh/local.zsh"
+echo "  Example: add aliases, PATH entries, or machine-specific env vars to local.zsh"
+echo "           alias work='cd ~/code/work'"

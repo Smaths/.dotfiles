@@ -29,6 +29,7 @@ alias dev='cd $HOME/Developer'
 alias doc='cd $HOME/Documents'
 alias dow='cd $HOME/Downloads'
 alias dotfiles='cd $HOME/.dotfiles'
+
 alias config='cd $HOME/.config'
 if [[ "$OSTYPE" == darwin* ]]; then
   alias icloud='cd $HOME/Library/Mobile\ Documents/'
@@ -231,3 +232,9 @@ for f in "$_alias_modules_dir"/*.zsh(N); do
   [[ -r "$f" ]] && source "$f"
 done
 unset _alias_modules_dir
+
+# -----------------------------------------------------------------------------
+# .dotfiles helpers
+# -----------------------------------------------------------------------------
+# Quicker helper for keeping shell .config up-to-date with .dotfiles
+alias 'dot-shell-update'='zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos'
