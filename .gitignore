@@ -25,7 +25,6 @@ config/bash/local.bash
 .zsh_history
 .zsh-plugins/
 
-# Codex local/runtime artifacts (keep project config tracked)
+# Codex local/runtime artifacts
 .codex/*
-!.codex/config.toml
 AGENTS.md
