@@ -14,7 +14,7 @@ set -euo pipefail
 # 3) Installs packages/apps from Brewfile
 # 4) Installs git via Homebrew when missing
 # 5) Safely links ~/.zshrc and ~/.zprofile to this repo
-# 6) Optionally runs install/platforms/macos.zsh for interactive macOS settings
+# 6) Optionally runs install/platforms/macos/settings.zsh for interactive macOS settings
 #
 # Safety behavior:
 # - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
@@ -23,8 +23,9 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+SCRIPT_DIR="${0:A:h}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-BREWFILE="$DOTFILES_DIR/install/Brewfile"
+BREWFILE="$SCRIPT_DIR/Brewfile"
 ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
 GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
@@ -44,12 +45,12 @@ typeset -a TMP_LOG_FILES=()
 
 usage() {
   cat <<'EOF'
-Usage: bootstrap-macos.zsh [options]
+Usage: bootstrap.zsh [options]
 
 Options:
   --dry-run            Print actions without changing anything
   --verbose            Show more command details
-  --skip-macos         Skip install/platforms/macos.zsh execution
+  --skip-macos         Skip install/platforms/macos/settings.zsh execution
   --skip-macros        Alias of --skip-macos
   --upgrade-packages   Upgrade outdated Brewfile packages during bootstrap
   -h, --help           Show this help
@@ -402,7 +403,7 @@ fi
 
 # Run interactive macOS settings unless explicitly skipped.
 ui_step_start "Apply macOS settings"
-MACOS_SCRIPT="$DOTFILES_DIR/install/platforms/macos.zsh"
+MACOS_SCRIPT="$SCRIPT_DIR/settings.zsh"
 MACOS_SETUP_SKIPPED_EXIT=20
 if (( SKIP_MACOS )); then
   ui_step_skip "skipped (--skip-macos)"

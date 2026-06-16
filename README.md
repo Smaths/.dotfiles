@@ -46,7 +46,7 @@ sh ~/.dotfiles/install/bootstrap.sh
 
 Linux:
 
-- Debian servers are supported through `install/bootstrap.sh`, which dispatches to `install/platforms/bootstrap-debian.sh`.
+- Debian servers are supported through `install/bootstrap.sh`, which dispatches to `install/platforms/debian/bootstrap.sh`.
 - Other Linux distributions can reuse config modules manually.
 
 ### Flags
@@ -86,7 +86,7 @@ Debian-only:
   - Before relinking `~/.zshrc` or `~/.zprofile`, existing files are moved to
     timestamped backups (`.bak.YYYYmmddHHMMSS`).
 - macOS:
-  - `install/platforms/macos.zsh` is interactive and opt-out via `--skip-macos`.
+  - `install/platforms/macos/settings.zsh` is interactive and opt-out via `--skip-macos`.
   - Homebrew package upgrades require explicit `--upgrade-packages` opt-in.
   - macOS setup prompt modes:
     - use defaults (no per-setting prompts)
@@ -96,7 +96,7 @@ Debian-only:
   - Validates `winget` package IDs before installation.
   - Checks symlink capability only when `--link-windows-shell` is requested.
 - Debian:
-  - Uses apt packages from `install/apt-packages.txt`.
+  - Uses apt packages from `install/platforms/debian/apt-packages.txt`.
   - Links `~/.bashrc` to `config/bash/.bashrc` with timestamped backup behavior.
   - Leaves the login shell unchanged unless `--force-shell` is passed.
 - Shell config:
@@ -124,17 +124,17 @@ Debian-only:
     - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
   - Zsh module chain via `config/zsh/.zshrc` -> `config/zsh/*.zsh`.
 - macOS:
-  - Homebrew packages and casks from `install/Brewfile` (includes `fd`, `fzf`, and `ripgrep`).
+  - Homebrew packages and casks from `install/platforms/macos/Brewfile` (includes `fd`, `fzf`, and `ripgrep`).
   - Bootstrap installs missing Brewfile entries without upgrading existing packages by default; pass `--upgrade-packages` to upgrade outdated entries.
   - Ghostty symlink:
     - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
-  - Optional interactive system defaults in `install/platforms/macos.zsh`.
+  - Optional interactive system defaults in `install/platforms/macos/settings.zsh`.
 - Windows:
-  - Packages from `install/winget-packages.txt` via `winget` (when available).
+  - Packages from `install/platforms/windows/winget-packages.txt` via `winget` (when available).
   - WSL-first guidance output (installs/linking commands for WSL shell environment).
   - Windows-host zsh linking only when `--link-windows-shell` is passed.
 - Debian:
-  - Packages from `install/apt-packages.txt` via `apt-get`.
+  - Packages from `install/platforms/debian/apt-packages.txt` via `apt-get`.
   - Bash symlink:
     - `~/.bashrc` -> `~/.dotfiles/config/bash/.bashrc`
   - Optional login shell update to bash via `--force-shell`.
@@ -151,7 +151,7 @@ macOS cleanup commands:
 ```zsh
 rm -f ~/.zshrc ~/.zprofile
 rm -f ${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config
-brew bundle cleanup --file ~/.dotfiles/install/Brewfile --force
+brew bundle cleanup --file ~/.dotfiles/install/platforms/macos/Brewfile --force
 rm -rf ~/.dotfiles
 ```
 
@@ -180,14 +180,14 @@ Other Linux cleanup:
 
 - Unix bootstrap wrapper: `install/bootstrap.sh`
 - Windows bootstrap wrapper: `install/bootstrap.ps1`
-- macOS bootstrap: `install/platforms/bootstrap-macos.zsh`
-- Windows bootstrap: `install/platforms/bootstrap-windows.ps1`
-- Debian bootstrap: `install/platforms/bootstrap-debian.sh`
-- macOS tuning (optional): `install/platforms/macos.zsh`
+- macOS bootstrap: `install/platforms/macos/bootstrap.zsh`
+- Windows bootstrap: `install/platforms/windows/bootstrap.ps1`
+- Debian bootstrap: `install/platforms/debian/bootstrap.sh`
+- macOS settings (optional): `install/platforms/macos/settings.zsh`
 - Shared Unix bootstrap UI: `install/lib/ui.sh`
-- macOS package manifest: `install/Brewfile`
-- Windows package manifest: `install/winget-packages.txt`
-- Debian package manifest: `install/apt-packages.txt`
+- macOS package manifest: `install/platforms/macos/Brewfile`
+- Windows package manifest: `install/platforms/windows/winget-packages.txt`
+- Debian package manifest: `install/platforms/debian/apt-packages.txt`
 - Shell entrypoint chain: `config/zsh/.zshrc` -> `config/zsh/*.zsh`
 - Debian bash entrypoint: `config/bash/.bashrc`
 
@@ -196,12 +196,12 @@ Other Linux cleanup:
 Run after changing install/config behavior:
 
 ```zsh
-shellcheck install/*.sh install/lib/*.sh install/platforms/*.sh install/platforms/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/platforms/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh install/lib/*.sh install/platforms/*/*.sh install/platforms/*/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
+shfmt -w -i 2 -ci install/platforms/*/*.zsh config/zsh/*.zsh
 sh -n install/bootstrap.sh
 sh -n install/lib/ui.sh
-bash -n install/platforms/bootstrap-debian.sh config/bash/.bashrc
-brew bundle check --file ~/.dotfiles/install/Brewfile
+bash -n install/platforms/debian/bootstrap.sh config/bash/.bashrc
+brew bundle check --file ~/.dotfiles/install/platforms/macos/Brewfile
 ```
 
 Debian dry-run check:
@@ -213,7 +213,7 @@ sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 Windows package manifest check:
 
 ```powershell
-Get-Content $HOME/.dotfiles/install/winget-packages.txt | `
+Get-Content $HOME/.dotfiles/install/platforms/windows/winget-packages.txt | `
   Where-Object { $_ -and -not $_.StartsWith('#') } | `
   ForEach-Object { winget search --id $_ -e }
 ```
@@ -232,6 +232,6 @@ See:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Platform Notes](docs/platforms.md)
-- [Operations](docs/operations.md)
+- [Operations](docs/OPERATIONS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)

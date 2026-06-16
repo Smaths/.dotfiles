@@ -1,4 +1,4 @@
-# Windows package IDs for install/platforms/bootstrap-windows.ps1
+# Windows package IDs for install/platforms/windows/bootstrap.ps1
 # Verified with `winget search --id <ID> -e` on 2026-03-01.
 
 Microsoft.WSL

@@ -32,7 +32,7 @@ Useful flags:
 - `--skip-packages` (Debian only): skip `apt-get` installs.
 - `--force-shell` (Debian only): change the current user's login shell to bash.
 
-During `install/platforms/macos.zsh`, choose one startup mode before the setting prompts:
+During `install/platforms/macos/settings.zsh`, choose one startup mode before the setting prompts:
 
 - `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
 - `2) Choose settings`: set defaults for each setting, then proceed.
@@ -73,7 +73,7 @@ git pull --ff-only
 sh install/bootstrap.sh --skip-packages
 ```
 
-Without `--skip-packages`, Debian bootstrap checks `install/apt-packages.txt`
+Without `--skip-packages`, Debian bootstrap checks `install/platforms/debian/apt-packages.txt`
 first and skips `apt-get update`/`apt-get install` when every manifest package
 is already installed. If packages are missing, it updates apt metadata and
 installs only the missing package names.
@@ -91,7 +91,7 @@ Manual checks:
 ```zsh
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
-brew bundle check --file ~/.dotfiles/install/Brewfile
+brew bundle check --file ~/.dotfiles/install/platforms/macos/Brewfile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
 zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
@@ -102,7 +102,7 @@ Windows equivalents:
 ```powershell
 Get-Item $HOME/.zshrc | Select-Object FullName, LinkType, Target
 Get-Item $HOME/.zprofile | Select-Object FullName, LinkType, Target
-Get-Content $HOME/.dotfiles/install/winget-packages.txt | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { winget list --id $_ -e --accept-source-agreements }
+Get-Content $HOME/.dotfiles/install/platforms/windows/winget-packages.txt | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { winget list --id $_ -e --accept-source-agreements }
 wsl -l -q
 ```
 

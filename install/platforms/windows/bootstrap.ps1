@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 # What this script does:
 # 1) Validates runtime platform
 # 2) Resolves winget
-# 3) Optionally installs packages from install/winget-packages.txt
+# 3) Optionally installs packages from install/platforms/windows/winget-packages.txt
 # 4) Prints WSL-first shell guidance (including tmux install)
 # 5) Optionally links Windows ~/.zshrc and ~/.zprofile to this repo
 #
@@ -24,7 +24,8 @@ $ErrorActionPreference = "Stop"
 # -----------------------------------------------------------------------------
 
 $DotfilesDir = if ($env:DOTFILES_DIR) { $env:DOTFILES_DIR } else { Join-Path $HOME ".dotfiles" }
-$WingetManifest = Join-Path $DotfilesDir "install/winget-packages.txt"
+$ScriptDir = Split-Path -Parent $PSCommandPath
+$WingetManifest = Join-Path $ScriptDir "winget-packages.txt"
 $ZshrcTarget = Join-Path $DotfilesDir "config/zsh/.zshrc"
 $ZprofileTarget = Join-Path $DotfilesDir "config/zsh/.zprofile"
 $HomePath = [Environment]::GetFolderPath("UserProfile")

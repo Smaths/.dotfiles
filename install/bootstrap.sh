@@ -8,15 +8,15 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 case "$(uname -s)" in
   Darwin)
-    exec zsh "$script_dir/platforms/bootstrap-macos.zsh" "$@"
+    exec zsh "$script_dir/platforms/macos/bootstrap.zsh" "$@"
     ;;
   Linux)
     if [ -r /etc/os-release ] && grep -Eqi '^(ID|ID_LIKE)=.*debian' /etc/os-release; then
-      exec bash "$script_dir/platforms/bootstrap-debian.sh" "$@"
+      exec bash "$script_dir/platforms/debian/bootstrap.sh" "$@"
     fi
 
     if [ -r /etc/debian_version ]; then
-      exec bash "$script_dir/platforms/bootstrap-debian.sh" "$@"
+      exec bash "$script_dir/platforms/debian/bootstrap.sh" "$@"
     fi
 
     echo "ERROR: Unsupported Linux distribution. Debian-like systems are supported." >&2

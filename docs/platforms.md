@@ -11,10 +11,10 @@ Prerequisites:
 
 Behavior:
 
-- `install/bootstrap.sh` dispatches to `install/platforms/bootstrap-macos.zsh`, which installs Homebrew if missing.
-- Installs missing entries from `install/Brewfile` without upgrading existing packages by default.
+- `install/bootstrap.sh` dispatches to `install/platforms/macos/bootstrap.zsh`, which installs Homebrew if missing.
+- Installs missing entries from `install/platforms/macos/Brewfile` without upgrading existing packages by default.
 - Pass `--upgrade-packages` to intentionally upgrade outdated Brewfile entries during bootstrap.
-- Runs optional interactive system defaults via `install/platforms/macos.zsh`.
+- Runs optional interactive system defaults via `install/platforms/macos/settings.zsh`.
 
 ## Windows (Secondary, WSL-First)
 
@@ -24,12 +24,12 @@ Prerequisites:
 
 - PowerShell 5.1+ or PowerShell 7+.
 - Symlink permissions (Developer Mode enabled, or elevated shell).
-- `winget` available for package automation from `install/winget-packages.txt`.
+- `winget` available for package automation from `install/platforms/windows/winget-packages.txt`.
 
 Behavior:
 
-- `install/bootstrap.ps1` dispatches to `install/platforms/bootstrap-windows.ps1`, which validates Windows runtime.
-- Uses `install/winget-packages.txt` when `winget` is available.
+- `install/bootstrap.ps1` dispatches to `install/platforms/windows/bootstrap.ps1`, which validates Windows runtime.
+- Uses `install/platforms/windows/winget-packages.txt` when `winget` is available.
 - Includes `Microsoft.WSL` and `Microsoft.WindowsTerminal` in the winget package set.
 - Validates winget package IDs before mutation.
 - Validates symlink capability only when `--link-windows-shell` is used.
@@ -51,8 +51,8 @@ Prerequisites:
 
 Behavior:
 
-- `install/bootstrap.sh` dispatches to `install/platforms/bootstrap-debian.sh`, which validates the platform before mutation.
-- Installs missing packages from `install/apt-packages.txt` unless `--skip-packages` is passed.
+- `install/bootstrap.sh` dispatches to `install/platforms/debian/bootstrap.sh`, which validates the platform before mutation.
+- Installs missing packages from `install/platforms/debian/apt-packages.txt` unless `--skip-packages` is passed.
 - Skips `apt-get update` and `apt-get install` when all manifest packages are already installed.
 - Links `~/.bashrc` to `config/bash/.bashrc` after backing up an existing file.
 - Keeps the current login shell unchanged unless `--force-shell` is passed.
@@ -63,7 +63,7 @@ Behavior:
 Other Linux distributions are not first-class bootstrap targets in this repo today.
 
 - `install/bootstrap.sh` exits on unsupported Linux distributions.
-- `install/platforms/bootstrap-debian.sh` is intended for Debian and Debian-like systems only.
+- `install/platforms/debian/bootstrap.sh` is intended for Debian and Debian-like systems only.
 - You can still reuse parts of `config/zsh/` or `config/bash/` manually.
 - Generic package and desktop automation are not implemented for Linux here.
 
@@ -72,7 +72,7 @@ Other Linux distributions are not first-class bootstrap targets in this repo tod
 - Zsh aliases include legacy Linux-centric helpers (pacman/yay/system commands).
 - Debian bash config intentionally keeps aliases server-safe and minimal.
 - Homebrew paths differ by architecture (`/opt/homebrew` vs `/usr/local`).
-- GUI app casks in `install/Brewfile` are macOS-specific.
+- GUI app casks in `install/platforms/macos/Brewfile` are macOS-specific.
 
 ## Future Expansion
 
