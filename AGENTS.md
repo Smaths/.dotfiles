@@ -13,7 +13,9 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 
 ## Canonical Entrypoints
 
-- Install/bootstrap: `install/bootstrap.zsh`
+- Unix install/bootstrap wrapper: `install/bootstrap.sh`
+- Windows install/bootstrap wrapper: `install/bootstrap.ps1`
+- macOS install/bootstrap: `install/bootstrap-macos.zsh`
 - Windows install/bootstrap: `install/bootstrap-windows.ps1`
 - Debian install/bootstrap: `install/bootstrap-debian.sh`
 - Optional macOS tuning: `install/macos.zsh`
@@ -39,10 +41,11 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
    - `shellcheck install/*.zsh config/zsh/*.zsh`
    - `shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc`
    - `shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh`
+   - `sh -n install/bootstrap.sh`
    - `bash -n install/bootstrap-debian.sh config/bash/.bashrc`
    - `brew bundle check --file ~/.dotfiles/install/Brewfile`
    - `winget search --id <ID> -e` for each `install/winget-packages.txt` entry
-   - On Debian: `bash ~/.dotfiles/install/bootstrap-debian.sh --dry-run --skip-packages`
+   - On Debian: `sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages`
    - If available: `dot doctor`
 
 ## Pointers

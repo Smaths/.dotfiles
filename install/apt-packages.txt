@@ -11,6 +11,7 @@ git
 iproute2
 iputils-ping
 less
+ncurses-term
 neovim
 ripgrep
 sudo

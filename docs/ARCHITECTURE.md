@@ -11,6 +11,7 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/zsh/.zprofile` -> `~/.zprofile` (symlink)
 - `config/bash/.bashrc` -> `~/.bashrc` (symlink on Debian)
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
+- `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `install/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
@@ -33,7 +34,7 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
 
 ## Symlink Strategy
 
-`install/bootstrap.zsh` uses `link_with_backup()`:
+`install/bootstrap-macos.zsh` uses `link_with_backup()`:
 
 - If the link already targets the expected file, no change.
 - If a non-link file exists, it is moved to `*.bak.<timestamp>`.
@@ -63,7 +64,8 @@ This preserves user state and enables safe reruns.
 
 ## Invariants
 
-- Bootstrap entrypoints are platform-specific (`install/bootstrap.zsh` for macOS, `install/bootstrap-windows.ps1` for Windows, `install/bootstrap-debian.sh` for Debian).
+- Bootstrap wrappers are thin dispatchers (`install/bootstrap.sh` for macOS/Debian, `install/bootstrap.ps1` for Windows).
+- Platform bootstrap scripts stay explicit (`install/bootstrap-macos.zsh`, `install/bootstrap-windows.ps1`, `install/bootstrap-debian.sh`).
 - Required package manifest and symlink targets must exist before mutation.
 - `install/macos.zsh` is interactive and optional via `--skip-macos`.
 - Debian package installation skips `apt-get update` and `apt-get install` when the apt manifest is already satisfied.

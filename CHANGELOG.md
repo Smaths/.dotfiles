@@ -14,6 +14,7 @@ All notable changes to this dotfiles repo should be documented in this file.
 - Debian server bootstrap entrypoint: `install/bootstrap-debian.sh`.
 - Debian apt package manifest: `install/apt-packages.txt`.
 - Debian bash shell config: `config/bash/.bashrc`.
+- Unified bootstrap wrappers: `install/bootstrap.sh` for macOS/Debian and `install/bootstrap.ps1` for Windows.
 
 ### Changed
 
@@ -36,3 +37,4 @@ All notable changes to this dotfiles repo should be documented in this file.
 - Windows bootstrap is now WSL-first: it prints WSL commands for `zsh`/`tmux` setup and skips Windows-host zsh linking unless `--link-windows-shell` is specified.
 - Documentation references were aligned to current canonical paths and filenames (`install/Brewfile`, `docs/ARCHITECTURE.md`).
 - Platform and operations docs now include Debian bash bootstrap usage and limits.
+- macOS bootstrap was renamed to `install/bootstrap-macos.zsh`; `install/bootstrap.sh` now dispatches to platform-specific Unix bootstraps.
