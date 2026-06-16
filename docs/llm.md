@@ -9,17 +9,17 @@
 ## Edit Order (Preferred)
 
 1. Manifest layer:
-   - `install/Brewfile`
-   - `install/winget-packages.txt`
-   - `install/apt-packages.txt`
+   - `install/platforms/macos/Brewfile`
+   - `install/platforms/windows/winget-packages.txt`
+   - `install/platforms/debian/apt-packages.txt`
    - tracked config files under `config/`
 2. Step scripts:
    - `install/bootstrap.sh`
    - `install/bootstrap.ps1`
-   - `install/platforms/bootstrap-macos.zsh`
-   - `install/platforms/bootstrap-windows.ps1`
-   - `install/platforms/bootstrap-debian.sh`
-   - `install/platforms/macos.zsh`
+   - `install/platforms/macos/bootstrap.zsh`
+   - `install/platforms/windows/bootstrap.ps1`
+   - `install/platforms/debian/bootstrap.sh`
+   - `install/platforms/macos/settings.zsh`
    - `install/lib/ui.sh`
 3. Documentation:
    - `README.md`
@@ -39,7 +39,7 @@ Do:
 
 Don't:
 
-- Reorder `install/Brewfile` entries without a concrete reason.
+- Reorder `install/platforms/macos/Brewfile` entries without a concrete reason.
 - Inline secrets/tokens/credentials in tracked files.
 - Add unreviewed `curl|sh` patterns beyond the explicit Homebrew bootstrap path.
 - Add destructive operations without an explicit `--force` style gate.
@@ -49,12 +49,12 @@ Don't:
 Run from repo root:
 
 ```zsh
-shellcheck install/*.sh install/lib/*.sh install/platforms/*.sh install/platforms/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/platforms/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh install/lib/*.sh install/platforms/*/*.sh install/platforms/*/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
+shfmt -w -i 2 -ci install/platforms/*/*.zsh config/zsh/*.zsh
 sh -n install/bootstrap.sh
 sh -n install/lib/ui.sh
-bash -n install/platforms/bootstrap-debian.sh config/bash/.bashrc
-brew bundle check --file ~/.dotfiles/install/Brewfile
+bash -n install/platforms/debian/bootstrap.sh config/bash/.bashrc
+brew bundle check --file ~/.dotfiles/install/platforms/macos/Brewfile
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'

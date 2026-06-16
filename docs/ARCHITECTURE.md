@@ -12,9 +12,9 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/bash/.bashrc` -> `~/.bashrc` (symlink on Debian)
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
-- `install/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
-- `install/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
-- `install/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
+- `install/platforms/macos/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
+- `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
+- `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
 - Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
 
 Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
@@ -34,7 +34,7 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
 
 ## Symlink Strategy
 
-`install/platforms/bootstrap-macos.zsh` uses `link_with_backup()`:
+`install/platforms/macos/bootstrap.zsh` uses `link_with_backup()`:
 
 - If the link already targets the expected file, no change.
 - If a non-link file exists, it is moved to `*.bak.<timestamp>`.
@@ -42,7 +42,7 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
 
 This preserves user state and enables safe reruns.
 
-`install/platforms/bootstrap-debian.sh` uses the same backup-before-symlink strategy for
+`install/platforms/debian/bootstrap.sh` uses the same backup-before-symlink strategy for
 `~/.bashrc`.
 
 `install/lib/ui.sh` provides shared Unix bootstrap presentation helpers for
@@ -53,8 +53,7 @@ scripts keep install behavior local and source only this presentation layer.
 
 - Managed by this repo:
   - symlink targets listed above
-  - package sets in `install/Brewfile` and `install/winget-packages.txt`
-  - Debian package set in `install/apt-packages.txt`
+  - package sets under `install/platforms/*/`
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - arbitrary files in `$HOME` not explicitly linked
@@ -69,9 +68,9 @@ scripts keep install behavior local and source only this presentation layer.
 ## Invariants
 
 - Bootstrap wrappers are thin dispatchers (`install/bootstrap.sh` for macOS/Debian, `install/bootstrap.ps1` for Windows).
-- Platform bootstrap scripts stay explicit under `install/platforms/` (`bootstrap-macos.zsh`, `bootstrap-windows.ps1`, `bootstrap-debian.sh`).
+- Platform bootstrap scripts stay explicit under `install/platforms/{macos,windows,debian}/`.
 - Shared bootstrap UI helpers live under `install/lib/`.
 - Required package manifest and symlink targets must exist before mutation.
-- `install/platforms/macos.zsh` is interactive and optional via `--skip-macos`.
+- `install/platforms/macos/settings.zsh` is interactive and optional via `--skip-macos`.
 - Debian package installation skips `apt-get update` and `apt-get install` when the apt manifest is already satisfied.
 - Debian login shell changes require explicit `--force-shell`.

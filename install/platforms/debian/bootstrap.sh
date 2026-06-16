@@ -10,7 +10,7 @@ set -euo pipefail
 #
 # What this script does:
 # 1) Validates Debian/bash runtime prerequisites
-# 2) Optionally installs CLI packages from install/apt-packages.txt
+# 2) Optionally installs CLI packages from install/platforms/debian/apt-packages.txt
 # 3) Safely links ~/.bashrc to this repo
 # 4) Verifies the resulting link
 # 5) Safely links ~/.tmux.conf to this repo when available
@@ -24,7 +24,8 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
-APT_MANIFEST="$DOTFILES_DIR/install/apt-packages.txt"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+APT_MANIFEST="$SCRIPT_DIR/apt-packages.txt"
 BASHRC_TARGET="$DOTFILES_DIR/config/bash/.bashrc"
 BASHRC_LINK_PATH="$HOME/.bashrc"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
@@ -38,7 +39,7 @@ TOTAL_STEPS=6
 
 usage() {
   cat <<'EOF'
-Usage: bootstrap-debian.sh [options]
+Usage: bootstrap.sh [options]
 
 Options:
   --dry-run         Print actions without changing anything
