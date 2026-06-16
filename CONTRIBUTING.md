@@ -36,11 +36,11 @@ Anything beyond this should be justified in docs/PR description and kept minimal
 Suggested local checks:
 
 ```zsh
-shellcheck install/*.zsh config/zsh/*.zsh
-shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh install/lib/*.sh install/platforms/*.sh install/platforms/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
+shfmt -w -i 2 -ci install/platforms/*.zsh config/zsh/*.zsh
 sh -n install/bootstrap.sh
-bash -n install/bootstrap-debian.sh config/bash/.bashrc
+sh -n install/lib/ui.sh
+bash -n install/platforms/bootstrap-debian.sh config/bash/.bashrc
 ```
 
 ## Documentation Requirements

@@ -13,10 +13,12 @@ set -euo pipefail
 # 2) Optionally installs CLI packages from install/apt-packages.txt
 # 3) Safely links ~/.bashrc to this repo
 # 4) Verifies the resulting link
-# 5) Optionally changes the login shell to bash with --force-shell
+# 5) Safely links ~/.tmux.conf to this repo when available
+# 6) Optionally changes the login shell to bash with --force-shell
 #
 # Safety behavior:
-# - Existing ~/.bashrc is backed up with a timestamp suffix before replacement.
+# - Existing ~/.bashrc and ~/.tmux.conf are backed up with timestamp suffixes
+#   before replacement.
 # - --dry-run prints commands and planned changes without modifying the system.
 # - Changing the login shell requires explicit --force-shell.
 # -----------------------------------------------------------------------------
@@ -27,15 +29,12 @@ BASHRC_TARGET="$DOTFILES_DIR/config/bash/.bashrc"
 BASHRC_LINK_PATH="$HOME/.bashrc"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
+UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
 DRY_RUN=0
 SKIP_PACKAGES=0
 FORCE_SHELL=0
 VERBOSE=0
 TOTAL_STEPS=6
-CURRENT_STEP=0
-OK_COUNT=0
-SKIP_COUNT=0
-START_TS="$(date +%s)"
 
 usage() {
   cat <<'EOF'
@@ -67,21 +66,6 @@ for arg in "$@"; do
       ;;
   esac
 done
-
-step_start() {
-  CURRENT_STEP=$((CURRENT_STEP + 1))
-  printf '[%d/%d] %s\n' "$CURRENT_STEP" "$TOTAL_STEPS" "$1"
-}
-
-step_ok() {
-  OK_COUNT=$((OK_COUNT + 1))
-  printf '      OK: %s\n' "$1"
-}
-
-step_skip() {
-  SKIP_COUNT=$((SKIP_COUNT + 1))
-  printf '      SKIP: %s\n' "$1"
-}
 
 run_cmd() {
   if ((DRY_RUN)); then
@@ -188,10 +172,17 @@ link_with_backup() {
   fi
 }
 
-echo "snarfum dotfiles Debian bootstrap"
-echo
+if [[ ! -f "$UI_LIB" ]]; then
+  echo "ERROR: Missing shared UI helper: $UI_LIB" >&2
+  exit 1
+fi
+# shellcheck source=../lib/ui.sh
+source "$UI_LIB"
+ui_init "snarfum dotfiles Debian bootstrap" "$TOTAL_STEPS"
+ui_print_header
+ui_start
 
-step_start "Validate Debian runtime"
+ui_step_start "Validate Debian runtime"
 require_cmd uname "Install core system tools and retry."
 require_cmd bash "Install bash and retry."
 if ! is_debian; then
@@ -206,71 +197,69 @@ if [[ ! -f "$BASHRC_TARGET" ]]; then
   echo "ERROR: Missing bashrc target: $BASHRC_TARGET" >&2
   exit 1
 fi
-step_ok "Debian-compatible system"
+ui_step_ok "Debian-compatible system"
 
-step_start "Install apt packages"
+ui_step_start "Install apt packages"
 if ((SKIP_PACKAGES)); then
-  step_skip "skipped (--skip-packages)"
+  ui_step_skip "skipped (--skip-packages)"
 else
   require_cmd apt-get "This bootstrap expects apt-get on Debian."
   require_cmd dpkg-query "This bootstrap expects dpkg-query on Debian."
   read_package_manifest
   if ((${#PACKAGES[@]} == 0)); then
-    step_skip "manifest empty"
+    ui_step_skip "manifest empty"
   else
     find_missing_packages
   fi
 
   if ((${#PACKAGES[@]} > 0 && ${#MISSING_PACKAGES[@]} == 0)); then
-    step_skip "all packages already installed"
+    ui_step_skip "all packages already installed"
   elif ((${#MISSING_PACKAGES[@]} > 0)); then
     run_as_root apt-get update
     run_as_root apt-get install -y "${MISSING_PACKAGES[@]}"
-    step_ok "${#MISSING_PACKAGES[@]} missing packages installed"
+    ui_step_ok "${#MISSING_PACKAGES[@]} missing packages installed"
   fi
 fi
 
-step_start "Link bash config"
+ui_step_start "Link bash config"
 link_with_backup "$BASHRC_TARGET" "$BASHRC_LINK_PATH"
-step_ok "linked/verified"
+ui_step_ok "linked/verified"
 
-step_start "Verify bash config"
+ui_step_start "Verify bash config"
 if ((DRY_RUN)); then
-  step_skip "dry-run"
+  ui_step_skip "dry-run"
 elif [[ "$(readlink "$BASHRC_LINK_PATH")" == "$BASHRC_TARGET" ]]; then
   bash -n "$BASHRC_TARGET"
-  step_ok "$BASHRC_LINK_PATH -> $BASHRC_TARGET"
+  ui_step_ok "$BASHRC_LINK_PATH -> $BASHRC_TARGET"
 else
   echo "ERROR: Expected $BASHRC_LINK_PATH to link to $BASHRC_TARGET" >&2
   exit 1
 fi
 
-step_start "Link tmux config"
+ui_step_start "Link tmux config"
 if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
   link_with_backup "$TMUX_CONFIG_TARGET" "$TMUX_CONFIG_LINK_PATH"
-  step_ok "linked/verified"
+  ui_step_ok "linked/verified"
 else
-  step_skip "target missing"
+  ui_step_skip "target missing"
 fi
 
-step_start "Set login shell"
+ui_step_start "Set login shell"
 if ((FORCE_SHELL)); then
   bash_path="$(command -v bash)"
   current_shell="$(getent passwd "$(id -un)" | cut -d: -f7)"
   bash_path_real="$(readlink -f "$bash_path" 2>/dev/null || printf '%s\n' "$bash_path")"
   current_shell_real="$(readlink -f "$current_shell" 2>/dev/null || printf '%s\n' "$current_shell")"
   if [[ "$current_shell_real" == "$bash_path_real" ]]; then
-    step_skip "already $bash_path"
+    ui_step_skip "already $bash_path"
   else
     run_cmd chsh -s "$bash_path" "$(id -un)"
-    step_ok "$bash_path"
+    ui_step_ok "$bash_path"
   fi
 else
-  step_skip "unchanged (pass --force-shell to change)"
+  ui_step_skip "unchanged (pass --force-shell to change)"
 fi
 
-end_ts="$(date +%s)"
-echo
-echo "Done in $((end_ts - START_TS))s: ${OK_COUNT}/${TOTAL_STEPS} completed, ${SKIP_COUNT} skipped"
+ui_summary
 echo "Optional local overrides:"
 echo "  cp ~/.dotfiles/config/bash/local.example.bash ~/.dotfiles/config/bash/local.bash"

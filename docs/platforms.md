@@ -11,10 +11,10 @@ Prerequisites:
 
 Behavior:
 
-- `install/bootstrap.sh` dispatches to `install/bootstrap-macos.zsh`, which installs Homebrew if missing.
+- `install/bootstrap.sh` dispatches to `install/platforms/bootstrap-macos.zsh`, which installs Homebrew if missing.
 - Installs missing entries from `install/Brewfile` without upgrading existing packages by default.
 - Pass `--upgrade-packages` to intentionally upgrade outdated Brewfile entries during bootstrap.
-- Runs optional interactive system defaults via `install/macos.zsh`.
+- Runs optional interactive system defaults via `install/platforms/macos.zsh`.
 
 ## Windows (Secondary, WSL-First)
 
@@ -28,7 +28,7 @@ Prerequisites:
 
 Behavior:
 
-- `install/bootstrap.ps1` dispatches to `install/bootstrap-windows.ps1`, which validates Windows runtime.
+- `install/bootstrap.ps1` dispatches to `install/platforms/bootstrap-windows.ps1`, which validates Windows runtime.
 - Uses `install/winget-packages.txt` when `winget` is available.
 - Includes `Microsoft.WSL` and `Microsoft.WindowsTerminal` in the winget package set.
 - Validates winget package IDs before mutation.
@@ -51,7 +51,7 @@ Prerequisites:
 
 Behavior:
 
-- `install/bootstrap.sh` dispatches to `install/bootstrap-debian.sh`, which validates the platform before mutation.
+- `install/bootstrap.sh` dispatches to `install/platforms/bootstrap-debian.sh`, which validates the platform before mutation.
 - Installs missing packages from `install/apt-packages.txt` unless `--skip-packages` is passed.
 - Skips `apt-get update` and `apt-get install` when all manifest packages are already installed.
 - Links `~/.bashrc` to `config/bash/.bashrc` after backing up an existing file.
@@ -63,7 +63,7 @@ Behavior:
 Other Linux distributions are not first-class bootstrap targets in this repo today.
 
 - `install/bootstrap.sh` exits on unsupported Linux distributions.
-- `install/bootstrap-debian.sh` is intended for Debian and Debian-like systems only.
+- `install/platforms/bootstrap-debian.sh` is intended for Debian and Debian-like systems only.
 - You can still reuse parts of `config/zsh/` or `config/bash/` manually.
 - Generic package and desktop automation are not implemented for Linux here.
 

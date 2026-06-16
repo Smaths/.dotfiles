@@ -34,7 +34,7 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
 
 ## Symlink Strategy
 
-`install/bootstrap-macos.zsh` uses `link_with_backup()`:
+`install/platforms/bootstrap-macos.zsh` uses `link_with_backup()`:
 
 - If the link already targets the expected file, no change.
 - If a non-link file exists, it is moved to `*.bak.<timestamp>`.
@@ -42,8 +42,12 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
 
 This preserves user state and enables safe reruns.
 
-`install/bootstrap-debian.sh` uses the same backup-before-symlink strategy for
+`install/platforms/bootstrap-debian.sh` uses the same backup-before-symlink strategy for
 `~/.bashrc`.
+
+`install/lib/ui.sh` provides shared Unix bootstrap presentation helpers for
+headers, aligned step output, status marks, and summary rendering. Platform
+scripts keep install behavior local and source only this presentation layer.
 
 ## Ownership and Scope
 
@@ -65,8 +69,9 @@ This preserves user state and enables safe reruns.
 ## Invariants
 
 - Bootstrap wrappers are thin dispatchers (`install/bootstrap.sh` for macOS/Debian, `install/bootstrap.ps1` for Windows).
-- Platform bootstrap scripts stay explicit (`install/bootstrap-macos.zsh`, `install/bootstrap-windows.ps1`, `install/bootstrap-debian.sh`).
+- Platform bootstrap scripts stay explicit under `install/platforms/` (`bootstrap-macos.zsh`, `bootstrap-windows.ps1`, `bootstrap-debian.sh`).
+- Shared bootstrap UI helpers live under `install/lib/`.
 - Required package manifest and symlink targets must exist before mutation.
-- `install/macos.zsh` is interactive and optional via `--skip-macos`.
+- `install/platforms/macos.zsh` is interactive and optional via `--skip-macos`.
 - Debian package installation skips `apt-get update` and `apt-get install` when the apt manifest is already satisfied.
 - Debian login shell changes require explicit `--force-shell`.

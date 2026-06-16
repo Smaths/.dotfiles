@@ -16,10 +16,11 @@
 2. Step scripts:
    - `install/bootstrap.sh`
    - `install/bootstrap.ps1`
-   - `install/bootstrap-macos.zsh`
-   - `install/bootstrap-windows.ps1`
-   - `install/bootstrap-debian.sh`
-   - `install/macos.zsh`
+   - `install/platforms/bootstrap-macos.zsh`
+   - `install/platforms/bootstrap-windows.ps1`
+   - `install/platforms/bootstrap-debian.sh`
+   - `install/platforms/macos.zsh`
+   - `install/lib/ui.sh`
 3. Documentation:
    - `README.md`
    - `docs/*.md`
@@ -48,11 +49,11 @@ Don't:
 Run from repo root:
 
 ```zsh
-shellcheck install/*.zsh config/zsh/*.zsh
-shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh install/lib/*.sh install/platforms/*.sh install/platforms/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
+shfmt -w -i 2 -ci install/platforms/*.zsh config/zsh/*.zsh
 sh -n install/bootstrap.sh
-bash -n install/bootstrap-debian.sh config/bash/.bashrc
+sh -n install/lib/ui.sh
+bash -n install/platforms/bootstrap-debian.sh config/bash/.bashrc
 brew bundle check --file ~/.dotfiles/install/Brewfile
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile

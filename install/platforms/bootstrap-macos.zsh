@@ -14,7 +14,7 @@ set -euo pipefail
 # 3) Installs packages/apps from Brewfile
 # 4) Installs git via Homebrew when missing
 # 5) Safely links ~/.zshrc and ~/.zprofile to this repo
-# 6) Optionally runs install/macos.zsh for interactive macOS settings
+# 6) Optionally runs install/platforms/macos.zsh for interactive macOS settings
 #
 # Safety behavior:
 # - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
@@ -31,6 +31,7 @@ GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
 GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
+UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
 DRY_RUN=0
 SKIP_MACOS=0
 INSTALL_GIT=0
@@ -39,15 +40,6 @@ VERBOSE=0
 BREW_BIN=""
 BREWFILE_PACKAGE_COUNT=0
 TOTAL_STEPS=7
-CURRENT_STEP=0
-CURRENT_STEP_LABEL=""
-OK_COUNT=0
-SKIP_COUNT=0
-START_TS="$(date +%s)"
-STEP_LABEL_WIDTH=34
-COLOR_OK=""
-COLOR_SKIP=""
-COLOR_RESET=""
 typeset -a TMP_LOG_FILES=()
 
 usage() {
@@ -57,28 +49,11 @@ Usage: bootstrap-macos.zsh [options]
 Options:
   --dry-run            Print actions without changing anything
   --verbose            Show more command details
-  --skip-macos         Skip install/macos.zsh execution
+  --skip-macos         Skip install/platforms/macos.zsh execution
   --skip-macros        Alias of --skip-macos
   --upgrade-packages   Upgrade outdated Brewfile packages during bootstrap
   -h, --help           Show this help
 EOF
-}
-
-print_header() {
-  cat <<'EOF'
-
-
-snarfum dotfiles bootstrap
-──────────────────────────────────
-EOF
-}
-
-init_colors() {
-  if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]]; then
-    COLOR_OK=$'\033[32m'
-    COLOR_SKIP=$'\033[33m'
-    COLOR_RESET=$'\033[0m'
-  fi
 }
 
 for arg in "$@"; do
@@ -144,56 +119,6 @@ on_error() {
 
   echo
   echo "ERROR: bootstrap failed at line $line_no: $command (exit $exit_code)" >&2
-}
-
-step_start() {
-  CURRENT_STEP=$((CURRENT_STEP + 1))
-  CURRENT_STEP_LABEL="$1"
-}
-
-format_step_label() {
-  local label="$1"
-  local dot_count=$((STEP_LABEL_WIDTH - ${#label}))
-  if (( dot_count < 3 )); then
-    dot_count=3
-  fi
-  printf '%s %s' "$label" "$(printf '%*s' "$dot_count" '' | tr ' ' '.')"
-}
-
-step_ok() {
-  local detail="$1"
-  OK_COUNT=$((OK_COUNT + 1))
-  printf '%d/%d ┤ %s %b✓%b %s\n' \
-    "$CURRENT_STEP" \
-    "$TOTAL_STEPS" \
-    "$(format_step_label "$CURRENT_STEP_LABEL")" \
-    "$COLOR_OK" \
-    "$COLOR_RESET" \
-    "$detail"
-}
-
-step_skip() {
-  local detail="$1"
-  SKIP_COUNT=$((SKIP_COUNT + 1))
-  printf '%d/%d │ %s %b↷%b %s\n' \
-    "$CURRENT_STEP" \
-    "$TOTAL_STEPS" \
-    "$(format_step_label "$CURRENT_STEP_LABEL")" \
-    "$COLOR_SKIP" \
-    "$COLOR_RESET" \
-    "$detail"
-}
-
-step_skip_user() {
-  local detail="$1"
-  SKIP_COUNT=$((SKIP_COUNT + 1))
-  printf '%d/%d │ %s %b⏭%b %s\n' \
-    "$CURRENT_STEP" \
-    "$TOTAL_STEPS" \
-    "$(format_step_label "$CURRENT_STEP_LABEL")" \
-    "$COLOR_SKIP" \
-    "$COLOR_RESET" \
-    "$detail"
 }
 
 run_with_peek() {
@@ -289,11 +214,15 @@ require_cmd() {
   fi
 }
 
-print_header
-echo
-init_colors
-echo "Starting bootstrap: ${TOTAL_STEPS} steps"
-echo
+if [[ ! -f "$UI_LIB" ]]; then
+  echo "ERROR: Missing shared UI helper: $UI_LIB" >&2
+  exit 1
+fi
+# shellcheck source=../lib/ui.sh
+source "$UI_LIB"
+ui_init "snarfum dotfiles bootstrap" "$TOTAL_STEPS"
+ui_print_header
+ui_start
 trap 'on_error $? $LINENO "${ZSH_COMMAND:-}"' ERR
 trap 'on_interrupt' INT TERM
 trap 'on_exit' EXIT
@@ -308,15 +237,15 @@ fi
 require_cmd uname "Install core system tools and retry."
 require_cmd curl "curl is expected to be present on macOS. If it's missing, your PATH/environment is broken or the OS install is atypical. Fix PATH or reinstall base system tools and retry."
 
-step_start "Resolve Homebrew"
+ui_step_start "Resolve Homebrew"
 if BREW_BIN="$(resolve_brew_bin)"; then
-  step_ok "$BREW_BIN"
+  ui_step_ok "$BREW_BIN"
 else
-  step_skip "not installed"
+  ui_step_skip "not installed"
 fi
 
 # Install Homebrew if absent.
-step_start "Install Homebrew"
+ui_step_start "Install Homebrew"
 if [[ -z "$BREW_BIN" ]]; then
   if (( DRY_RUN )); then
     echo "[dry-run] /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'"
@@ -333,9 +262,9 @@ if [[ -z "$BREW_BIN" ]]; then
       exit 1
     fi
   fi
-  step_ok "$BREW_BIN"
+  ui_step_ok "$BREW_BIN"
 else
-  step_skip "already installed"
+  ui_step_skip "already installed"
 fi
 
 # Load brew into this shell so subsequent brew commands work immediately.
@@ -368,7 +297,7 @@ if [[ ! -f "$ZPROFILE_TARGET" ]]; then
 fi
 
 BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages)"
-step_start "Install Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
+ui_step_start "Install Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
 BREWFILE_READY=0
 if (( UPGRADE_PACKAGES )); then
   if brew bundle check --file="$BREWFILE" >/dev/null 2>&1; then
@@ -382,9 +311,9 @@ fi
 
 if (( BREWFILE_READY && ! INSTALL_GIT )); then
   if (( UPGRADE_PACKAGES )); then
-    step_skip "already installed/up to date"
+    ui_step_skip "already installed/up to date"
   else
-    step_skip "already installed"
+    ui_step_skip "already installed"
   fi
 else
   if (( ! BREWFILE_READY )); then
@@ -400,7 +329,7 @@ else
     run_with_peek "Installing git" brew install git
   fi
 
-  step_ok "brew bundle complete"
+  ui_step_ok "brew bundle complete"
 fi
 
 # Symlink helper:
@@ -447,36 +376,36 @@ link_with_backup() {
   fi
 }
 
-step_start "Link shell config files"
+ui_step_start "Link shell config files"
 link_with_backup "$ZSHRC_TARGET" "$HOME/.zshrc"
 link_with_backup "$ZPROFILE_TARGET" "$HOME/.zprofile"
-step_ok "linked/verified"
+ui_step_ok "linked/verified"
 
 # Link Ghostty config to XDG default path when present.
-step_start "Link Ghostty config"
+ui_step_start "Link Ghostty config"
 if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
   run_cmd mkdir -p "$XDG_CONFIG_HOME/ghostty"
   link_with_backup "$GHOSTTY_CONFIG_TARGET" "$GHOSTTY_CONFIG_LINK_PATH"
-  step_ok "linked/verified"
+  ui_step_ok "linked/verified"
 else
-  step_skip "target missing"
+  ui_step_skip "target missing"
 fi
 
 # Link tmux config to ~/.tmux.conf when present.
-step_start "Link tmux config"
+ui_step_start "Link tmux config"
 if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
   link_with_backup "$TMUX_CONFIG_TARGET" "$TMUX_CONFIG_LINK_PATH"
-  step_ok "linked/verified"
+  ui_step_ok "linked/verified"
 else
-  step_skip "target missing"
+  ui_step_skip "target missing"
 fi
 
 # Run interactive macOS settings unless explicitly skipped.
-step_start "Apply macOS settings"
-MACOS_SCRIPT="$DOTFILES_DIR/install/macos.zsh"
+ui_step_start "Apply macOS settings"
+MACOS_SCRIPT="$DOTFILES_DIR/install/platforms/macos.zsh"
 MACOS_SETUP_SKIPPED_EXIT=20
 if (( SKIP_MACOS )); then
-  step_skip "skipped (--skip-macos)"
+  ui_step_skip "skipped (--skip-macos)"
 elif [[ -f "$MACOS_SCRIPT" ]]; then
   echo
   echo "macOS interactive setup"
@@ -486,33 +415,25 @@ elif [[ -f "$MACOS_SCRIPT" ]]; then
   fi
   if (( DRY_RUN )); then
     run_cmd zsh "$MACOS_SCRIPT"
-    step_ok "dry-run"
+    ui_step_ok "dry-run"
   else
     set +e
     zsh "$MACOS_SCRIPT"
     macos_exit=$?
     set -e
     if (( macos_exit == 0 )); then
-      step_ok "done"
+      ui_step_ok "done"
     elif (( macos_exit == MACOS_SETUP_SKIPPED_EXIT )); then
-      step_skip_user "skipped (user selected Skip)"
+      ui_step_skip_user "skipped (user selected Skip)"
     else
       return "$macos_exit"
     fi
   fi
 else
-  step_skip "script missing"
+  ui_step_skip "script missing"
 fi
 
-local_end_ts="$(date +%s)"
-elapsed="$((local_end_ts - START_TS))"
-summary_line="Done in ${elapsed}s • ${OK_COUNT}/${TOTAL_STEPS} completed • ${SKIP_COUNT} skipped"
-summary_width=$(( ${#summary_line} + 2 ))
-summary_border="$(printf '%*s' "$summary_width" '' | tr ' ' '─')"
-echo
-echo "┌${summary_border}┐"
-echo "│ ${summary_line} │"
-echo "└${summary_border}┘"
+ui_summary
 echo "Optional local overrides:"
 echo "  cp ~/.dotfiles/config/zsh/local.example.zsh ~/.dotfiles/config/zsh/local.zsh"
 echo "  Example: add aliases, PATH entries, or machine-specific env vars to local.zsh"

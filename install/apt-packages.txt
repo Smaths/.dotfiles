@@ -1,4 +1,4 @@
-# Debian server packages managed by install/bootstrap-debian.sh.
+# Debian server packages managed by install/platforms/bootstrap-debian.sh.
 # Keep this list CLI-only and broadly available in Debian stable.
 
 bash

@@ -15,10 +15,11 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 
 - Unix install/bootstrap wrapper: `install/bootstrap.sh`
 - Windows install/bootstrap wrapper: `install/bootstrap.ps1`
-- macOS install/bootstrap: `install/bootstrap-macos.zsh`
-- Windows install/bootstrap: `install/bootstrap-windows.ps1`
-- Debian install/bootstrap: `install/bootstrap-debian.sh`
-- Optional macOS tuning: `install/macos.zsh`
+- macOS install/bootstrap: `install/platforms/bootstrap-macos.zsh`
+- Windows install/bootstrap: `install/platforms/bootstrap-windows.ps1`
+- Debian install/bootstrap: `install/platforms/bootstrap-debian.sh`
+- Optional macOS tuning: `install/platforms/macos.zsh`
+- Shared Unix bootstrap UI: `install/lib/ui.sh`
 - Package manifest: `install/Brewfile`
 - Windows package manifest: `install/winget-packages.txt`
 - Debian package manifest: `install/apt-packages.txt`
@@ -38,11 +39,11 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 2. Update automation step scripts (`install/*.zsh`, `install/*.ps1`, `install/*.sh`) if behavior changed.
 3. Update docs (`README.md`, `docs/*.md`, `CHANGELOG.md`).
 4. Run required checks:
-   - `shellcheck install/*.zsh config/zsh/*.zsh`
-   - `shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc`
-   - `shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh`
+   - `shellcheck install/*.sh install/lib/*.sh install/platforms/*.sh install/platforms/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc`
+   - `shfmt -w -i 2 -ci install/platforms/*.zsh config/zsh/*.zsh`
    - `sh -n install/bootstrap.sh`
-   - `bash -n install/bootstrap-debian.sh config/bash/.bashrc`
+   - `sh -n install/lib/ui.sh`
+   - `bash -n install/platforms/bootstrap-debian.sh config/bash/.bashrc`
    - `brew bundle check --file ~/.dotfiles/install/Brewfile`
    - `winget search --id <ID> -e` for each `install/winget-packages.txt` entry
    - On Debian: `sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages`

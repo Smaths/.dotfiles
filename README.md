@@ -23,21 +23,21 @@ See [Platform Notes](docs/platforms.md) for details and prerequisites.
 macOS
 
 ```zsh
-git clone <repo-url> ~/.dotfiles
+git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
 sh ~/.dotfiles/install/bootstrap.sh
 ```
 
 Windows (PowerShell): Note the Bypass command, review code before executing.
 
 ```powershell
-git clone <repo-url> $HOME/.dotfiles
+git clone https://github.com/Smaths/.dotfiles.git $HOME/.dotfiles
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap.ps1
 ```
 
 Debian server:
 
 ```bash
-git clone <repo-url> ~/.dotfiles
+git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
 sh ~/.dotfiles/install/bootstrap.sh
 ```
 
@@ -46,7 +46,7 @@ sh ~/.dotfiles/install/bootstrap.sh
 
 Linux:
 
-- Debian servers are supported through `install/bootstrap.sh`, which dispatches to `install/bootstrap-debian.sh`.
+- Debian servers are supported through `install/bootstrap.sh`, which dispatches to `install/platforms/bootstrap-debian.sh`.
 - Other Linux distributions can reuse config modules manually.
 
 ### Flags
@@ -86,7 +86,7 @@ Debian-only:
   - Before relinking `~/.zshrc` or `~/.zprofile`, existing files are moved to
     timestamped backups (`.bak.YYYYmmddHHMMSS`).
 - macOS:
-  - `install/macos.zsh` is interactive and opt-out via `--skip-macos`.
+  - `install/platforms/macos.zsh` is interactive and opt-out via `--skip-macos`.
   - Homebrew package upgrades require explicit `--upgrade-packages` opt-in.
   - macOS setup prompt modes:
     - use defaults (no per-setting prompts)
@@ -128,7 +128,7 @@ Debian-only:
   - Bootstrap installs missing Brewfile entries without upgrading existing packages by default; pass `--upgrade-packages` to upgrade outdated entries.
   - Ghostty symlink:
     - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
-  - Optional interactive system defaults in `install/macos.zsh`.
+  - Optional interactive system defaults in `install/platforms/macos.zsh`.
 - Windows:
   - Packages from `install/winget-packages.txt` via `winget` (when available).
   - WSL-first guidance output (installs/linking commands for WSL shell environment).
@@ -180,10 +180,11 @@ Other Linux cleanup:
 
 - Unix bootstrap wrapper: `install/bootstrap.sh`
 - Windows bootstrap wrapper: `install/bootstrap.ps1`
-- macOS bootstrap: `install/bootstrap-macos.zsh`
-- Windows bootstrap: `install/bootstrap-windows.ps1`
-- Debian bootstrap: `install/bootstrap-debian.sh`
-- macOS tuning (optional): `install/macos.zsh`
+- macOS bootstrap: `install/platforms/bootstrap-macos.zsh`
+- Windows bootstrap: `install/platforms/bootstrap-windows.ps1`
+- Debian bootstrap: `install/platforms/bootstrap-debian.sh`
+- macOS tuning (optional): `install/platforms/macos.zsh`
+- Shared Unix bootstrap UI: `install/lib/ui.sh`
 - macOS package manifest: `install/Brewfile`
 - Windows package manifest: `install/winget-packages.txt`
 - Debian package manifest: `install/apt-packages.txt`
@@ -195,11 +196,11 @@ Other Linux cleanup:
 Run after changing install/config behavior:
 
 ```zsh
-shellcheck install/*.zsh config/zsh/*.zsh
-shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+shellcheck install/*.sh install/lib/*.sh install/platforms/*.sh install/platforms/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
+shfmt -w -i 2 -ci install/platforms/*.zsh config/zsh/*.zsh
 sh -n install/bootstrap.sh
-bash -n install/bootstrap-debian.sh config/bash/.bashrc
+sh -n install/lib/ui.sh
+bash -n install/platforms/bootstrap-debian.sh config/bash/.bashrc
 brew bundle check --file ~/.dotfiles/install/Brewfile
 ```
 
