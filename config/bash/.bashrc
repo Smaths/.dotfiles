@@ -87,6 +87,43 @@ if [ -r /usr/share/doc/fzf/examples/completion.bash ]; then
   source /usr/share/doc/fzf/examples/completion.bash
 fi
 
+# Fuzzy-jump the directory stack (bash-native mirror of the zsh `d`/fstack helper).
+# Bare `d` opens an fzf picker over `dirs -v`; `d 2` jumps straight to index 2.
+# Note: bash only fills the stack via `pushd` (it has no zsh AUTO_PUSHD), so the
+# stack stays small unless you push directories onto it.
+d() {
+  local line idx target
+
+  if (($# > 0)); then
+    idx="$1"
+    [[ "$idx" =~ ^[0-9]+$ ]] || {
+      printf 'Usage: d [stack-index]\n' >&2
+      return 2
+    }
+    target="$(dirs -l "+$idx" 2>/dev/null)" || {
+      printf 'd: no directory at stack index %s\n' "$idx" >&2
+      return 1
+    }
+    builtin cd "$target" || return
+    return
+  fi
+
+  command -v fzf >/dev/null 2>&1 || {
+    printf 'd: fzf is required for interactive mode\n' >&2
+    return 127
+  }
+
+  line="$(
+    dirs -v | fzf --prompt='stack> ' --preview 'echo {}' --preview-window=hidden
+  )" || return 1
+
+  idx="${line#"${line%%[![:space:]]*}"}" # drop leading whitespace
+  idx="${idx%%[[:space:]]*}"             # keep the leading index token
+  [[ "$idx" =~ ^[0-9]+$ ]] || return 1
+  target="$(dirs -l "+$idx" 2>/dev/null)" || return 1
+  builtin cd "$target" || return
+}
+
 # Local machine overrides are opt-in and gitignored by convention.
 if [ -r "$BASH_CONFIG_DIR/local.bash" ]; then
   # shellcheck source=/dev/null
