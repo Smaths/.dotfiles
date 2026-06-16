@@ -3,21 +3,21 @@
 ## Install (Fresh Machine)
 
 ```zsh
-git clone <repo-url> ~/.dotfiles
+git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
 sh ~/.dotfiles/install/bootstrap.sh
 ```
 
 Windows:
 
 ```powershell
-git clone <repo-url> $HOME/.dotfiles
+git clone https://github.com/Smaths/.dotfiles.git $HOME/.dotfiles
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap.ps1
 ```
 
 Debian server:
 
 ```bash
-git clone <repo-url> ~/.dotfiles
+git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
 sh ~/.dotfiles/install/bootstrap.sh
 ```
 
@@ -32,7 +32,7 @@ Useful flags:
 - `--skip-packages` (Debian only): skip `apt-get` installs.
 - `--force-shell` (Debian only): change the current user's login shell to bash.
 
-During `install/macos.zsh`, choose one startup mode before the setting prompts:
+During `install/platforms/macos.zsh`, choose one startup mode before the setting prompts:
 
 - `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
 - `2) Choose settings`: set defaults for each setting, then proceed.
