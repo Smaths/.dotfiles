@@ -25,11 +25,13 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 APT_MANIFEST="$DOTFILES_DIR/install/apt-packages.txt"
 BASHRC_TARGET="$DOTFILES_DIR/config/bash/.bashrc"
 BASHRC_LINK_PATH="$HOME/.bashrc"
+TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
+TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
 DRY_RUN=0
 SKIP_PACKAGES=0
 FORCE_SHELL=0
 VERBOSE=0
-TOTAL_STEPS=5
+TOTAL_STEPS=6
 CURRENT_STEP=0
 OK_COUNT=0
 SKIP_COUNT=0
@@ -241,6 +243,14 @@ elif [[ "$(readlink "$BASHRC_LINK_PATH")" == "$BASHRC_TARGET" ]]; then
 else
   echo "ERROR: Expected $BASHRC_LINK_PATH to link to $BASHRC_TARGET" >&2
   exit 1
+fi
+
+step_start "Link tmux config"
+if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
+  link_with_backup "$TMUX_CONFIG_TARGET" "$TMUX_CONFIG_LINK_PATH"
+  step_ok "linked/verified"
+else
+  step_skip "target missing"
 fi
 
 step_start "Set login shell"

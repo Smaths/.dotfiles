@@ -14,7 +14,9 @@
    - `install/apt-packages.txt`
    - tracked config files under `config/`
 2. Step scripts:
-   - `install/bootstrap.zsh`
+   - `install/bootstrap.sh`
+   - `install/bootstrap.ps1`
+   - `install/bootstrap-macos.zsh`
    - `install/bootstrap-windows.ps1`
    - `install/bootstrap-debian.sh`
    - `install/macos.zsh`
@@ -49,6 +51,7 @@ Run from repo root:
 shellcheck install/*.zsh config/zsh/*.zsh
 shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
 shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+sh -n install/bootstrap.sh
 bash -n install/bootstrap-debian.sh config/bash/.bashrc
 brew bundle check --file ~/.dotfiles/install/Brewfile
 test -L ~/.zshrc && readlink ~/.zshrc
@@ -64,5 +67,5 @@ If a `dot doctor` command exists in the local environment, run that too.
 
 - Never commit secrets.
 - Do not assume generic Linux bootstrap support exists; Debian is the supported Linux server bootstrap target.
-- `install/bootstrap.zsh` is macOS-only; use `install/bootstrap-debian.sh` for Debian servers.
+- `install/bootstrap.sh` dispatches only to macOS and Debian bootstraps; use `install/bootstrap.ps1` for Windows.
 - Do not silently expand network dependencies beyond documented tools (`brew`, `winget`, `apt-get`, `git`, `curl`).

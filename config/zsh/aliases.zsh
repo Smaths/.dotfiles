@@ -237,4 +237,4 @@ unset _alias_modules_dir
 # .dotfiles helpers
 # -----------------------------------------------------------------------------
 # Quicker helper for keeping shell .config up-to-date with .dotfiles
-alias 'dot-shell-update'='zsh ~/.dotfiles/install/bootstrap.zsh --skip-macos'
+alias 'dot-shell-update'='sh ~/.dotfiles/install/bootstrap.sh --skip-macos'

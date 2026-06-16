@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Interactive macOS preferences setup.
-# Intended to be called from install/bootstrap.zsh.
+# Intended to be called from install/bootstrap-macos.zsh.
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "──▶ macOS setup skipped: not running on Darwin"

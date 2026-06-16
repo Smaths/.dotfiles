@@ -29,6 +29,8 @@ ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
 GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
 GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
+TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
+TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
 DRY_RUN=0
 SKIP_MACOS=0
 INSTALL_GIT=0
@@ -36,7 +38,7 @@ UPGRADE_PACKAGES=0
 VERBOSE=0
 BREW_BIN=""
 BREWFILE_PACKAGE_COUNT=0
-TOTAL_STEPS=6
+TOTAL_STEPS=7
 CURRENT_STEP=0
 CURRENT_STEP_LABEL=""
 OK_COUNT=0
@@ -50,7 +52,7 @@ typeset -a TMP_LOG_FILES=()
 
 usage() {
   cat <<'EOF'
-Usage: bootstrap.zsh [options]
+Usage: bootstrap-macos.zsh [options]
 
 Options:
   --dry-run            Print actions without changing anything
@@ -455,6 +457,15 @@ step_start "Link Ghostty config"
 if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
   run_cmd mkdir -p "$XDG_CONFIG_HOME/ghostty"
   link_with_backup "$GHOSTTY_CONFIG_TARGET" "$GHOSTTY_CONFIG_LINK_PATH"
+  step_ok "linked/verified"
+else
+  step_skip "target missing"
+fi
+
+# Link tmux config to ~/.tmux.conf when present.
+step_start "Link tmux config"
+if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
+  link_with_backup "$TMUX_CONFIG_TARGET" "$TMUX_CONFIG_LINK_PATH"
   step_ok "linked/verified"
 else
   step_skip "target missing"

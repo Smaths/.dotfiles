@@ -11,9 +11,9 @@ configs while preserving existing user files via timestamped backups.
 
 ## Supported Platforms
 
-- **Primary**: macOS 13+ (Homebrew-based bootstrap).
-- **Secondary**: Windows (WSL-first) via `install/bootstrap-windows.ps1`.
-- **Secondary**: Debian server via `install/bootstrap-debian.sh`.
+- **Primary**: macOS 13+ (Homebrew-based bootstrap via `install/bootstrap.sh`).
+- **Secondary**: Windows (WSL-first) via `install/bootstrap.ps1`.
+- **Secondary**: Debian server via `install/bootstrap.sh`.
 - **Unsupported**: Other Linux distributions for config reuse only; no generic Linux bootstrap entrypoint.
 
 See [Platform Notes](docs/platforms.md) for details and prerequisites.
@@ -24,21 +24,21 @@ macOS
 
 ```zsh
 git clone <repo-url> ~/.dotfiles
-zsh ~/.dotfiles/install/bootstrap.zsh
+sh ~/.dotfiles/install/bootstrap.sh
 ```
 
-Windows (PowerShell): Note the ByPass command, review code before executing.
+Windows (PowerShell): Note the Bypass command, review code before executing.
 
 ```powershell
 git clone <repo-url> $HOME/.dotfiles
-powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap.ps1
 ```
 
 Debian server:
 
 ```bash
 git clone <repo-url> ~/.dotfiles
-bash ~/.dotfiles/install/bootstrap-debian.sh
+sh ~/.dotfiles/install/bootstrap.sh
 ```
 
 > [!WARNING]
@@ -46,7 +46,7 @@ bash ~/.dotfiles/install/bootstrap-debian.sh
 
 Linux:
 
-- Debian servers are supported through `install/bootstrap-debian.sh`.
+- Debian servers are supported through `install/bootstrap.sh`, which dispatches to `install/bootstrap-debian.sh`.
 - Other Linux distributions can reuse config modules manually.
 
 ### Flags
@@ -54,8 +54,8 @@ Linux:
 Global:
 
 ```zsh
-zsh --dry-run
-zsh --verbose
+sh install/bootstrap.sh --dry-run
+sh install/bootstrap.sh --verbose
 ```
 
 macOS-only:
@@ -178,7 +178,9 @@ Other Linux cleanup:
 
 ## Entry Points
 
-- macOS bootstrap: `install/bootstrap.zsh`
+- Unix bootstrap wrapper: `install/bootstrap.sh`
+- Windows bootstrap wrapper: `install/bootstrap.ps1`
+- macOS bootstrap: `install/bootstrap-macos.zsh`
 - Windows bootstrap: `install/bootstrap-windows.ps1`
 - Debian bootstrap: `install/bootstrap-debian.sh`
 - macOS tuning (optional): `install/macos.zsh`
@@ -196,6 +198,7 @@ Run after changing install/config behavior:
 shellcheck install/*.zsh config/zsh/*.zsh
 shellcheck install/*.sh config/bash/*.bash config/bash/.bashrc
 shfmt -w -i 2 -ci install/*.zsh config/zsh/*.zsh
+sh -n install/bootstrap.sh
 bash -n install/bootstrap-debian.sh config/bash/.bashrc
 brew bundle check --file ~/.dotfiles/install/Brewfile
 ```
@@ -203,7 +206,7 @@ brew bundle check --file ~/.dotfiles/install/Brewfile
 Debian dry-run check:
 
 ```bash
-bash ~/.dotfiles/install/bootstrap-debian.sh --dry-run --skip-packages
+sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 ```
 
 Windows package manifest check:

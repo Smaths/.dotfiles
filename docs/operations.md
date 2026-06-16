@@ -4,21 +4,21 @@
 
 ```zsh
 git clone <repo-url> ~/.dotfiles
-zsh ~/.dotfiles/install/bootstrap.zsh
+sh ~/.dotfiles/install/bootstrap.sh
 ```
 
 Windows:
 
 ```powershell
 git clone <repo-url> $HOME/.dotfiles
-powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap-windows.ps1
+powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap.ps1
 ```
 
 Debian server:
 
 ```bash
 git clone <repo-url> ~/.dotfiles
-bash ~/.dotfiles/install/bootstrap-debian.sh
+sh ~/.dotfiles/install/bootstrap.sh
 ```
 
 Useful flags:
@@ -43,7 +43,7 @@ During `install/macos.zsh`, choose one startup mode before the setting prompts:
 ```zsh
 cd ~/.dotfiles
 git pull --ff-only
-zsh install/bootstrap.zsh --skip-macos
+sh install/bootstrap.sh --skip-macos
 ```
 
 The macOS bootstrap checks the Brewfile first and skips `brew bundle install`
@@ -54,7 +54,7 @@ without turning every bootstrap into a full Homebrew upgrade pass.
 To intentionally upgrade outdated Homebrew packages and casks during bootstrap:
 
 ```zsh
-zsh install/bootstrap.zsh --skip-macos --upgrade-packages
+sh install/bootstrap.sh --skip-macos --upgrade-packages
 ```
 
 Windows update flow:
@@ -62,7 +62,7 @@ Windows update flow:
 ```powershell
 Set-Location $HOME/.dotfiles
 git pull --ff-only
-powershell -ExecutionPolicy Bypass -File install/bootstrap-windows.ps1 --skip-packages
+powershell -ExecutionPolicy Bypass -File install/bootstrap.ps1 --skip-packages
 ```
 
 Debian update flow:
@@ -70,7 +70,7 @@ Debian update flow:
 ```bash
 cd ~/.dotfiles
 git pull --ff-only
-bash install/bootstrap-debian.sh --skip-packages
+sh install/bootstrap.sh --skip-packages
 ```
 
 Without `--skip-packages`, Debian bootstrap checks `install/apt-packages.txt`
@@ -81,7 +81,7 @@ installs only the missing package names.
 Re-enable interactive defaults only when needed:
 
 ```zsh
-zsh install/bootstrap.zsh
+sh install/bootstrap.sh
 ```
 
 ## Doctor (Health Checks)
@@ -111,7 +111,7 @@ Debian equivalents:
 ```bash
 test -L ~/.bashrc && readlink ~/.bashrc
 bash -n ~/.dotfiles/config/bash/.bashrc
-bash ~/.dotfiles/install/bootstrap-debian.sh --dry-run --skip-packages
+sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 ```
 
 Expected:

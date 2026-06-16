@@ -27,6 +27,9 @@ _dot_path_prepend "$HOME/bin"
 _dot_path_prepend "$HOME/.config/mcp/bin"
 export PATH
 
+# Prompt: green user/host, blue working directory, plain command text.
+PS1='\[\e[32m\]\u@\h\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\$ '
+
 # History tuned for long-lived server sessions.
 export HISTFILE="${HISTFILE:-$HOME/.bash_history}"
 export HISTSIZE=50000
