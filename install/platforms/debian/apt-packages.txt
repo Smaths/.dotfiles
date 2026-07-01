@@ -14,5 +14,6 @@ less
 ncurses-term
 neovim
 ripgrep
+rsync
 sudo
 tmux

@@ -4,7 +4,10 @@
 export CSK_VPS_USER
 : "${CSK_VPS_HOST:=csk-server-eric}"
 export CSK_VPS_HOST
-: "${CSK_LOCAL_SERVER_OWNER:=csk-server-01:csk-server-01}"
+: "${CSK_LOCAL_SERVER_OWNER:=csk-ops:csk-ops}"
+if [[ "$CSK_LOCAL_SERVER_OWNER" == csk-server-*:csk-server-* ]]; then
+  CSK_LOCAL_SERVER_OWNER="csk-ops:csk-ops"
+fi
 export CSK_LOCAL_SERVER_OWNER
 : "${CSK_REPO_ROOT:=$HOME/Developer/CollidascopeVR/CollidascopeStudio}"
 export CSK_REPO_ROOT
@@ -78,7 +81,44 @@ csk-deploy-linux-server() {
 }
 
 csk-deploy-linux-server-local() {
-  _csk-deploy-linux-server-to "csk-server-local" "${CSK_LOCAL_SERVER_OWNER}" "collidascope-server"
+  local remote="csk-server-local"
+  local release_owner="${CSK_LOCAL_SERVER_OWNER}"
+  local artifact
+  local release
+  local remote_artifact
+
+  artifact="$(ls -t "$LINUX_SERVER_BUILD_DIR"/*.tar.gz 2>/dev/null | head -n 1)"
+  release="$(date +%Y%m%d-%H%M%S)"
+  remote_artifact="/tmp/collidascope-server-$release.tar.gz"
+
+  if [ -z "$artifact" ]; then
+    echo "No Linux server artifact found in $LINUX_SERVER_BUILD_DIR"
+    return 1
+  fi
+
+  if [[ ! "$release_owner" =~ '^[A-Za-z_][A-Za-z0-9_-]*(:[A-Za-z_][A-Za-z0-9_-]*)?$' ]]; then
+    echo "Invalid release owner: $release_owner"
+    return 1
+  fi
+
+  echo "Deploying $artifact to $remote as release $release..."
+
+  scp "$artifact" "$remote:$remote_artifact" || return 1
+
+  ssh -tt "$remote" "
+    set -e
+    sudo mkdir -p /opt/collidascope/server/releases/$release
+    sudo tar -xzf $remote_artifact -C /opt/collidascope/server/releases/$release
+    sudo chown -R $release_owner /opt/collidascope/server/releases/$release
+    sudo chmod +x /opt/collidascope/server/releases/$release/Collidascope
+    sudo ln -sfn /opt/collidascope/server/releases/$release /opt/collidascope/server/current
+    sudo rm -f $remote_artifact
+    cd /opt/collidascope/server
+    docker compose -f compose.server.yaml up -d --force-recreate collidascope-server
+    docker compose -f compose.server.yaml ps
+  " || return 1
+
+  echo "Deploy complete."
 }
 
 csk-sync-server-helpers() {
@@ -111,6 +151,6 @@ alias csk-server-status='ssh csk-server-eric "csk service status"'
 alias csk-server-logs='ssh csk-server-eric "csk logs"'
 alias csk-server-unity-status='ssh csk-server-eric "csk unity status"'
 alias csk-ssh-local='ssh csk-server-local'
-alias csk-server-status-local='ssh csk-server-local "csk service status"'
-alias csk-server-logs-local='ssh csk-server-local "csk logs"'
-alias csk-server-unity-status-local='ssh csk-server-local "csk unity status"'
+alias csk-server-status-local='ssh csk-server-local "cd /opt/collidascope/server && docker compose -f compose.server.yaml ps"'
+alias csk-server-logs-local='ssh csk-server-local "docker logs -f collidascope-server"'
+alias csk-server-unity-status-local='ssh csk-server-local "printf '\''{\"command\":\"status\"}\\n'\'' | nc 127.0.0.1 7788"'
