@@ -36,7 +36,7 @@ ui_init_symbols() {
       ;;
     *)
       case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
-        *UTF-8*|*utf-8*|*UTF8*|*utf8*) UI_UNICODE=1 ;;
+        *UTF-8* | *utf-8* | *UTF8* | *utf8*) UI_UNICODE=1 ;;
         *) UI_UNICODE=0 ;;
       esac
       ;;

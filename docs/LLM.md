@@ -20,6 +20,7 @@
    - `install/platforms/windows/bootstrap.ps1`
    - `install/platforms/debian/bootstrap.sh`
    - `install/platforms/macos/settings.zsh`
+   - `install/lib/common.sh`
    - `install/lib/ui.sh`
 3. Documentation:
    - `README.md`
@@ -49,12 +50,8 @@ Don't:
 Run from repo root:
 
 ```zsh
-shellcheck install/*.sh install/lib/*.sh install/platforms/*/*.sh install/platforms/*/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/platforms/*/*.zsh config/zsh/*.zsh
-sh -n install/bootstrap.sh
-sh -n install/lib/ui.sh
-bash -n install/platforms/debian/bootstrap.sh config/bash/.bashrc
-brew bundle check --file ~/.dotfiles/install/platforms/macos/Brewfile
+bash tests/check.sh
+brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
@@ -62,11 +59,12 @@ zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
 ```
 
-If a `dot doctor` command exists in the local environment, run that too.
+Run `mise current`, `node --version`, and `pnpm --version` to confirm the managed
+runtime versions.
 
 ## Off-Limits
 
 - Never commit secrets.
 - Do not assume generic Linux bootstrap support exists; Debian is the supported Linux server bootstrap target.
 - `install/bootstrap.sh` dispatches only to macOS and Debian bootstraps; use `install/bootstrap.ps1` for Windows.
-- Do not silently expand network dependencies beyond documented tools (`brew`, `winget`, `apt-get`, `git`, `curl`).
+- Do not silently expand network dependencies beyond documented tools (`brew`, `mise`, `winget`, `apt-get`, `git`, `curl`).

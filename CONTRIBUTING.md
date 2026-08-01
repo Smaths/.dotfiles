@@ -36,12 +36,11 @@ Anything beyond this should be justified in docs/PR description and kept minimal
 Suggested local checks:
 
 ```zsh
-shellcheck install/*.sh install/lib/*.sh install/platforms/*/*.sh install/platforms/*/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/platforms/*/*.zsh config/zsh/*.zsh
-sh -n install/bootstrap.sh
-sh -n install/lib/ui.sh
-bash -n install/platforms/debian/bootstrap.sh config/bash/.bashrc
+bash tests/check.sh
 ```
+
+This is the same script CI runs. Add new checks there rather than duplicating
+the command list in documentation.
 
 ## Documentation Requirements
 

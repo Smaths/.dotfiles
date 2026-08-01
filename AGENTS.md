@@ -6,7 +6,7 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 
 ## Supported Platforms
 
-- Primary: macOS 13+
+- Primary: macOS 14+
 - Secondary: Windows bootstrap via PowerShell
 - Secondary: Debian server bootstrap via bash
 - Secondary: Other Linux config reuse only
@@ -19,7 +19,7 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Windows install/bootstrap: `install/platforms/windows/bootstrap.ps1`
 - Debian install/bootstrap: `install/platforms/debian/bootstrap.sh`
 - Optional macOS settings: `install/platforms/macos/settings.zsh`
-- Shared Unix bootstrap UI: `install/lib/ui.sh`
+- Shared Unix bootstrap helpers: `install/lib/common.sh`, `install/lib/ui.sh`
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
@@ -31,7 +31,7 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Idempotency first: reruns should converge and avoid duplicate state.
 - No destructive operations without explicit `--force` style opt-in.
 - Never commit secrets, tokens, keys, or credentials.
-- Do not expand network behavior beyond documented tools (`brew`, `winget`, `apt-get`, `git`, `curl`) without explicit documentation updates.
+- Do not expand network behavior beyond documented tools (`brew`, `mise`, `winget`, `apt-get`, `git`, `curl`) without explicit documentation updates.
 
 ## Change Workflow
 
@@ -39,21 +39,16 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 2. Update automation step scripts (`install/*.zsh`, `install/*.ps1`, `install/*.sh`) if behavior changed.
 3. Update docs (`README.md`, `docs/*.md`, `CHANGELOG.md`).
 4. Run required checks:
-   - `shellcheck install/*.sh install/lib/*.sh install/platforms/*/*.sh install/platforms/*/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc`
-   - `shfmt -w -i 2 -ci install/platforms/*/*.zsh config/zsh/*.zsh`
-   - `sh -n install/bootstrap.sh`
-   - `sh -n install/lib/ui.sh`
-   - `bash -n install/platforms/debian/bootstrap.sh config/bash/.bashrc`
-   - `brew bundle check --file ~/.dotfiles/install/platforms/macos/Brewfile`
+   - `bash tests/check.sh` (static validation and shared helper tests; also run by CI)
+   - `brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile`
    - `winget search --id <ID> -e` for each `install/platforms/windows/winget-packages.txt` entry
    - On Debian: `sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages`
-   - If available: `dot doctor`
 
 ## Pointers
 
 - Architecture: `docs/ARCHITECTURE.md`
-- Platforms/prereqs: `docs/platforms.md`
+- Platforms/prereqs: `docs/PLATFORMS.md`
 - Operations: `docs/OPERATIONS.md`
-- LLM operating notes: `docs/llm.md`
+- LLM operating notes: `docs/LLM.md`
 - Contribution rules: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`

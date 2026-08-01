@@ -1,0 +1,8 @@
+[tools]
+node = ["24.18.1", "22.12.0"]
+pnpm = "11.19.0"
+
+[settings]
+# Honor project-native Node.js and pnpm version declarations.
+idiomatic_version_file_enable_tools = ["node", "pnpm"]
+paranoid = true

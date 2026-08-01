@@ -27,4 +27,3 @@ config/bash/local.bash
 
 # Codex local/runtime artifacts
 .codex/*
-AGENTS.md

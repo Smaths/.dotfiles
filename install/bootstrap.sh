@@ -4,7 +4,7 @@ set -eu
 # Unified Unix bootstrap entrypoint.
 # Dispatches to the platform-specific bootstrap while keeping each script simple.
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 
 case "$(uname -s)" in
   Darwin)

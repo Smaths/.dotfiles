@@ -1,0 +1,28 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: Validation
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shell tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck shfmt zsh
+
+      - name: Run checks
+        run: bash tests/check.sh
+
+      - name: Run Debian dry-run
+        run: |
+          mkdir -p "$RUNNER_TEMP/dotfiles-home"
+          HOME="$RUNNER_TEMP/dotfiles-home" DOTFILES_DIR="$GITHUB_WORKSPACE" sh install/bootstrap.sh --dry-run --skip-packages

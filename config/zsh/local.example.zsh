@@ -8,7 +8,6 @@
 # fpath=("$HOME/.docker/completions" $fpath)
 # autoload -Uz compinit && compinit
 
-
 # Collidascope overrides
 # export CSK_VPS_USER="eric"
 # export CSK_VPS_HOST="5.161.181.25"

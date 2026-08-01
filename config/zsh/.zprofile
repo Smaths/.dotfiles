@@ -1,3 +1,4 @@
 # Login-shell loader.
 # Keep this minimal and source path config.
-source "$HOME/.dotfiles/config/zsh/path.zsh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+source "$DOTFILES_DIR/config/zsh/path.zsh"

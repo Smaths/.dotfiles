@@ -190,7 +190,9 @@ fi
 alias tmuxk='tmux kill-session -t'
 alias tmuxa='tmux attach -t'
 alias tmuxl='tmux list-sessions'
-alias mux='tmuxp load'
+if _has tmuxp; then
+  alias mux='tmuxp load'
+fi
 
 # -----------------------------------------------------------------------------
 # Misc workflow helpers
@@ -217,7 +219,11 @@ unset -f _has
 # Optional GitHub Copilot shortcuts
 # -----------------------------------------------------------------------------
 if command -v gh >/dev/null 2>&1 && gh extension list 2>/dev/null | grep -q 'github/gh-copilot'; then
-  copilot() { local t="$1"; shift 2>/dev/null || true; gh copilot suggest -t "$t" "$@"; }
+  copilot() {
+    local t="$1"
+    shift 2>/dev/null || true
+    gh copilot suggest -t "$t" "$@"
+  }
   alias '??'='copilot shell'
   alias 'git?'='copilot git'
   alias 'gh?'='copilot gh'
@@ -237,4 +243,4 @@ unset _alias_modules_dir
 # .dotfiles helpers
 # -----------------------------------------------------------------------------
 # Quicker helper for keeping shell .config up-to-date with .dotfiles
-alias 'dot-shell-update'='sh ~/.dotfiles/install/bootstrap.sh --skip-macos'
+alias 'dot-shell-update'='sh ~/.dotfiles/install/bootstrap.sh'

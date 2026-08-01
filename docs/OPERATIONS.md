@@ -24,15 +24,25 @@ sh ~/.dotfiles/install/bootstrap.sh
 Useful flags:
 
 - `--dry-run`: print intended actions without mutating.
+- `--yes`: run without interactive confirmation.
 - `--verbose`: show extra command detail.
-- `--skip-macos`: skip interactive defaults prompts.
 - `--upgrade-packages` (macOS only): upgrade outdated Brewfile entries during bootstrap.
 - `--skip-packages` (Windows only): skip `winget` installs.
 - `--link-windows-shell` (Windows only): also link Windows `~/.zshrc` and `~/.zprofile` (default is WSL-first skip).
 - `--skip-packages` (Debian only): skip `apt-get` installs.
 - `--force-shell` (Debian only): change the current user's login shell to bash.
 
-During `install/platforms/macos/settings.zsh`, choose one startup mode before the setting prompts:
+Interactive Unix runs print a preflight plan and ask for confirmation before
+installing packages or relinking config. Non-TTY mutation requires `--yes`;
+otherwise use `--dry-run` to inspect the plan.
+
+macOS settings are separate from bootstrap. Run them explicitly when wanted:
+
+```zsh
+zsh ~/.dotfiles/install/platforms/macos/settings.zsh
+```
+
+The settings script offers three modes:
 
 - `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
 - `2) Choose settings`: set defaults for each setting, then proceed.
@@ -43,18 +53,57 @@ During `install/platforms/macos/settings.zsh`, choose one startup mode before th
 ```zsh
 cd ~/.dotfiles
 git pull --ff-only
-sh install/bootstrap.sh --skip-macos
+sh install/bootstrap.sh
 ```
 
 The macOS bootstrap checks the Brewfile first and skips `brew bundle install`
 when all entries are already present. When installation is needed, it uses
 `brew bundle install --no-upgrade --jobs=auto` so reruns install missing entries
 without turning every bootstrap into a full Homebrew upgrade pass.
+When installation is needed, Brew Bundle and mise run in the foreground with
+their native output and signal handling; bootstrap does not background them or
+redirect their output to temporary logs.
+After Brew Bundle completes, the bootstrap symlinks `config/mise/config.toml` to
+`${XDG_CONFIG_HOME:-~/.config}/mise/config.toml` and then runs `mise install` to
+install or verify the pinned Node.js and pnpm versions. Because the config sits
+at the path mise reads by default, no environment variable is needed and every
+process resolves the same toolchain. Node.js 24 and pnpm 11 are the defaults;
+Node.js 22.12.0 is also installed for projects that select it through `.nvmrc`
+or `.node-version`. A project's `packageManager` field remains the source of
+truth for selecting another pnpm version through mise.
 
 To intentionally upgrade outdated Homebrew packages and casks during bootstrap:
 
 ```zsh
-sh install/bootstrap.sh --skip-macos --upgrade-packages
+sh install/bootstrap.sh --upgrade-packages
+```
+
+For unattended maintenance, pass `--yes` explicitly:
+
+```zsh
+sh install/bootstrap.sh --yes
+```
+
+Node.js and pnpm upgrades are intentional config changes rather than side
+effects of a Homebrew upgrade. Update the defaults and any required Node.js
+compatibility runtimes, review the diff, then rerun bootstrap. Keep project
+runtime and package-manager pins until their projects are tested on newer
+versions.
+
+```zsh
+${EDITOR:-vi} ~/.dotfiles/config/mise/config.toml
+mise install
+sh install/bootstrap.sh
+```
+
+Check the versions selected in a project directory before installing
+dependencies:
+
+```zsh
+mise current
+node --version
+npm --version   # npm projects
+pnpm --version  # pnpm projects
 ```
 
 Windows update flow:
@@ -78,12 +127,6 @@ first and skips `apt-get update`/`apt-get install` when every manifest package
 is already installed. If packages are missing, it updates apt metadata and
 installs only the missing package names.
 
-Re-enable interactive defaults only when needed:
-
-```zsh
-sh install/bootstrap.sh
-```
-
 ## Doctor (Health Checks)
 
 Manual checks:
@@ -91,7 +134,13 @@ Manual checks:
 ```zsh
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
-brew bundle check --file ~/.dotfiles/install/platforms/macos/Brewfile
+brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile
+test -L ~/.config/mise/config.toml && readlink ~/.config/mise/config.toml
+mise current
+node --version
+pnpm --version
+# Same runtimes outside zsh: this is what scripts, editors, and hooks see.
+bash -c 'node --version; pnpm --version'
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
 zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
@@ -116,6 +165,9 @@ sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 
 Expected:
 
+- `mise current` resolves the Node.js and pnpm versions pinned in
+  `config/mise/config.toml`, and reports the same versions under `bash -c`. A
+  mismatch between the two means the mise config symlink is missing.
 - WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes the WSL shell/tmux setup commands.
 - Windows `~/.zshrc` and `~/.zprofile` are linked only if `--link-windows-shell` was used.
 - `winget list --id ... -e` resolves each configured package.
@@ -135,12 +187,14 @@ fstack
 
 ## Backup
 
-Bootstrap automatically creates timestamped backups before relinking:
+Bootstrap automatically creates collision-safe timestamped backups before
+relinking regular files, directories, or incorrect symlinks. Correct symlinks
+are a no-op, so converged reruns do not create additional backups:
 
-- `~/.zshrc.bak.<timestamp>`
-- `~/.zprofile.bak.<timestamp>`
-- `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>` (macOS bootstrap only, if replaced)
-- `~/.bashrc.bak.<timestamp>` (Debian bootstrap only, if replaced)
+- `~/.zshrc.bak.<timestamp>[.N]`
+- `~/.zprofile.bak.<timestamp>[.N]`
+- `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>[.N]` (macOS bootstrap only, if replaced)
+- `~/.bashrc.bak.<timestamp>[.N]` (Debian bootstrap only, if replaced)
 
 You can additionally snapshot the repo:
 
@@ -152,7 +206,7 @@ git tag backup-$(date +%Y%m%d-%H%M%S)
 ## Restore
 
 1. Remove current managed symlink.
-2. Move chosen `*.bak.<timestamp>` back to original path.
+2. Move chosen `*.bak.<timestamp>[.N]` back to original path.
 3. Start a new shell.
 
 Example:

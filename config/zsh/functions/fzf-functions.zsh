@@ -29,7 +29,10 @@ fcd() {
 
   __fzf_require_cmd fzf || return $?
   __fzf_require_cmd fd || return $?
-  [[ -d "$root" ]] || { print -u2 "Not a directory: $root"; return 1; }
+  [[ -d "$root" ]] || {
+    print -u2 "Not a directory: $root"
+    return 1
+  }
 
   selected="$(
     __fzf_fd_find d "$root" |
@@ -48,7 +51,10 @@ ffcd() {
 
   __fzf_require_cmd fzf || return $?
   __fzf_require_cmd fd || return $?
-  [[ -d "$root" ]] || { print -u2 "Not a directory: $root"; return 1; }
+  [[ -d "$root" ]] || {
+    print -u2 "Not a directory: $root"
+    return 1
+  }
 
   selected="$(
     __fzf_fd_find f "$root" |
@@ -67,7 +73,10 @@ fview() {
 
   __fzf_require_cmd fzf || return $?
   __fzf_require_cmd fd || return $?
-  [[ -d "$root" ]] || { print -u2 "Not a directory: $root"; return 1; }
+  [[ -d "$root" ]] || {
+    print -u2 "Not a directory: $root"
+    return 1
+  }
 
   selected="$(
     __fzf_fd_find f "$root" |
@@ -92,7 +101,10 @@ fstack() {
 
   if [[ $# -gt 0 ]]; then
     idx="$1"
-    [[ "$idx" == <-> ]] || { print -u2 "Usage: d [stack-index]"; return 2; }
+    [[ "$idx" == <-> ]] || {
+      print -u2 "Usage: d [stack-index]"
+      return 2
+    }
     builtin cd "-$idx" >/dev/null
     return
   fi

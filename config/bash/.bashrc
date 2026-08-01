@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Main bash entrypoint for this dotfiles repo.
 # This file is intended for Debian server shells and should be symlinked to ~/.bashrc.
 
@@ -82,11 +83,11 @@ export FZF_DEFAULT_OPTS="
 "
 
 if [ -r /usr/share/doc/fzf/examples/key-bindings.bash ]; then
-  # shellcheck source=/usr/share/doc/fzf/examples/key-bindings.bash
+  # shellcheck disable=SC1091
   source /usr/share/doc/fzf/examples/key-bindings.bash
 fi
 if [ -r /usr/share/doc/fzf/examples/completion.bash ]; then
-  # shellcheck source=/usr/share/doc/fzf/examples/completion.bash
+  # shellcheck disable=SC1091
   source /usr/share/doc/fzf/examples/completion.bash
 fi
 

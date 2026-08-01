@@ -12,9 +12,10 @@ set -euo pipefail
 # 1) Validates runtime prerequisites and platform
 # 2) Installs Homebrew if missing
 # 3) Installs packages/apps from Brewfile
-# 4) Installs git via Homebrew when missing
-# 5) Safely links ~/.zshrc and ~/.zprofile to this repo
-# 6) Optionally runs install/platforms/macos/settings.zsh for interactive macOS settings
+# 4) Links config/mise/config.toml to the XDG path mise reads by default
+# 5) Installs pinned Node.js and pnpm versions with mise
+# 6) Installs git via Homebrew when missing
+# 7) Safely links ~/.zshrc and ~/.zprofile to this repo
 #
 # Safety behavior:
 # - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
@@ -26,22 +27,24 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 SCRIPT_DIR="${0:A:h}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 BREWFILE="$SCRIPT_DIR/Brewfile"
+MISE_CONFIG_TARGET="$DOTFILES_DIR/config/mise/config.toml"
+MISE_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/mise/config.toml"
 ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
 GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
 GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
+COMMON_LIB="$DOTFILES_DIR/install/lib/common.sh"
 UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
 DRY_RUN=0
-SKIP_MACOS=0
+YES=0
 INSTALL_GIT=0
 UPGRADE_PACKAGES=0
 VERBOSE=0
 BREW_BIN=""
 BREWFILE_PACKAGE_COUNT=0
-TOTAL_STEPS=7
-typeset -a TMP_LOG_FILES=()
+TOTAL_STEPS=8
 
 usage() {
   cat <<'EOF'
@@ -49,9 +52,8 @@ Usage: bootstrap.zsh [options]
 
 Options:
   --dry-run            Print actions without changing anything
+  --yes                Run without interactive confirmation
   --verbose            Show more command details
-  --skip-macos         Skip install/platforms/macos/settings.zsh execution
-  --skip-macros        Alias of --skip-macos
   --upgrade-packages   Upgrade outdated Brewfile packages during bootstrap
   -h, --help           Show this help
 EOF
@@ -60,10 +62,10 @@ EOF
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
+    --yes) YES=1 ;;
     --verbose) VERBOSE=1 ;;
-    --skip-macos|--skip-macros) SKIP_MACOS=1 ;;
     --upgrade-packages) UPGRADE_PACKAGES=1 ;;
-    -h|--help)
+    -h | --help)
       usage
       exit 0
       ;;
@@ -75,37 +77,12 @@ for arg in "$@"; do
   esac
 done
 
-run_cmd() {
-  # Helper to centralize dry-run behavior for command execution.
-  if (( DRY_RUN )); then
-    echo "[dry-run] $*"
-  else
-    "$@"
-  fi
-}
-
-cleanup_temp_logs() {
-  local log_file
-  for log_file in "${TMP_LOG_FILES[@]}"; do
-    if [[ -n "$log_file" && -f "$log_file" ]]; then
-      rm -f "$log_file"
-    fi
-  done
-}
-
-on_interrupt() {
-  cleanup_temp_logs
-  echo
-  echo "Interrupted. Temporary logs cleaned." >&2
-  exit 130
-}
-
-on_exit() {
-  local exit_code=$?
-  if (( exit_code == 0 )); then
-    cleanup_temp_logs
-  fi
-}
+if [[ ! -f "$COMMON_LIB" ]]; then
+  printf 'ERROR: Missing shared bootstrap helper: %s\n' "$COMMON_LIB" >&2
+  exit 1
+fi
+# shellcheck source=install/lib/common.sh
+source "$COMMON_LIB"
 
 on_error() {
   local exit_code="$1"
@@ -114,70 +91,12 @@ on_error() {
 
   # Ctrl+C / signal-driven exits can still trigger ERR in zsh.
   # Keep interrupt output clean and avoid a misleading failure line.
-  if (( exit_code == 130 || exit_code == 143 || exit_code == -3 || exit_code == 20 )); then
+  if ((exit_code == 130 || exit_code == 143 || exit_code == -3)); then
     return 0
   fi
 
   echo
   echo "ERROR: bootstrap failed at line $line_no: $command (exit $exit_code)" >&2
-}
-
-run_with_peek() {
-  # Run noisy commands quietly while periodically showing a compact progress peek.
-  local label="$1"
-  shift
-
-  if (( DRY_RUN )); then
-    echo "[dry-run] $label: $*"
-    return 0
-  fi
-
-  local log_file
-  log_file="$(mktemp -t "bootstrap.${label// /_}.XXXXXX")"
-  TMP_LOG_FILES+=("$log_file")
-
-  if (( VERBOSE )); then
-    echo "  running: $label"
-  fi
-  "$@" >"$log_file" 2>&1 &
-  local pid=$!
-  local elapsed=0
-
-  while kill -0 "$pid" >/dev/null 2>&1; do
-    sleep 3
-    elapsed=$((elapsed + 3))
-    if (( VERBOSE )); then
-      if [[ -s "$log_file" ]]; then
-        local peek
-        peek="$(tail -n 1 "$log_file" | tr -d '\r')"
-        if [[ -n "$peek" ]]; then
-          echo "   ... ${peek}"
-        else
-          echo "   ... running (${elapsed}s)"
-        fi
-      else
-        echo "   ... running (${elapsed}s)"
-      fi
-    fi
-  done
-
-  set +e
-  wait "$pid"
-  local exit_code=$?
-  set -e
-
-  if (( exit_code != 0 )); then
-    echo "  FAIL: $label (exit $exit_code). Recent output:"
-    tail -n 40 "$log_file"
-    echo "Full log: $log_file"
-    return "$exit_code"
-  fi
-
-  if (( VERBOSE )); then
-    echo "  done: $label"
-  fi
-
-  rm -f "$log_file"
 }
 
 resolve_brew_bin() {
@@ -205,13 +124,77 @@ count_brewfile_packages() {
   ' "$BREWFILE"
 }
 
-require_cmd() {
-  # Hard fail with a contextual message when a required command is missing.
-  local cmd="$1"
-  local msg="$2"
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "ERROR: Missing required command '$cmd'. $msg" >&2
+print_preflight_plan() {
+  echo
+  echo "Bootstrap plan (macOS)"
+  echo "----------------------"
+  if [[ -n "$BREW_BIN" ]]; then
+    echo "  Homebrew: already installed at $BREW_BIN"
+  else
+    echo "  Homebrew: install using the official installer"
+  fi
+  if ((UPGRADE_PACKAGES)); then
+    echo "  Brewfile packages: install missing entries and upgrade outdated entries"
+  else
+    echo "  Brewfile packages: install missing entries only"
+  fi
+  echo "  mise config link: $MISE_CONFIG_LINK_PATH"
+  echo "  mise runtimes: install pinned Node.js and pnpm versions"
+  echo "  Git: install with Homebrew only if missing"
+  echo "  Shell links: ~/.zshrc and ~/.zprofile"
+  if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
+    echo "  Ghostty link: $GHOSTTY_CONFIG_LINK_PATH"
+  else
+    echo "  Ghostty link: skipped (target missing)"
+  fi
+  if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
+    echo "  tmux link: $TMUX_CONFIG_LINK_PATH"
+  else
+    echo "  tmux link: skipped (target missing)"
+  fi
+}
+
+confirm_preflight() {
+  local answer
+
+  print_preflight_plan
+
+  if ((DRY_RUN)); then
+    echo
+    echo "Dry run: continuing without confirmation."
+    return 0
+  fi
+
+  if ((YES)); then
+    echo
+    echo "Proceeding because --yes was passed."
+    return 0
+  fi
+
+  if [[ ! -t 0 ]]; then
+    echo
+    echo "ERROR: Refusing to run mutating bootstrap without an interactive terminal." >&2
+    echo "Pass --yes to run non-interactively or --dry-run to inspect planned actions." >&2
     exit 1
+  fi
+
+  echo
+  read -r "?Proceed with these changes? [y/N]: " answer
+  case "$answer" in
+    y | Y | yes | YES) ;;
+    *)
+      echo "Cancelled."
+      exit 0
+      ;;
+  esac
+}
+
+show_brewfile_misses() {
+  echo "  Brewfile is not satisfied. Details:"
+  if ((UPGRADE_PACKAGES)); then
+    brew bundle check --verbose --file="$BREWFILE" || true
+  else
+    env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --verbose --no-upgrade --file="$BREWFILE" || true
   fi
 }
 
@@ -225,8 +208,6 @@ ui_init "snarfum dotfiles bootstrap" "$TOTAL_STEPS"
 ui_print_header
 ui_start
 trap 'on_error $? $LINENO "${ZSH_COMMAND:-}"' ERR
-trap 'on_interrupt' INT TERM
-trap 'on_exit' EXIT
 
 # This bootstrap is intentionally macOS-only.
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -237,49 +218,6 @@ fi
 # Preflight requirements before network/package steps.
 require_cmd uname "Install core system tools and retry."
 require_cmd curl "curl is expected to be present on macOS. If it's missing, your PATH/environment is broken or the OS install is atypical. Fix PATH or reinstall base system tools and retry."
-
-ui_step_start "Resolve Homebrew"
-if BREW_BIN="$(resolve_brew_bin)"; then
-  ui_step_ok "$BREW_BIN"
-else
-  ui_step_skip "not installed"
-fi
-
-# Install Homebrew if absent.
-ui_step_start "Install Homebrew"
-if [[ -z "$BREW_BIN" ]]; then
-  if (( DRY_RUN )); then
-    echo "[dry-run] /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'"
-  else
-    run_with_peek \
-      "Installing Homebrew" \
-      /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'
-  fi
-  if ! BREW_BIN="$(resolve_brew_bin)"; then
-    if (( DRY_RUN )); then
-      BREW_BIN="<homebrew path after install>"
-    else
-      echo "ERROR: Homebrew installer completed but brew could not be resolved." >&2
-      exit 1
-    fi
-  fi
-  ui_step_ok "$BREW_BIN"
-else
-  ui_step_skip "already installed"
-fi
-
-# Load brew into this shell so subsequent brew commands work immediately.
-if [[ -n "$BREW_BIN" ]]; then
-  eval "$("$BREW_BIN" shellenv)"
-fi
-
-# If git is missing, install it after brew is available.
-if ! command -v git >/dev/null 2>&1; then
-  INSTALL_GIT=1
-  if (( VERBOSE )); then
-    echo "  git missing; will install"
-  fi
-fi
 
 # Validate required project files before applying changes.
 if [[ ! -f "$BREWFILE" ]]; then
@@ -297,97 +235,147 @@ if [[ ! -f "$ZPROFILE_TARGET" ]]; then
   exit 1
 fi
 
+if [[ ! -f "$MISE_CONFIG_TARGET" ]]; then
+  echo "ERROR: Missing mise config: $MISE_CONFIG_TARGET" >&2
+  exit 1
+fi
+
+ui_step_start "Resolve Homebrew"
+if BREW_BIN="$(resolve_brew_bin)"; then
+  ui_step_ok "$BREW_BIN"
+else
+  ui_step_skip "not installed"
+fi
+
+confirm_preflight
+
+# Install Homebrew if absent.
+ui_step_start "Install Homebrew"
+if [[ -z "$BREW_BIN" ]]; then
+  if ((DRY_RUN)); then
+    echo "[dry-run] /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'"
+  else
+    echo "  running Homebrew installer in the foreground"
+    /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'
+  fi
+  if ! BREW_BIN="$(resolve_brew_bin)"; then
+    if ((DRY_RUN)); then
+      BREW_BIN="<homebrew path after install>"
+    else
+      echo "ERROR: Homebrew installer completed but brew could not be resolved." >&2
+      exit 1
+    fi
+  fi
+  ui_step_ok "$BREW_BIN"
+else
+  ui_step_skip "already installed"
+fi
+
+# Load brew into this shell so subsequent brew commands work immediately.
+if [[ -n "$BREW_BIN" && "$BREW_BIN" != "<homebrew path after install>" ]]; then
+  eval "$("$BREW_BIN" shellenv)"
+fi
+
+# If git is missing, install it after brew is available.
+if ! command -v git >/dev/null 2>&1; then
+  INSTALL_GIT=1
+  if ((VERBOSE)); then
+    echo "  git missing; will install"
+  fi
+fi
+
 BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages)"
 ui_step_start "Install Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
-BREWFILE_READY=0
-if (( UPGRADE_PACKAGES )); then
-  if brew bundle check --file="$BREWFILE" >/dev/null 2>&1; then
-    BREWFILE_READY=1
+if ((DRY_RUN)) && [[ "$BREW_BIN" == "<homebrew path after install>" ]]; then
+  if ((UPGRADE_PACKAGES)); then
+    echo "[dry-run] brew bundle install --file=\"$BREWFILE\" --jobs=auto"
+  else
+    echo "[dry-run] brew bundle install --file=\"$BREWFILE\" --no-upgrade --jobs=auto"
   fi
+  ui_step_ok "planned after Homebrew install"
 else
-  if env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file="$BREWFILE" >/dev/null 2>&1; then
-    BREWFILE_READY=1
+  BREWFILE_READY=0
+  if ((UPGRADE_PACKAGES)); then
+    if brew bundle check --file="$BREWFILE" >/dev/null 2>&1; then
+      BREWFILE_READY=1
+    fi
+  else
+    if env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file="$BREWFILE" >/dev/null 2>&1; then
+      BREWFILE_READY=1
+    fi
+  fi
+
+  if ((BREWFILE_READY && !INSTALL_GIT)); then
+    if ((UPGRADE_PACKAGES)); then
+      ui_step_skip "already installed/up to date"
+    else
+      ui_step_skip "already installed"
+    fi
+  else
+    if ((!BREWFILE_READY)); then
+      show_brewfile_misses
+      if ((UPGRADE_PACKAGES)); then
+        run_cmd brew bundle install --file="$BREWFILE" --jobs=auto
+      else
+        run_cmd brew bundle install --file="$BREWFILE" --no-upgrade --jobs=auto
+      fi
+    fi
+
+    # Install git only when missing to keep reruns minimal.
+    if ((INSTALL_GIT)); then
+      run_cmd brew install git
+    fi
+
+    if ((DRY_RUN)); then
+      ui_step_ok "planned"
+    else
+      ui_step_ok "brew bundle complete"
+    fi
   fi
 fi
 
-if (( BREWFILE_READY && ! INSTALL_GIT )); then
-  if (( UPGRADE_PACKAGES )); then
-    ui_step_skip "already installed/up to date"
-  else
-    ui_step_skip "already installed"
-  fi
+# Link the tracked mise config to the path mise reads by default, so every
+# process resolves the same toolchain -- not just shells that source .zshrc.
+ui_step_start "Link mise config"
+run_cmd mkdir -p "${MISE_CONFIG_LINK_PATH:h}"
+link_with_backup "$MISE_CONFIG_TARGET" "$MISE_CONFIG_LINK_PATH"
+if ((DRY_RUN)); then
+  ui_step_ok "planned"
 else
-  if (( ! BREWFILE_READY )); then
-    if (( UPGRADE_PACKAGES )); then
-      run_with_peek "Installing/upgrading Brewfile packages" brew bundle install --file="$BREWFILE" --jobs=auto
-    else
-      run_with_peek "Installing Brewfile packages" brew bundle install --file="$BREWFILE" --no-upgrade --jobs=auto
-    fi
-  fi
-
-  # Install git only when missing to keep reruns minimal.
-  if (( INSTALL_GIT )); then
-    run_with_peek "Installing git" brew install git
-  fi
-
-  ui_step_ok "brew bundle complete"
+  ui_step_ok "linked/verified"
 fi
 
-# Symlink helper:
-# - If the link already points to the right target, do nothing.
-# - If a file exists, move it to a timestamped backup before linking.
-link_with_backup() {
-  local link_target="${1:-}"
-  local link_path="${2:-}"
-
-  if [[ -z "$link_target" || -z "$link_path" ]]; then
-    echo "ERROR: link_with_backup requires target and link path" >&2
-    return 1
-  fi
-
-  if [[ -L "$link_path" ]]; then
-    local current_target
-    current_target="$(readlink "$link_path")"
-    if [[ "$current_target" == "$link_target" ]]; then
-      if (( VERBOSE )); then
-        echo "  link: already correct ($link_path -> $link_target)"
-      fi
-      return
-    fi
-  elif [[ -e "$link_path" ]]; then
-    local backup="${link_path}.bak.$(date +%Y%m%d%H%M%S)"
-    if (( DRY_RUN )); then
-      echo "  link: would back up $link_path -> $backup"
-    else
-      run_cmd mv "$link_path" "$backup"
-      if (( VERBOSE )); then
-        echo "  link: backed up $link_path -> $backup"
-      fi
-    fi
-  fi
-
-  if (( DRY_RUN )); then
-    echo "  link: would create $link_path -> $link_target"
-    run_cmd ln -sfn "$link_target" "$link_path"
-  else
-    run_cmd ln -sfn "$link_target" "$link_path"
-    if (( VERBOSE )); then
-      echo "  link: created $link_path -> $link_target"
-    fi
-  fi
-}
+ui_step_start "Install mise runtimes"
+if ((!DRY_RUN)) && ! command -v mise >/dev/null 2>&1; then
+  echo "ERROR: mise was not installed by Brew Bundle." >&2
+  exit 1
+fi
+run_cmd mise install --yes
+if ((DRY_RUN)); then
+  ui_step_ok "planned"
+else
+  ui_step_ok "Node.js and pnpm installed/verified"
+fi
 
 ui_step_start "Link shell config files"
 link_with_backup "$ZSHRC_TARGET" "$HOME/.zshrc"
 link_with_backup "$ZPROFILE_TARGET" "$HOME/.zprofile"
-ui_step_ok "linked/verified"
+if ((DRY_RUN)); then
+  ui_step_ok "planned"
+else
+  ui_step_ok "linked/verified"
+fi
 
 # Link Ghostty config to XDG default path when present.
 ui_step_start "Link Ghostty config"
 if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
   run_cmd mkdir -p "$XDG_CONFIG_HOME/ghostty"
   link_with_backup "$GHOSTTY_CONFIG_TARGET" "$GHOSTTY_CONFIG_LINK_PATH"
-  ui_step_ok "linked/verified"
+  if ((DRY_RUN)); then
+    ui_step_ok "planned"
+  else
+    ui_step_ok "linked/verified"
+  fi
 else
   ui_step_skip "target missing"
 fi
@@ -396,42 +384,13 @@ fi
 ui_step_start "Link tmux config"
 if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
   link_with_backup "$TMUX_CONFIG_TARGET" "$TMUX_CONFIG_LINK_PATH"
-  ui_step_ok "linked/verified"
+  if ((DRY_RUN)); then
+    ui_step_ok "planned"
+  else
+    ui_step_ok "linked/verified"
+  fi
 else
   ui_step_skip "target missing"
-fi
-
-# Run interactive macOS settings unless explicitly skipped.
-ui_step_start "Apply macOS settings"
-MACOS_SCRIPT="$SCRIPT_DIR/settings.zsh"
-MACOS_SETUP_SKIPPED_EXIT=20
-if (( SKIP_MACOS )); then
-  ui_step_skip "skipped (--skip-macos)"
-elif [[ -f "$MACOS_SCRIPT" ]]; then
-  echo
-  echo "macOS interactive setup"
-  echo "───────────────────────"
-  if (( VERBOSE )); then
-    echo "  running: $MACOS_SCRIPT"
-  fi
-  if (( DRY_RUN )); then
-    run_cmd zsh "$MACOS_SCRIPT"
-    ui_step_ok "dry-run"
-  else
-    set +e
-    zsh "$MACOS_SCRIPT"
-    macos_exit=$?
-    set -e
-    if (( macos_exit == 0 )); then
-      ui_step_ok "done"
-    elif (( macos_exit == MACOS_SETUP_SKIPPED_EXIT )); then
-      ui_step_skip_user "skipped (user selected Skip)"
-    else
-      return "$macos_exit"
-    fi
-  fi
-else
-  ui_step_skip "script missing"
 fi
 
 ui_summary

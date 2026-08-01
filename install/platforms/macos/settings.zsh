@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Interactive macOS preferences setup.
-# Intended to be called from install/platforms/macos/bootstrap.zsh.
+# Run explicitly after bootstrap when managed macOS defaults are wanted.
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "──▶ macOS setup skipped: not running on Darwin"
@@ -17,11 +17,11 @@ ask_yes_no_default() {
   local normalized_default="n"
 
   case "${default_answer:l}" in
-    y|yes|1|true)
+    y | yes | 1 | true)
       default_hint="[Y/n]"
       normalized_default="y"
       ;;
-    n|no|0|false|"")
+    n | no | 0 | false | "")
       default_hint="[y/N]"
       normalized_default="n"
       ;;
@@ -34,8 +34,8 @@ ask_yes_no_default() {
   while true; do
     read -r "?$prompt $default_hint: " answer
     case "${answer:l}" in
-      y|yes) return 0 ;;
-      n|no) return 1 ;;
+      y | yes) return 0 ;;
+      n | no) return 1 ;;
       "")
         if [[ "$normalized_default" == "y" ]]; then
           return 0
@@ -57,7 +57,10 @@ apply_default() {
     bool) defaults write "$domain" "$key" -bool "$value" ;;
     int) defaults write "$domain" "$key" -int "$value" ;;
     string) defaults write "$domain" "$key" -string "$value" ;;
-    *) echo "Unsupported defaults type: $type" >&2; return 1 ;;
+    *)
+      echo "Unsupported defaults type: $type" >&2
+      return 1
+      ;;
   esac
 }
 
@@ -72,7 +75,7 @@ print_note() {
 }
 
 print_settings_box() {
-  if (( ${#SETTINGS_LINES[@]} == 0 )); then
+  if ((${#SETTINGS_LINES[@]} == 0)); then
     return 0
   fi
 
@@ -80,7 +83,7 @@ print_settings_box() {
   local max_width=${#header}
   local line
   for line in "${SETTINGS_LINES[@]}"; do
-    if (( ${#line} > max_width )); then
+    if ((${#line} > max_width)); then
       max_width=${#line}
     fi
   done
@@ -111,7 +114,6 @@ typeset -A DEFAULTS_PRESET=(
   [restart_finder_now]="y"
   [restart_dock_now]="y"
 )
-PROMPT_PER_SETTING=1
 typeset -a SETTINGS_LINES=()
 
 print_defaults_summary() {
@@ -142,7 +144,7 @@ print_defaults_summary() {
   format_defaults_label() {
     local label="$1"
     local dot_count=$((label_width - ${#label}))
-    if (( dot_count < 3 )); then
+    if ((dot_count < 3)); then
       dot_count=3
     fi
     printf '%s %s' "$label" "$(printf '%*s' "$dot_count" '' | tr ' ' '.')"
@@ -162,7 +164,7 @@ print_defaults_summary() {
   local max_width=${#settings_header}
   local line
   for line in "${preset_lines[@]}"; do
-    if (( ${#line} > max_width )); then
+    if ((${#line} > max_width)); then
       max_width=${#line}
     fi
   done
@@ -183,7 +185,7 @@ select_prompt_mode() {
   local mode
   while true; do
 
-cat <<'EOF'
+    cat <<'EOF'
 Prompt mode:
   [1] Use defaults (no per-setting prompts)
   [2] Choose settings (prompt per setting)
@@ -194,7 +196,6 @@ EOF
       1)
         print_defaults_summary
         if ask_yes_no_default "Proceed (this will restart Finder and Dock if those options are enabled)?" "y"; then
-          PROMPT_PER_SETTING=0
           return 0
         fi
         echo "Defaults not confirmed. Choose a mode again."
@@ -211,7 +212,6 @@ EOF
         if ask_yes_no_default "──▶ Restart Finder now" "${DEFAULTS_PRESET[restart_finder_now]}"; then DEFAULTS_PRESET[restart_finder_now]="y"; else DEFAULTS_PRESET[restart_finder_now]="n"; fi
         if ask_yes_no_default "──▶ Restart Dock now" "${DEFAULTS_PRESET[restart_dock_now]}"; then DEFAULTS_PRESET[restart_dock_now]="y"; else DEFAULTS_PRESET[restart_dock_now]="n"; fi
         if ask_yes_no_default "Proceed (this may restart Finder/Dock depending on your choices)?" "y"; then
-          PROMPT_PER_SETTING=0
           return 0
         fi
         echo "Cancelled. Returning to prompt mode selection."
@@ -220,7 +220,7 @@ EOF
       3)
         echo "──▶ macOS setup skipped by user"
         echo ""
-        return 2
+        exit 0
         ;;
       *)
         echo "Please choose 1, 2, or 3 (empty input is ignored)."
@@ -229,84 +229,49 @@ EOF
   done
 }
 
-set +e
 select_prompt_mode
-select_mode_exit=$?
-set -e
-if (( select_mode_exit == 2 )); then
-  exit 20
-elif (( select_mode_exit != 0 )); then
-  exit "$select_mode_exit"
-fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Disable Natural Scrolling (Trackpad)" "${DEFAULTS_PRESET[natural_scrolling]}" && DEFAULTS_PRESET[natural_scrolling]="y" || DEFAULTS_PRESET[natural_scrolling]="n"
-fi
 if [[ "${DEFAULTS_PRESET[natural_scrolling]}" == "y" ]]; then
   apply_default NSGlobalDomain com.apple.swipescrolldirection bool false
   print_applied "Natural Scrolling disabled"
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Set Caps Lock to Control (requires logout/login)" "${DEFAULTS_PRESET[caps_to_control]}" && DEFAULTS_PRESET[caps_to_control]="y" || DEFAULTS_PRESET[caps_to_control]="n"
-fi
 if [[ "${DEFAULTS_PRESET[caps_to_control]}" == "y" ]]; then
   hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}' >/dev/null
   print_applied "Caps Lock remapped to Control for current session"
   print_note "Caps Lock remap may not persist across reboot/login on all macOS versions."
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Finder: use list view by default" "${DEFAULTS_PRESET[finder_list_view]}" && DEFAULTS_PRESET[finder_list_view]="y" || DEFAULTS_PRESET[finder_list_view]="n"
-fi
 if [[ "${DEFAULTS_PRESET[finder_list_view]}" == "y" ]]; then
   apply_default com.apple.finder FXPreferredViewStyle string Nlsv
   print_applied "Finder list view"
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Finder: show full POSIX path in window title" "${DEFAULTS_PRESET[finder_show_full_path]}" && DEFAULTS_PRESET[finder_show_full_path]="y" || DEFAULTS_PRESET[finder_show_full_path]="n"
-fi
 if [[ "${DEFAULTS_PRESET[finder_show_full_path]}" == "y" ]]; then
   apply_default com.apple.finder _FXShowPosixPathInTitle bool true
   print_applied "Finder full path in title"
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Finder: search current folder by default" "${DEFAULTS_PRESET[finder_search_current_folder]}" && DEFAULTS_PRESET[finder_search_current_folder]="y" || DEFAULTS_PRESET[finder_search_current_folder]="n"
-fi
 if [[ "${DEFAULTS_PRESET[finder_search_current_folder]}" == "y" ]]; then
   apply_default com.apple.finder FXDefaultSearchScope string SCcf
   print_applied "Finder search scope current folder"
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Dock: enable auto-hide" "${DEFAULTS_PRESET[dock_autohide]}" && DEFAULTS_PRESET[dock_autohide]="y" || DEFAULTS_PRESET[dock_autohide]="n"
-fi
 if [[ "${DEFAULTS_PRESET[dock_autohide]}" == "y" ]]; then
   apply_default com.apple.dock autohide bool true
   print_applied "Dock auto-hide"
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Dock: set minimize effect to Scale" "${DEFAULTS_PRESET[dock_scale_effect]}" && DEFAULTS_PRESET[dock_scale_effect]="y" || DEFAULTS_PRESET[dock_scale_effect]="n"
-fi
 if [[ "${DEFAULTS_PRESET[dock_scale_effect]}" == "y" ]]; then
   apply_default com.apple.dock mineffect string scale
   print_applied "Dock minimize effect scale"
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Restart Finder now to apply Finder changes" "${DEFAULTS_PRESET[restart_finder_now]}" && DEFAULTS_PRESET[restart_finder_now]="y" || DEFAULTS_PRESET[restart_finder_now]="n"
-fi
 if [[ "${DEFAULTS_PRESET[restart_finder_now]}" == "y" ]]; then
   killall Finder >/dev/null 2>&1 || true
   print_applied "Finder restarted"
 fi
 
-if (( PROMPT_PER_SETTING )); then
-  ask_yes_no_default "Restart Dock now to apply Dock changes" "${DEFAULTS_PRESET[restart_dock_now]}" && DEFAULTS_PRESET[restart_dock_now]="y" || DEFAULTS_PRESET[restart_dock_now]="n"
-fi
 if [[ "${DEFAULTS_PRESET[restart_dock_now]}" == "y" ]]; then
   killall Dock >/dev/null 2>&1 || true
   print_applied "Dock restarted"

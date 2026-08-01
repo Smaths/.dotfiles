@@ -24,14 +24,16 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
-SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+SCRIPT_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 APT_MANIFEST="$SCRIPT_DIR/apt-packages.txt"
 BASHRC_TARGET="$DOTFILES_DIR/config/bash/.bashrc"
 BASHRC_LINK_PATH="$HOME/.bashrc"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
+COMMON_LIB="$DOTFILES_DIR/install/lib/common.sh"
 UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
 DRY_RUN=0
+YES=0
 SKIP_PACKAGES=0
 FORCE_SHELL=0
 VERBOSE=0
@@ -43,6 +45,7 @@ Usage: bootstrap.sh [options]
 
 Options:
   --dry-run         Print actions without changing anything
+  --yes             Run without interactive confirmation
   --verbose         Show more command details
   --skip-packages   Skip apt package installation
   --force-shell     Change the current user's login shell to bash
@@ -53,6 +56,7 @@ EOF
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
+    --yes) YES=1 ;;
     --verbose) VERBOSE=1 ;;
     --skip-packages) SKIP_PACKAGES=1 ;;
     --force-shell) FORCE_SHELL=1 ;;
@@ -68,15 +72,12 @@ for arg in "$@"; do
   esac
 done
 
-run_cmd() {
-  if ((DRY_RUN)); then
-    printf '[dry-run]'
-    printf ' %q' "$@"
-    printf '\n'
-  else
-    "$@"
-  fi
-}
+if [[ ! -f "$COMMON_LIB" ]]; then
+  printf 'ERROR: Missing shared bootstrap helper: %s\n' "$COMMON_LIB" >&2
+  exit 1
+fi
+# shellcheck source=install/lib/common.sh
+source "$COMMON_LIB"
 
 run_as_root() {
   if ((EUID == 0)); then
@@ -91,15 +92,6 @@ run_as_root() {
 
   echo "ERROR: '$*' requires root. Re-run as root or install sudo." >&2
   exit 1
-}
-
-require_cmd() {
-  local cmd="$1"
-  local message="$2"
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "ERROR: Missing required command '$cmd'. $message" >&2
-    exit 1
-  fi
 }
 
 is_debian() {
@@ -141,43 +133,65 @@ find_missing_packages() {
   done
 }
 
-link_with_backup() {
-  local link_target="${1:-}"
-  local link_path="${2:-}"
+print_preflight_plan() {
+  printf '\n'
+  printf 'Bootstrap plan (Debian)\n'
+  printf '%s\n' '-----------------------'
+  if ((SKIP_PACKAGES)); then
+    printf '  apt packages: skipped (--skip-packages)\n'
+  else
+    printf '  apt packages: install missing entries only (%d listed)\n' "${#PACKAGES[@]}"
+  fi
+  printf '  bash link: %s -> %s\n' "$BASHRC_LINK_PATH" "$BASHRC_TARGET"
+  if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
+    printf '  tmux link: %s -> %s\n' "$TMUX_CONFIG_LINK_PATH" "$TMUX_CONFIG_TARGET"
+  else
+    printf '  tmux link: skipped (target missing)\n'
+  fi
+  if ((FORCE_SHELL)); then
+    printf '  login shell: change current user to bash if needed\n'
+  else
+    printf '  login shell: unchanged (pass --force-shell to change)\n'
+  fi
+}
 
-  if [[ -z "$link_target" || -z "$link_path" ]]; then
-    echo "ERROR: link_with_backup requires target and link path" >&2
-    return 1
+confirm_preflight() {
+  local answer
+
+  print_preflight_plan
+
+  if ((DRY_RUN)); then
+    printf '\nDry run: continuing without confirmation.\n'
+    return 0
   fi
 
-  if [[ -L "$link_path" ]]; then
-    local current_target
-    current_target="$(readlink "$link_path")"
-    if [[ "$current_target" == "$link_target" ]]; then
-      if ((VERBOSE)); then
-        echo "      link already correct: $link_path -> $link_target"
-      fi
-      return 0
-    fi
-  elif [[ -e "$link_path" ]]; then
-    local backup="${link_path}.bak.$(date +%Y%m%d%H%M%S)"
-    run_cmd mv "$link_path" "$backup"
-    if ((VERBOSE)); then
-      echo "      backed up: $link_path -> $backup"
-    fi
+  if ((YES)); then
+    printf '\nProceeding because --yes was passed.\n'
+    return 0
   fi
 
-  run_cmd ln -sfn "$link_target" "$link_path"
-  if ((VERBOSE)); then
-    echo "      linked: $link_path -> $link_target"
+  if [[ ! -t 0 ]]; then
+    printf '\nERROR: Refusing to run mutating bootstrap without an interactive terminal.\n' >&2
+    printf 'Pass --yes to run non-interactively or --dry-run to inspect planned actions.\n' >&2
+    exit 1
   fi
+
+  printf '\n'
+  read -r -p "Proceed with these changes? [y/N]: " answer
+  case "$answer" in
+    y | Y | yes | YES) ;;
+    *)
+      printf 'Cancelled.\n'
+      exit 0
+      ;;
+  esac
 }
 
 if [[ ! -f "$UI_LIB" ]]; then
   echo "ERROR: Missing shared UI helper: $UI_LIB" >&2
   exit 1
 fi
-# shellcheck source=../lib/ui.sh
+# shellcheck source=install/lib/ui.sh
 source "$UI_LIB"
 ui_init "snarfum dotfiles Debian bootstrap" "$TOTAL_STEPS"
 ui_print_header
@@ -198,7 +212,10 @@ if [[ ! -f "$BASHRC_TARGET" ]]; then
   echo "ERROR: Missing bashrc target: $BASHRC_TARGET" >&2
   exit 1
 fi
+read_package_manifest
 ui_step_ok "Debian-compatible system"
+
+confirm_preflight
 
 ui_step_start "Install apt packages"
 if ((SKIP_PACKAGES)); then
@@ -206,7 +223,6 @@ if ((SKIP_PACKAGES)); then
 else
   require_cmd apt-get "This bootstrap expects apt-get on Debian."
   require_cmd dpkg-query "This bootstrap expects dpkg-query on Debian."
-  read_package_manifest
   if ((${#PACKAGES[@]} == 0)); then
     ui_step_skip "manifest empty"
   else
@@ -216,7 +232,10 @@ else
   if ((${#PACKAGES[@]} > 0 && ${#MISSING_PACKAGES[@]} == 0)); then
     ui_step_skip "all packages already installed"
   elif ((${#MISSING_PACKAGES[@]} > 0)); then
+    echo "  missing packages: ${MISSING_PACKAGES[*]}"
+    echo "  running: apt-get update"
     run_as_root apt-get update
+    echo "  running: apt-get install -y ${MISSING_PACKAGES[*]}"
     run_as_root apt-get install -y "${MISSING_PACKAGES[@]}"
     ui_step_ok "${#MISSING_PACKAGES[@]} missing packages installed"
   fi
@@ -224,7 +243,11 @@ fi
 
 ui_step_start "Link bash config"
 link_with_backup "$BASHRC_TARGET" "$BASHRC_LINK_PATH"
-ui_step_ok "linked/verified"
+if ((DRY_RUN)); then
+  ui_step_ok "planned"
+else
+  ui_step_ok "linked/verified"
+fi
 
 ui_step_start "Verify bash config"
 if ((DRY_RUN)); then
@@ -240,7 +263,11 @@ fi
 ui_step_start "Link tmux config"
 if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
   link_with_backup "$TMUX_CONFIG_TARGET" "$TMUX_CONFIG_LINK_PATH"
-  ui_step_ok "linked/verified"
+  if ((DRY_RUN)); then
+    ui_step_ok "planned"
+  else
+    ui_step_ok "linked/verified"
+  fi
 else
   ui_step_skip "target missing"
 fi

@@ -11,12 +11,12 @@ configs while preserving existing user files via timestamped backups.
 
 ## Supported Platforms
 
-- **Primary**: macOS 13+ (Homebrew-based bootstrap via `install/bootstrap.sh`).
+- **Primary**: macOS 14+ (Homebrew-based bootstrap via `install/bootstrap.sh`).
 - **Secondary**: Windows (WSL-first) via `install/bootstrap.ps1`.
 - **Secondary**: Debian server via `install/bootstrap.sh`.
 - **Unsupported**: Other Linux distributions for config reuse only; no generic Linux bootstrap entrypoint.
 
-See [Platform Notes](docs/platforms.md) for details and prerequisites.
+See [Platform Notes](docs/PLATFORMS.md) for details and prerequisites.
 
 ## Quick Install
 
@@ -55,14 +55,14 @@ Global:
 
 ```zsh
 sh install/bootstrap.sh --dry-run
+sh install/bootstrap.sh --yes
 sh install/bootstrap.sh --verbose
 ```
 
 macOS-only:
 
 ```zsh
-zsh --skip-macos
-zsh --upgrade-packages
+sh install/bootstrap.sh --upgrade-packages
 ```
 
 Windows-only:
@@ -83,10 +83,15 @@ Debian-only:
 
 - Cross-platform:
   - Idempotent intent: reruns should be safe and mostly no-op when already configured.
-  - Before relinking `~/.zshrc` or `~/.zprofile`, existing files are moved to
-    timestamped backups (`.bak.YYYYmmddHHMMSS`).
+  - Interactive terminal runs print a preflight plan and ask for confirmation
+    before mutating. Non-interactive mutation requires `--yes`; use
+    `--dry-run` to inspect the plan without changing anything.
+  - Before relinking `~/.zshrc` or `~/.zprofile`, existing files, directories,
+    and incorrect symlinks are moved to collision-safe timestamped backups
+    (`.bak.YYYYmmddHHMMSS[.N]`). Correct symlinks remain unchanged.
 - macOS:
-  - `install/platforms/macos/settings.zsh` is interactive and opt-out via `--skip-macos`.
+  - Interactive system defaults are opt-in and run separately with
+    `zsh ~/.dotfiles/install/platforms/macos/settings.zsh`.
   - Homebrew package upgrades require explicit `--upgrade-packages` opt-in.
   - macOS setup prompt modes:
     - use defaults (no per-setting prompts)
@@ -100,6 +105,15 @@ Debian-only:
   - Links `~/.bashrc` to `config/bash/.bashrc` with timestamped backup behavior.
   - Leaves the login shell unchanged unless `--force-shell` is passed.
 - Shell config:
+  - Node.js 24 LTS and pnpm 11 are the defaults, while Node.js 22.12.0 is
+    installed for project compatibility; the macOS bootstrap installs them
+    from `config/mise/config.toml` after Brew Bundle completes.
+  - `mise` reads existing `.nvmrc` and `.node-version` files for per-project
+    Node.js switching and project `packageManager` fields for pnpm switching.
+    npm remains available from each managed Node.js install.
+  - Runtimes resolve through mise shims on `PATH` (`config/zsh/path.zsh`) rather
+    than `mise activate`, so scripts, editors, git hooks, and other non-zsh
+    processes get the same versions the terminal does.
   - `fzf` defaults are wired to `fd` (`FZF_DEFAULT_COMMAND`, `FZF_CTRL_T_COMMAND`)
     with hidden files included and shared excludes for heavy paths (for example:
     `.git`, `node_modules`, `.cache`, `dist`, `build`, `.next`, `.turbo`,
@@ -108,6 +122,22 @@ Debian-only:
   - Alias modules load from `config/zsh/aliases/*.zsh` in lexical order; keep project/machine-specific overrides in `config/zsh/local.zsh`.
 
 ## Features
+
+### Managed Node.js Toolchain
+
+- `mise` owns the Node.js and pnpm versions instead of Homebrew `node`, nvm, or
+  a global Yarn install.
+- The tracked global config keeps Node.js 24 LTS and pnpm 11 as defaults, and
+  installs Node.js 22.12.0 for compatibility. Project `packageManager` fields
+  remain the source of truth for selecting other pnpm versions through mise.
+- Bootstrap symlinks `config/mise/config.toml` to
+  `${XDG_CONFIG_HOME:-~/.config}/mise/config.toml`, the path mise reads by
+  default. No environment variable is required, so the toolchain is identical in
+  the terminal and in any process that never sources `~/.zshrc`.
+- Follow each project's lockfile and `packageManager` field instead of adding
+  project-specific pnpm releases to the global tool list.
+- Vite and other build tools remain project dependencies; for example, start a
+  Vite project with `pnpm create vite`.
 
 ### Fuzzy Navigation Helpers
 
@@ -124,11 +154,20 @@ Debian-only:
     - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
   - Zsh module chain via `config/zsh/.zshrc` -> `config/zsh/*.zsh`.
 - macOS:
-  - Homebrew packages and casks from `install/platforms/macos/Brewfile` (includes `fd`, `fzf`, and `ripgrep`).
+  - Homebrew packages and casks from `install/platforms/macos/Brewfile`
+    (includes jq, shell validation tools, Herdr, mise, Unity Hub, VS Code,
+    Zed, and Sublime Text).
   - Bootstrap installs missing Brewfile entries without upgrading existing packages by default; pass `--upgrade-packages` to upgrade outdated entries.
+  - Pinned Node.js and pnpm versions from `config/mise/config.toml`.
+  - mise config symlink:
+    - `$XDG_CONFIG_HOME/mise/config.toml` -> `~/.dotfiles/config/mise/config.toml`
+  - Homebrew, Brew Bundle, and mise installation commands run in the foreground
+    with their native prompts, status output, signals, and exit codes.
   - Ghostty symlink:
     - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
-  - Optional interactive system defaults in `install/platforms/macos/settings.zsh`.
+  - tmux symlink:
+    - `~/.tmux.conf` -> `~/.dotfiles/config/tmux/tmux.conf`
+  - Optional standalone interactive system defaults in `install/platforms/macos/settings.zsh`.
 - Windows:
   - Packages from `install/platforms/windows/winget-packages.txt` via `winget` (when available).
   - WSL-first guidance output (installs/linking commands for WSL shell environment).
@@ -142,7 +181,7 @@ Debian-only:
 ## Rollback / Uninstall
 
 1. Remove symlinks if present.
-2. Restore backups created by bootstrap (`*.bak.<timestamp>`) as needed.
+2. Restore backups created by bootstrap (`*.bak.<timestamp>[.N]`) as needed.
 3. Optionally uninstall managed packages.
 4. Remove the repo clone.
 
@@ -167,7 +206,7 @@ Debian cleanup:
 
 ```bash
 rm -f ~/.bashrc
-# Restore ~/.bashrc.bak.<timestamp> if needed.
+# Restore ~/.bashrc.bak.<timestamp>[.N] if needed.
 rm -rf ~/.dotfiles
 ```
 
@@ -184,6 +223,7 @@ Other Linux cleanup:
 - Windows bootstrap: `install/platforms/windows/bootstrap.ps1`
 - Debian bootstrap: `install/platforms/debian/bootstrap.sh`
 - macOS settings (optional): `install/platforms/macos/settings.zsh`
+- Shared Unix bootstrap behavior: `install/lib/common.sh`
 - Shared Unix bootstrap UI: `install/lib/ui.sh`
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
@@ -196,13 +236,12 @@ Other Linux cleanup:
 Run after changing install/config behavior:
 
 ```zsh
-shellcheck install/*.sh install/lib/*.sh install/platforms/*/*.sh install/platforms/*/*.zsh config/zsh/*.zsh config/bash/*.bash config/bash/.bashrc
-shfmt -w -i 2 -ci install/platforms/*/*.zsh config/zsh/*.zsh
-sh -n install/bootstrap.sh
-sh -n install/lib/ui.sh
-bash -n install/platforms/debian/bootstrap.sh config/bash/.bashrc
-brew bundle check --file ~/.dotfiles/install/platforms/macos/Brewfile
+bash tests/check.sh
+brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile
 ```
+
+`tests/check.sh` is the single source of truth for static validation and shared
+bootstrap helper tests. CI runs the same script.
 
 Debian dry-run check:
 
@@ -218,20 +257,25 @@ Get-Content $HOME/.dotfiles/install/platforms/windows/winget-packages.txt | `
   ForEach-Object { winget search --id $_ -e }
 ```
 
-If available:
+Inspect the managed runtimes:
 
-- `dot doctor`
+```zsh
+mise current
+node --version
+pnpm --version
+```
 
 ## Off-Limits and Invariants
 
 - Scripts should not delete user files by default.
 - No secret material (tokens/keys/passwords) should be committed.
-- Network installs are limited to explicit bootstrap dependencies (`brew`, `winget`, `apt-get`, `git`, `curl`).
+- Network installs are limited to explicit bootstrap dependencies (`brew`,
+  `mise`, `winget`, `apt-get`, `git`, `curl`).
 
 See:
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Platform Notes](docs/platforms.md)
+- [Platform Notes](docs/PLATFORMS.md)
 - [Operations](docs/OPERATIONS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
