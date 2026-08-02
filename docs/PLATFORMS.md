@@ -18,9 +18,13 @@ Behavior:
 - Downloads the official Homebrew installer to a temporary file before running
   it so the installer retains terminal input for confirmation and `sudo`
   prompts, then removes the temporary file.
-- Uses Homebrew-installed `mise` to install the Node.js versions and pnpm 11
-  default pinned in `config/mise/config.toml`. Project version files and pnpm
-  `packageManager` metadata remain the source of truth for project overrides.
+- Uses Homebrew-installed `mise` to install the pinned Node.js versions, Pi
+  terminal agent, and pnpm 11 default from `config/mise/config.toml`. Project
+  version files and pnpm `packageManager` metadata remain the source of truth
+  for project overrides.
+- Loads Prompt Purification from the vendored Zsh source in this repository;
+  bootstrap performs no prompt-specific download and validates the source
+  before linking `~/.zshrc`.
 - Uses MySQL 8.4 LTS through the keg-only `mysql@8.4` formula; Zsh adds its
   client and server binaries to `PATH`. Bootstrap installs or verifies the
   formula but leaves the Homebrew service state unchanged.
@@ -46,12 +50,14 @@ Behavior:
 - Validates winget package IDs before mutation.
 - Validates symlink capability only when `--link-windows-shell` is used.
 - Prints recommended WSL commands to install `zsh`, `tmux`, `ripgrep`, and `fzf`, then link shell files in WSL.
+- The linked Zsh config loads the same vendored Prompt Purification source as
+  macOS; Windows does not download a separate prompt copy.
 - Skips Windows-host `~/.zshrc` and `~/.zprofile` links by default; enable with `--link-windows-shell`.
 - If `winget` is missing, package installation is skipped (non-destructive default).
 - Known scope gap: the preflight plan, confirmation prompt, and `--yes` flag are
   implemented for the Unix bootstraps only. The Windows bootstrap still relies on
   `--dry-run` for inspection and does not prompt before mutating. It also does not
-  manage Node.js or pnpm; `config/mise/config.toml` is macOS-only today.
+  manage Node.js, Pi, or pnpm; `config/mise/config.toml` is macOS-only today.
 
 ## Debian Server (Secondary)
 

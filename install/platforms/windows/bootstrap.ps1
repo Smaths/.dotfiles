@@ -28,6 +28,7 @@ $ScriptDir = Split-Path -Parent $PSCommandPath
 $WingetManifest = Join-Path $ScriptDir "winget-packages.txt"
 $ZshrcTarget = Join-Path $DotfilesDir "config/zsh/.zshrc"
 $ZprofileTarget = Join-Path $DotfilesDir "config/zsh/.zprofile"
+$PromptPurificationTarget = Join-Path $DotfilesDir "config/zsh/prompts/purification/prompt_purification_setup"
 $HomePath = [Environment]::GetFolderPath("UserProfile")
 
 $DryRun = $false
@@ -351,6 +352,10 @@ if (-not (Test-Path -LiteralPath $ZshrcTarget)) {
 
 if (-not (Test-Path -LiteralPath $ZprofileTarget)) {
   throw "Missing symlink target: $ZprofileTarget"
+}
+
+if (-not (Test-Path -LiteralPath $PromptPurificationTarget)) {
+  throw "Missing vendored prompt: $PromptPurificationTarget"
 }
 
 Step-Start "Run preflight checks"

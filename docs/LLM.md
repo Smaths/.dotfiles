@@ -59,10 +59,11 @@ test -L ~/.zprofile && readlink ~/.zprofile
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
 zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
+zsh -i -c 'typeset -f prompt_purification_setup >/dev/null && echo ok'
 ```
 
-Run `mise current`, `node --version`, and `pnpm --version` to confirm the managed
-runtime versions.
+Run `mise current`, `node --version`, `pnpm --version`, and `pi --version` to
+confirm the managed tool versions.
 
 ## Off-Limits
 

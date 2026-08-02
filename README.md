@@ -105,9 +105,14 @@ Debian-only:
   - Links `~/.bashrc` to `config/bash/.bashrc` with timestamped backup behavior.
   - Leaves the login shell unchanged unless `--force-shell` is passed.
 - Shell config:
+  - Prompt Purification is vendored under `config/zsh/prompts/purification/`
+    and loads from the repository, so Zsh uses the same prompt without a
+    separate per-machine download.
   - Node.js 24 LTS and pnpm 11 are the defaults, while Node.js 22.12.0 is
     installed for project compatibility; the macOS bootstrap installs them
     from `config/mise/config.toml` after Brew Bundle completes.
+  - Pi 0.82.1 is installed from the same mise config as the `pi` terminal
+    agent, independently of project Node.js versions.
   - `mise` reads existing `.nvmrc` and `.node-version` files for per-project
     Node.js switching and project `packageManager` fields for pnpm switching.
     npm remains available from each managed Node.js install.
@@ -123,7 +128,19 @@ Debian-only:
 
 ## Features
 
-### Managed Node.js Toolchain
+### Vendored Zsh Prompt
+
+- Prompt Purification is vendored at
+  `config/zsh/prompts/purification/prompt_purification_setup` and loaded by
+  `config/zsh/options.zsh`.
+- `config/zsh/prompts/purification/UPSTREAM.md` records the reviewed upstream
+  commit, content hashes, author, license, and update procedure.
+- No prompt-specific download or package installation runs during bootstrap;
+  linking `~/.zshrc` makes the repository-owned prompt active.
+- The prompt applies to Zsh configurations only. Debian's managed Bash config
+  remains independent.
+
+### Managed mise Tools
 
 - `mise` owns the Node.js and pnpm versions instead of Homebrew `node`, nvm, or
   a global Yarn install.
@@ -153,16 +170,20 @@ Debian-only:
     - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
     - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
   - Zsh module chain via `config/zsh/.zshrc` -> `config/zsh/*.zsh`.
+  - Vendored Prompt Purification source and provenance metadata under
+    `config/zsh/prompts/purification/`.
 - macOS:
   - Homebrew packages and casks from `install/platforms/macos/Brewfile`
     (includes jq, shell validation tools, Herdr, mise, Unity Hub, VS Code,
-    Zed, and Sublime Text).
+    Zed, Sublime Text, ChatGPT, Claude, Codex, and Claude Code).
   - Bootstrap installs missing Brewfile entries without upgrading existing packages by default; pass `--upgrade-packages` to upgrade outdated entries.
-  - Pinned Node.js and pnpm versions from `config/mise/config.toml`.
+  - Pinned Node.js, Pi, and pnpm versions from `config/mise/config.toml`.
   - mise config symlink:
     - `$XDG_CONFIG_HOME/mise/config.toml` -> `~/.dotfiles/config/mise/config.toml`
   - Homebrew, Brew Bundle, and mise installation commands run in the foreground
     with their native prompts, status output, signals, and exit codes.
+  - Brew Bundle streams verbose install output while running up to four formula
+    jobs in parallel, so long installs continue to show activity after fetching.
   - First-time Homebrew setup downloads the official installer to a temporary
     file before running it, preserving terminal input for confirmation and
     `sudo` prompts; the temporary file is removed on success or failure.

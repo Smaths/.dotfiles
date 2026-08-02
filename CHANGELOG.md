@@ -25,9 +25,18 @@ All notable changes to this dotfiles repo should be documented in this file.
 - Herdr, shell validation tools, tmux, Neovim, bat, uv, Git utilities, cloud
   CLIs, Android platform tools, .NET SDK, Unity Hub, and Zed to the macOS
   package manifest.
+- ChatGPT and Claude desktop clients plus the Codex and Claude Code terminal
+  agents to the macOS package manifest.
+- Pi 0.82.1 as a mise-managed terminal agent.
+- Prompt Purification vendored at its reviewed upstream commit and loaded from
+  the tracked Zsh config instead of an unmanaged file under `~/.config`.
 
 ### Changed
 
+- Replaced the proprietary Little Snitch macOS cask with the open-source LuLu
+  firewall.
+- macOS bootstrap now streams verbose Brew Bundle command output during parallel
+  package installation instead of appearing idle after the fetch phase.
 - `README.md` rewritten as LLM-legible project entrypoint with:
   - purpose and platform support
   - quick install flow
@@ -47,7 +56,9 @@ All notable changes to this dotfiles repo should be documented in this file.
 - macOS package and runtime installation commands now run in the foreground
   with native output and signal handling; background polling, temporary logs,
   and their cleanup traps were removed.
-- macOS bootstrap now skips `brew bundle install` when the Brewfile is already satisfied and uses `--no-upgrade --jobs=auto` when package installation is needed.
+- macOS bootstrap now skips `brew bundle install` when the Brewfile is already
+  satisfied and uses `--verbose --no-upgrade --jobs=auto` when package
+  installation is needed.
 - macOS bootstrap now supports `--upgrade-packages` to intentionally upgrade outdated Brewfile entries.
 - Interactive macOS defaults are now an explicit standalone operation through
   `install/platforms/macos/settings.zsh`; bootstrap no longer invokes them or
@@ -60,7 +71,7 @@ All notable changes to this dotfiles repo should be documented in this file.
 - Documentation references were aligned to current canonical paths and filenames (`install/platforms/macos/Brewfile`, `docs/ARCHITECTURE.md`).
 - Platform and operations docs now include Debian bash bootstrap usage and limits.
 - macOS bootstrap lives at `install/platforms/macos/bootstrap.zsh`; `install/bootstrap.sh` dispatches to platform-specific Unix bootstraps.
-- macOS bootstrap now installs pinned mise runtimes after Brew Bundle.
+- macOS bootstrap now installs pinned mise tools after Brew Bundle.
 - The mise config is now symlinked to `$XDG_CONFIG_HOME/mise/config.toml`, the
   path mise reads by default, instead of being selected by an
   `MISE_GLOBAL_CONFIG_FILE` export from `config/zsh/env.zsh`. The export only

@@ -13,7 +13,7 @@ set -euo pipefail
 # 2) Installs Homebrew if missing
 # 3) Installs packages/apps from Brewfile
 # 4) Links config/mise/config.toml to the XDG path mise reads by default
-# 5) Installs pinned Node.js and pnpm versions with mise
+# 5) Installs pinned Node.js, Pi, and pnpm versions with mise
 # 6) Installs git via Homebrew when missing
 # 7) Safely links ~/.zshrc and ~/.zprofile to this repo
 #
@@ -31,6 +31,7 @@ MISE_CONFIG_TARGET="$DOTFILES_DIR/config/mise/config.toml"
 MISE_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/mise/config.toml"
 ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
+PROMPT_PURIFICATION_TARGET="$DOTFILES_DIR/config/zsh/prompts/purification/prompt_purification_setup"
 GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
 GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
@@ -140,9 +141,10 @@ print_preflight_plan() {
     echo "  Brewfile packages: install missing entries only"
   fi
   echo "  mise config link: $MISE_CONFIG_LINK_PATH"
-  echo "  mise runtimes: install pinned Node.js and pnpm versions"
+  echo "  mise tools: install pinned Node.js, Pi, and pnpm versions"
   echo "  Git: install with Homebrew only if missing"
   echo "  Shell links: ~/.zshrc and ~/.zprofile"
+  echo "  Zsh prompt: vendored Prompt Purification"
   if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
     echo "  Ghostty link: $GHOSTTY_CONFIG_LINK_PATH"
   else
@@ -244,6 +246,11 @@ if [[ ! -f "$ZPROFILE_TARGET" ]]; then
   exit 1
 fi
 
+if [[ ! -f "$PROMPT_PURIFICATION_TARGET" ]]; then
+  echo "ERROR: Missing vendored prompt: $PROMPT_PURIFICATION_TARGET" >&2
+  exit 1
+fi
+
 if [[ ! -f "$MISE_CONFIG_TARGET" ]]; then
   echo "ERROR: Missing mise config: $MISE_CONFIG_TARGET" >&2
   exit 1
@@ -297,9 +304,9 @@ BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages)"
 ui_step_start "Install Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
 if ((DRY_RUN)) && [[ "$BREW_BIN" == "<homebrew path after install>" ]]; then
   if ((UPGRADE_PACKAGES)); then
-    echo "[dry-run] brew bundle install --file=\"$BREWFILE\" --jobs=auto"
+    echo "[dry-run] brew bundle install --verbose --file=\"$BREWFILE\" --jobs=auto"
   else
-    echo "[dry-run] brew bundle install --file=\"$BREWFILE\" --no-upgrade --jobs=auto"
+    echo "[dry-run] brew bundle install --verbose --file=\"$BREWFILE\" --no-upgrade --jobs=auto"
   fi
   ui_step_ok "planned after Homebrew install"
 else
@@ -323,10 +330,11 @@ else
   else
     if ((!BREWFILE_READY)); then
       show_brewfile_misses
+      echo "  installing Brewfile entries with live Homebrew output (up to 4 parallel jobs)"
       if ((UPGRADE_PACKAGES)); then
-        run_cmd brew bundle install --file="$BREWFILE" --jobs=auto
+        run_cmd brew bundle install --verbose --file="$BREWFILE" --jobs=auto
       else
-        run_cmd brew bundle install --file="$BREWFILE" --no-upgrade --jobs=auto
+        run_cmd brew bundle install --verbose --file="$BREWFILE" --no-upgrade --jobs=auto
       fi
     fi
 
@@ -354,7 +362,7 @@ else
   ui_step_ok "linked/verified"
 fi
 
-ui_step_start "Install mise runtimes"
+ui_step_start "Install mise tools"
 if ((!DRY_RUN)) && ! command -v mise >/dev/null 2>&1; then
   echo "ERROR: mise was not installed by Brew Bundle." >&2
   exit 1
@@ -363,7 +371,7 @@ run_cmd mise install --yes
 if ((DRY_RUN)); then
   ui_step_ok "planned"
 else
-  ui_step_ok "Node.js and pnpm installed/verified"
+  ui_step_ok "Node.js, Pi, and pnpm installed/verified"
 fi
 
 ui_step_start "Link shell config files"

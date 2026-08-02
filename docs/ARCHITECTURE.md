@@ -13,17 +13,22 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `config/mise/config.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`
-  (symlink on macOS). It declares the default Node.js and pnpm toolchain plus a
-  Node.js compatibility runtime; project `.nvmrc`, `.node-version`, and
-  `packageManager` metadata can override the active versions. Linking it to the
-  path mise already reads by default means every process resolves the same
-  toolchain, rather than only shells that source `config/zsh/env.zsh`.
+  (symlink on macOS). It declares the default Node.js and pnpm toolchain, a
+  Node.js compatibility runtime, and the Pi terminal agent; project `.nvmrc`,
+  `.node-version`, and `packageManager` metadata can override the active
+  versions. Linking it to the path mise already reads by default means every
+  process resolves the same toolchain, rather than only shells that source
+  `config/zsh/env.zsh`.
 - `install/platforms/macos/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
 - Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
 
 Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
+`config/zsh/options.zsh` adds the tracked
+`config/zsh/prompts/purification/` directory to `fpath` and initializes the
+vendored prompt. Bootstrap validates that prompt source before linking the Zsh
+entrypoints, so a partial checkout fails before changing shell files.
 
 `config/bash/.bashrc` is intentionally standalone for Debian servers. It mirrors
 only portable shell defaults and small aliases instead of sourcing zsh modules.
@@ -31,6 +36,9 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
 ## Zsh Module Boundaries
 
 - `config/zsh/options.zsh`: shell options, history behavior, and directory-stack options.
+- `config/zsh/prompts/purification/`: vendored Prompt Purification source and
+  upstream provenance. The repository-owned copy avoids per-machine prompt
+  downloads and drift.
 - `config/zsh/path.zsh`: `PATH` and path-like variable setup, including the mise
   shims directory. Shims are the only mise activation mechanism; `mise activate`
   is deliberately not used, because shims also cover non-interactive and non-zsh
@@ -72,7 +80,8 @@ macOS bootstrap interactive without coupling installer stdin to `curl`.
 - Managed by this repo:
   - symlink targets listed above
   - package sets under `install/platforms/*/`
-  - Node.js and pnpm versions declared in `config/mise/config.toml`
+  - Node.js, Pi, and pnpm versions declared in `config/mise/config.toml`
+  - the Zsh Prompt Purification source and its reviewed upstream provenance
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - arbitrary files in `$HOME` not explicitly linked
@@ -90,6 +99,8 @@ macOS bootstrap interactive without coupling installer stdin to `curl`.
 - Platform bootstrap scripts stay explicit under `install/platforms/{macos,windows,debian}/`.
 - Shared bootstrap behavior and UI helpers live under `install/lib/`.
 - Required package manifest and symlink targets must exist before mutation.
+- Zsh-linking bootstraps require the vendored Prompt Purification source before
+  advertising or linking the managed Zsh configuration.
 - `install/platforms/macos/settings.zsh` is interactive, standalone, and never
   invoked by bootstrap.
 - Debian package installation skips `apt-get update` and `apt-get install` when the apt manifest is already satisfied.

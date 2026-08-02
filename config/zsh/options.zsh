@@ -1,10 +1,6 @@
-# Prompt (fallback to starship if available)
-if [[ -r "$HOME/.config/prompt_purification/prompt_purification_setup" ]]; then
-  fpath=("$HOME/.config/prompt_purification" $fpath)
-  autoload -Uz prompt_purification_setup && prompt_purification_setup
-elif command -v starship >/dev/null 2>&1; then
-  eval "$(starship init zsh)"
-fi
+# Prompt (vendored with this repo; see prompts/purification/UPSTREAM.md)
+fpath=("$ZSH_CONFIG_DIR/prompts/purification" $fpath)
+autoload -Uz prompt_purification_setup && prompt_purification_setup
 
 # Navigation
 DIRSTACKSIZE=20          # Keep up to 10 entries in the directory stack.
