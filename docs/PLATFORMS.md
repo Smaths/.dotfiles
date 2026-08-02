@@ -15,6 +15,9 @@ Behavior:
 - Installs missing entries from `install/platforms/macos/Brewfile` without upgrading existing packages by default.
 - Runs Homebrew, Brew Bundle, and mise installation commands in the foreground
   with native output and signal handling.
+- Downloads the official Homebrew installer to a temporary file before running
+  it so the installer retains terminal input for confirmation and `sudo`
+  prompts, then removes the temporary file.
 - Uses Homebrew-installed `mise` to install the Node.js versions and pnpm 11
   default pinned in `config/mise/config.toml`. Project version files and pnpm
   `packageManager` metadata remain the source of truth for project overrides.

@@ -21,6 +21,7 @@
    - `install/platforms/debian/bootstrap.sh`
    - `install/platforms/macos/settings.zsh`
    - `install/lib/common.sh`
+   - `install/lib/homebrew.sh`
    - `install/lib/ui.sh`
 3. Documentation:
    - `README.md`
@@ -42,7 +43,8 @@ Don't:
 
 - Reorder `install/platforms/macos/Brewfile` entries without a concrete reason.
 - Inline secrets/tokens/credentials in tracked files.
-- Add unreviewed `curl|sh` patterns beyond the explicit Homebrew bootstrap path.
+- Pipe downloaded scripts directly into a shell; download them to a temporary
+  file first so failures and terminal behavior remain observable.
 - Add destructive operations without an explicit `--force` style gate.
 
 ## Required Checks Before Finalizing

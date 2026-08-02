@@ -163,6 +163,9 @@ Debian-only:
     - `$XDG_CONFIG_HOME/mise/config.toml` -> `~/.dotfiles/config/mise/config.toml`
   - Homebrew, Brew Bundle, and mise installation commands run in the foreground
     with their native prompts, status output, signals, and exit codes.
+  - First-time Homebrew setup downloads the official installer to a temporary
+    file before running it, preserving terminal input for confirmation and
+    `sudo` prompts; the temporary file is removed on success or failure.
   - Ghostty symlink:
     - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
   - tmux symlink:
@@ -224,6 +227,7 @@ Other Linux cleanup:
 - Debian bootstrap: `install/platforms/debian/bootstrap.sh`
 - macOS settings (optional): `install/platforms/macos/settings.zsh`
 - Shared Unix bootstrap behavior: `install/lib/common.sh`
+- Homebrew installer helper: `install/lib/homebrew.sh`
 - Shared Unix bootstrap UI: `install/lib/ui.sh`
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`

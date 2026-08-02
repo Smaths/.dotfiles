@@ -39,6 +39,11 @@ All notable changes to this dotfiles repo should be documented in this file.
   - skip
 - Platform and operations docs now include Windows bootstrap usage and limits.
 - macOS bootstrap now separates Homebrew resolution from first-time Homebrew installation in progress output.
+- First-time Homebrew installation now downloads the official installer to a
+  temporary file before executing it. This preserves interactive confirmation
+  and `sudo` prompts and cleans up the installer after success or failure.
+- Bootstrap failures now identify the active step instead of reporting an
+  unavailable zsh command value as `unknown command`.
 - macOS package and runtime installation commands now run in the foreground
   with native output and signal handling; background polling, temporary logs,
   and their cleanup traps were removed.

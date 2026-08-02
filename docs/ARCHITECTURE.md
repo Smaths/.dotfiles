@@ -63,6 +63,10 @@ platform-specific.
 `install/lib/ui.sh` provides shared Unix bootstrap presentation helpers for
 headers, aligned step output, status marks, and summary rendering.
 
+`install/lib/homebrew.sh` downloads the official Homebrew installer to a
+temporary file and executes it with terminal input intact. This keeps the
+macOS bootstrap interactive without coupling installer stdin to `curl`.
+
 ## Ownership and Scope
 
 - Managed by this repo:

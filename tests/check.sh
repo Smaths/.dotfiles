@@ -12,4 +12,6 @@ git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.zsh' '*.bash' 
 sh -n install/bootstrap.sh
 bash tests/install/common_test.sh
 zsh tests/install/common_test.sh
+bash tests/install/homebrew_test.sh
+zsh tests/install/homebrew_test.sh
 git diff --check

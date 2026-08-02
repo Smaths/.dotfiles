@@ -19,7 +19,8 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Windows install/bootstrap: `install/platforms/windows/bootstrap.ps1`
 - Debian install/bootstrap: `install/platforms/debian/bootstrap.sh`
 - Optional macOS settings: `install/platforms/macos/settings.zsh`
-- Shared Unix bootstrap helpers: `install/lib/common.sh`, `install/lib/ui.sh`
+- Shared Unix bootstrap helpers: `install/lib/common.sh`,
+  `install/lib/homebrew.sh`, `install/lib/ui.sh`
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`

@@ -36,6 +36,7 @@ GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
 COMMON_LIB="$DOTFILES_DIR/install/lib/common.sh"
+HOMEBREW_LIB="$DOTFILES_DIR/install/lib/homebrew.sh"
 UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
 DRY_RUN=0
 YES=0
@@ -87,7 +88,7 @@ source "$COMMON_LIB"
 on_error() {
   local exit_code="$1"
   local line_no="$2"
-  local command="${3:-unknown command}"
+  local step="${UI_CURRENT_STEP_LABEL:-bootstrap}"
 
   # Ctrl+C / signal-driven exits can still trigger ERR in zsh.
   # Keep interrupt output clean and avoid a misleading failure line.
@@ -96,7 +97,7 @@ on_error() {
   fi
 
   echo
-  echo "ERROR: bootstrap failed at line $line_no: $command (exit $exit_code)" >&2
+  echo "ERROR: $step failed at line $line_no (exit $exit_code)" >&2
 }
 
 resolve_brew_bin() {
@@ -204,10 +205,18 @@ if [[ ! -f "$UI_LIB" ]]; then
 fi
 # shellcheck source=../lib/ui.sh
 source "$UI_LIB"
+
+if [[ ! -f "$HOMEBREW_LIB" ]]; then
+  echo "ERROR: Missing Homebrew installer helper: $HOMEBREW_LIB" >&2
+  exit 1
+fi
+# shellcheck source=install/lib/homebrew.sh
+source "$HOMEBREW_LIB"
+
 ui_init "snarfum dotfiles bootstrap" "$TOTAL_STEPS"
 ui_print_header
 ui_start
-trap 'on_error $? $LINENO "${ZSH_COMMAND:-}"' ERR
+trap 'on_error $? $LINENO' ERR
 
 # This bootstrap is intentionally macOS-only.
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -253,10 +262,10 @@ confirm_preflight
 ui_step_start "Install Homebrew"
 if [[ -z "$BREW_BIN" ]]; then
   if ((DRY_RUN)); then
-    echo "[dry-run] /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'"
+    echo "[dry-run] download $HOMEBREW_INSTALL_URL to a temporary file and run it with /bin/bash"
   else
     echo "  running Homebrew installer in the foreground"
-    /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash'
+    install_homebrew
   fi
   if ! BREW_BIN="$(resolve_brew_bin)"; then
     if ((DRY_RUN)); then
