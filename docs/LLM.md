@@ -64,10 +64,13 @@ zsh -i -c 'typeset -f prompt_purification_setup >/dev/null && echo ok'
 
 Run `mise current`, `node --version`, `pnpm --version`, and `pi --version` to
 confirm the managed tool versions.
+Run `uv python list --only-installed` to confirm uv-managed Python interpreters;
+standalone native CLIs remain Homebrew-owned.
 
 ## Off-Limits
 
 - Never commit secrets.
 - Do not assume generic Linux bootstrap support exists; Debian is the supported Linux server bootstrap target.
 - `install/bootstrap.sh` dispatches only to macOS and Debian bootstraps; use `install/bootstrap.ps1` for Windows.
-- Do not silently expand network dependencies beyond documented tools (`brew`, `mise`, `winget`, `apt-get`, `git`, `curl`).
+- Do not silently expand network dependencies beyond documented tools (`brew`,
+  `mise`, `uv`, `winget`, `apt-get`, `git`, `curl`).

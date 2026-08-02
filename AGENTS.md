@@ -24,7 +24,8 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
-- Shell entrypoint chain: `config/zsh/.zshrc` -> `config/zsh/*.zsh`
+- Zsh startup chain: `config/zsh/.zprofile` -> `config/zsh/path.zsh`, then
+  `config/zsh/.zshrc` -> interactive `config/zsh/*.zsh` modules
 - Debian bash entrypoint: `config/bash/.bashrc`
 
 ## Non-Negotiables
@@ -32,7 +33,8 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Idempotency first: reruns should converge and avoid duplicate state.
 - No destructive operations without explicit `--force` style opt-in.
 - Never commit secrets, tokens, keys, or credentials.
-- Do not expand network behavior beyond documented tools (`brew`, `mise`, `winget`, `apt-get`, `git`, `curl`) without explicit documentation updates.
+- Do not expand network behavior beyond documented tools (`brew`, `mise`, `uv`,
+  `winget`, `apt-get`, `git`, `curl`) without explicit documentation updates.
 
 ## Change Workflow
 

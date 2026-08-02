@@ -22,13 +22,18 @@ Behavior:
   terminal agent, and pnpm 11 default from `config/mise/config.toml`. Project
   version files and pnpm `packageManager` metadata remain the source of truth
   for project overrides.
+- Uses Homebrew-installed `uv` as the sole Python environment and package-tool
+  manager. Bootstrap links `config/uv/uv.toml` and does not modify Apple/Xcode
+  Python. Standalone native CLIs, including the official OpenAI CLI, remain
+  Homebrew-owned.
 - Loads Prompt Purification from the vendored Zsh source in this repository;
   bootstrap performs no prompt-specific download and validates the source
   before linking `~/.zshrc`.
 - Uses MySQL 8.4 LTS through the keg-only `mysql@8.4` formula; Zsh adds its
   client and server binaries to `PATH`. Bootstrap installs or verifies the
   formula but leaves the Homebrew service state unchanged.
-- Pass `--upgrade-packages` to intentionally upgrade outdated Brewfile entries during bootstrap.
+- Pass `--upgrade-packages` to intentionally upgrade outdated Brewfile entries
+  during bootstrap.
 - Keeps interactive system defaults separate from bootstrap; run them explicitly
   with `zsh ~/.dotfiles/install/platforms/macos/settings.zsh`.
 

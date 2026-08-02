@@ -1,0 +1,3 @@
+# Keep Python interpreters, project environments, and Python CLI tools under
+# one owner. Never fall back to Apple/Xcode or Homebrew Python for uv operations.
+python-preference = "only-managed"

@@ -113,6 +113,10 @@ Debian-only:
     from `config/mise/config.toml` after Brew Bundle completes.
   - Pi 0.82.1 is installed from the same mise config as the `pi` terminal
     agent, independently of project Node.js versions.
+  - Homebrew installs `uv`; the tracked uv config requires uv-managed Python
+    interpreters. Apple/Xcode Python remains untouched and is not used as a
+    global package environment. Standalone applications such as the official
+    OpenAI CLI remain Homebrew-owned rather than Python packages.
   - `mise` reads existing `.nvmrc` and `.node-version` files for per-project
     Node.js switching and project `packageManager` fields for pnpm switching.
     npm remains available from each managed Node.js install.
@@ -156,6 +160,18 @@ Debian-only:
 - Vite and other build tools remain project dependencies; for example, start a
   Vite project with `pnpm create vite`.
 
+### Managed Python Tools
+
+- Homebrew owns the `uv` executable and standalone native CLIs; `uv` owns
+  Python interpreters, project environments, and Python-package tools.
+- `config/uv/uv.toml` sets `python-preference = "only-managed"`, preventing uv
+  from installing into or depending on Apple/Xcode or Homebrew Python.
+- Project libraries belong in each project's `pyproject.toml` and `uv.lock`,
+  not in a shared user-level Python environment. Use `uv run` inside projects
+  and `uvx` for temporary Python tools. Use `uv tool install` only for a
+  persistent CLI that is actually distributed as a Python package and has no
+  preferred native package.
+
 ### Fuzzy Navigation Helpers
 
 - `fcd [root]`: fuzzy-select a directory and change into it.
@@ -169,19 +185,23 @@ Debian-only:
   - Symlink targets:
     - `~/.zshrc` -> `~/.dotfiles/config/zsh/.zshrc`
     - `~/.zprofile` -> `~/.dotfiles/config/zsh/.zprofile`
-  - Zsh module chain via `config/zsh/.zshrc` -> `config/zsh/*.zsh`.
+  - Zsh startup chain: `config/zsh/.zprofile` loads `path.zsh`; then
+    `config/zsh/.zshrc` loads the interactive modules.
   - Vendored Prompt Purification source and provenance metadata under
     `config/zsh/prompts/purification/`.
 - macOS:
   - Homebrew packages and casks from `install/platforms/macos/Brewfile`
-    (includes jq, shell validation tools, Herdr, mise, Unity Hub, VS Code,
-    Zed, Sublime Text, ChatGPT, Claude, Codex, and Claude Code).
+    (includes jq, shell validation tools, Herdr, mise, Hex voice-to-text on
+    Apple Silicon, Unity Hub, VS Code, Zed, Sublime Text, ChatGPT, Claude,
+    Codex, and Claude Code).
   - Bootstrap installs missing Brewfile entries without upgrading existing packages by default; pass `--upgrade-packages` to upgrade outdated entries.
   - Pinned Node.js, Pi, and pnpm versions from `config/mise/config.toml`.
   - mise config symlink:
     - `$XDG_CONFIG_HOME/mise/config.toml` -> `~/.dotfiles/config/mise/config.toml`
-  - Homebrew, Brew Bundle, and mise installation commands run in the foreground
-    with their native prompts, status output, signals, and exit codes.
+  - uv config symlink:
+    - `$XDG_CONFIG_HOME/uv/uv.toml` -> `~/.dotfiles/config/uv/uv.toml`
+  - Homebrew, Brew Bundle, and mise installation commands run in the
+    foreground with their native prompts, status output, signals, and exit codes.
   - Brew Bundle streams verbose install output while running up to four formula
     jobs in parallel, so long installs continue to show activity after fetching.
   - First-time Homebrew setup downloads the official installer to a temporary
@@ -253,7 +273,8 @@ Other Linux cleanup:
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
-- Shell entrypoint chain: `config/zsh/.zshrc` -> `config/zsh/*.zsh`
+- Zsh startup chain: `config/zsh/.zprofile` -> `config/zsh/path.zsh`, then
+  `config/zsh/.zshrc` -> interactive `config/zsh/*.zsh` modules
 - Debian bash entrypoint: `config/bash/.bashrc`
 
 ## Validation Commands
@@ -288,6 +309,8 @@ Inspect the managed runtimes:
 mise current
 node --version
 pnpm --version
+uv python list --only-installed
+openai --version
 ```
 
 ## Off-Limits and Invariants
@@ -295,7 +318,7 @@ pnpm --version
 - Scripts should not delete user files by default.
 - No secret material (tokens/keys/passwords) should be committed.
 - Network installs are limited to explicit bootstrap dependencies (`brew`,
-  `mise`, `winget`, `apt-get`, `git`, `curl`).
+  `mise`, `uv`, `winget`, `apt-get`, `git`, `curl`).
 
 See:
 

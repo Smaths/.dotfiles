@@ -25,14 +25,27 @@ All notable changes to this dotfiles repo should be documented in this file.
 - Herdr, shell validation tools, tmux, Neovim, bat, uv, Git utilities, cloud
   CLIs, Android platform tools, .NET SDK, Unity Hub, and Zed to the macOS
   package manifest.
+- Hex voice-to-text transcription to the macOS package manifest on Apple
+  Silicon, matching the app's platform requirement without breaking Intel Macs.
 - ChatGPT and Claude desktop clients plus the Codex and Claude Code terminal
   agents to the macOS package manifest.
 - Pi 0.82.1 as a mise-managed terminal agent.
 - Prompt Purification vendored at its reviewed upstream commit and loaded from
   the tracked Zsh config instead of an unmanaged file under `~/.config`.
+- A tracked uv configuration that prevents uv from falling back to Apple/Xcode
+  or Homebrew Python. The official OpenAI CLI is installed from its Homebrew tap
+  instead of the legacy Python package entry point.
 
 ### Changed
 
+- Zsh `PATH` initialization now runs once from `config/zsh/.zprofile`; the
+  interactive `.zshrc` inherits it instead of sourcing `path.zsh` again.
+- Zsh PATH prefixes are now declared once in effective precedence order. The
+  legacy `~/Library/Python/3.9/bin` global package directory is excluded while
+  Apple/Xcode Python itself remains untouched.
+- Python ownership moved from a shared Apple-Python `pip install --user`
+  environment to uv-managed interpreters, project environments, and isolated
+  CLI tools. Project libraries are no longer treated as global applications.
 - Replaced the proprietary Little Snitch macOS cask with the open-source LuLu
   firewall.
 - macOS bootstrap now streams verbose Brew Bundle command output during parallel

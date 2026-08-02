@@ -14,8 +14,9 @@ set -euo pipefail
 # 3) Installs packages/apps from Brewfile
 # 4) Links config/mise/config.toml to the XDG path mise reads by default
 # 5) Installs pinned Node.js, Pi, and pnpm versions with mise
-# 6) Installs git via Homebrew when missing
-# 7) Safely links ~/.zshrc and ~/.zprofile to this repo
+# 6) Links uv configuration for isolated Python management
+# 7) Installs git via Homebrew when missing
+# 8) Safely links ~/.zshrc and ~/.zprofile to this repo
 #
 # Safety behavior:
 # - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
@@ -29,6 +30,8 @@ XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 BREWFILE="$SCRIPT_DIR/Brewfile"
 MISE_CONFIG_TARGET="$DOTFILES_DIR/config/mise/config.toml"
 MISE_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/mise/config.toml"
+UV_CONFIG_TARGET="$DOTFILES_DIR/config/uv/uv.toml"
+UV_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/uv/uv.toml"
 ZSHRC_TARGET="$DOTFILES_DIR/config/zsh/.zshrc"
 ZPROFILE_TARGET="$DOTFILES_DIR/config/zsh/.zprofile"
 PROMPT_PURIFICATION_TARGET="$DOTFILES_DIR/config/zsh/prompts/purification/prompt_purification_setup"
@@ -46,7 +49,7 @@ UPGRADE_PACKAGES=0
 VERBOSE=0
 BREW_BIN=""
 BREWFILE_PACKAGE_COUNT=0
-TOTAL_STEPS=8
+TOTAL_STEPS=9
 
 usage() {
   cat <<'EOF'
@@ -142,6 +145,7 @@ print_preflight_plan() {
   fi
   echo "  mise config link: $MISE_CONFIG_LINK_PATH"
   echo "  mise tools: install pinned Node.js, Pi, and pnpm versions"
+  echo "  uv config link: $UV_CONFIG_LINK_PATH"
   echo "  Git: install with Homebrew only if missing"
   echo "  Shell links: ~/.zshrc and ~/.zprofile"
   echo "  Zsh prompt: vendored Prompt Purification"
@@ -253,6 +257,11 @@ fi
 
 if [[ ! -f "$MISE_CONFIG_TARGET" ]]; then
   echo "ERROR: Missing mise config: $MISE_CONFIG_TARGET" >&2
+  exit 1
+fi
+
+if [[ ! -f "$UV_CONFIG_TARGET" ]]; then
+  echo "ERROR: Missing uv config: $UV_CONFIG_TARGET" >&2
   exit 1
 fi
 
@@ -372,6 +381,15 @@ if ((DRY_RUN)); then
   ui_step_ok "planned"
 else
   ui_step_ok "Node.js, Pi, and pnpm installed/verified"
+fi
+
+ui_step_start "Link uv config"
+run_cmd mkdir -p "${UV_CONFIG_LINK_PATH:h}"
+link_with_backup "$UV_CONFIG_TARGET" "$UV_CONFIG_LINK_PATH"
+if ((DRY_RUN)); then
+  ui_step_ok "planned"
+else
+  ui_step_ok "linked/verified"
 fi
 
 ui_step_start "Link shell config files"

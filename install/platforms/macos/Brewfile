@@ -1,3 +1,5 @@
+tap "openai/tools"
+
 # Core CLI tools
 brew "automake"
 brew "azure-cli"
@@ -44,6 +46,7 @@ cask "istat-menus@6"
 cask "keepassxc"
 cask "keka"
 cask "obsidian"
+cask "openai/tools/openai"
 cask "protonvpn"
 cask "synology-drive"
 cask "vlc"
@@ -73,6 +76,7 @@ cask "audio-hijack"
 cask "bettertouchtool"
 cask "blender"
 cask "ilok-license-manager"
+cask "kitlangton-hex" if Hardware::CPU.arm?
 cask "midi-monitor"
 cask "ogdesign-eagle"
 cask "shottr"

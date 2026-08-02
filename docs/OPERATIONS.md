@@ -26,7 +26,8 @@ Useful flags:
 - `--dry-run`: print intended actions without mutating.
 - `--yes`: run without interactive confirmation.
 - `--verbose`: show extra command detail.
-- `--upgrade-packages` (macOS only): upgrade outdated Brewfile entries during bootstrap.
+- `--upgrade-packages` (macOS only): upgrade outdated Brewfile entries during
+  bootstrap.
 - `--skip-packages` (Windows only): skip `winget` installs.
 - `--link-windows-shell` (Windows only): also link Windows `~/.zshrc` and `~/.zprofile` (default is WSL-first skip).
 - `--skip-packages` (Debian only): skip `apt-get` installs.
@@ -78,6 +79,12 @@ Node.js 22.12.0 is also installed for projects that select it through `.nvmrc`
 or `.node-version`, and Pi 0.82.1 provides the `pi` terminal agent. A project's
 `packageManager` field remains the source of truth for selecting another pnpm
 version through mise.
+
+Bootstrap also symlinks `config/uv/uv.toml` to
+`${XDG_CONFIG_HOME:-~/.config}/uv/uv.toml`. uv uses only uv-managed Python
+interpreters for projects and Python-package tools; Apple/Xcode Python and its
+user package directory are not modified or added to `PATH`. Standalone native
+applications such as the official OpenAI CLI are installed through Homebrew.
 
 To intentionally upgrade outdated Homebrew packages and casks during bootstrap:
 
@@ -148,6 +155,12 @@ mise current
 node --version
 pnpm --version
 pi --version
+test -L ~/.config/uv/uv.toml && readlink ~/.config/uv/uv.toml
+uv python list --only-installed
+openai --version
+# Apple/Xcode Python remains available, but its user scripts are not global.
+/usr/bin/python3 --version
+zsh -lc '[[ ":$PATH:" != *":$HOME/Library/Python/3.9/bin:"* ]]'
 # Same tools outside zsh: this is what scripts, editors, and hooks see.
 bash -c 'node --version; pnpm --version; pi --version'
 test -f ~/.dotfiles/config/zsh/prompts/purification/prompt_purification_setup
@@ -179,6 +192,9 @@ Expected:
 - `mise current` resolves the Node.js, Pi, and pnpm versions pinned in
   `config/mise/config.toml`, and reports the same versions under `bash -c`. A
   mismatch between the two means the mise config symlink is missing.
+- `uv python list --only-installed` reports uv-owned interpreters, `openai`
+  resolves from Homebrew, and the PATH does not contain a version-specific
+  Apple Python user-package directory.
 - WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes the WSL shell/tmux setup commands.
 - Windows `~/.zshrc` and `~/.zprofile` are linked only if `--link-windows-shell` was used.
 - `winget list --id ... -e` resolves each configured package.
@@ -207,6 +223,8 @@ are a no-op, so converged reruns do not create additional backups:
 - `~/.zshrc.bak.<timestamp>[.N]`
 - `~/.zprofile.bak.<timestamp>[.N]`
 - `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>[.N]` (macOS bootstrap only, if replaced)
+- `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml.bak.<timestamp>[.N]`
+  (macOS bootstrap only, if replaced)
 - `~/.bashrc.bak.<timestamp>[.N]` (Debian bootstrap only, if replaced)
 
 You can additionally snapshot the repo:

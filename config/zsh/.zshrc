@@ -11,7 +11,6 @@ fi
 
 # Core shell behavior first.
 source "$ZSH_CONFIG_DIR/options.zsh"
-source "$ZSH_CONFIG_DIR/path.zsh"
 source "$ZSH_CONFIG_DIR/env.zsh"
 
 # Completions and plugins next.

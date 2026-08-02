@@ -19,12 +19,21 @@ The design goal is predictable bootstrap behavior with minimal surprise.
   versions. Linking it to the path mise already reads by default means every
   process resolves the same toolchain, rather than only shells that source
   `config/zsh/env.zsh`.
+- `config/uv/uv.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml`
+  (symlink on macOS). It confines uv operations to uv-managed Python
+  interpreters instead of Apple/Xcode or Homebrew Python.
 - `install/platforms/macos/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
 - Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
 
-Other files under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
+`config/zsh/.zprofile` runs `brew shellenv` and then sources
+`config/zsh/path.zsh`, once, for login shells. That order is load-bearing:
+`brew shellenv` prepends the Homebrew prefix to `PATH`, so running it after
+`path.zsh` would place Homebrew's runtimes ahead of the mise shims and defeat
+per-project version resolution. Interactive child shells inherit the resulting
+`PATH`; the remaining modules under `config/zsh/*.zsh` are sourced by
+`config/zsh/.zshrc`.
 `config/zsh/options.zsh` adds the tracked
 `config/zsh/prompts/purification/` directory to `fpath` and initializes the
 vendored prompt. Bootstrap validates that prompt source before linking the Zsh
@@ -39,10 +48,12 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
 - `config/zsh/prompts/purification/`: vendored Prompt Purification source and
   upstream provenance. The repository-owned copy avoids per-machine prompt
   downloads and drift.
-- `config/zsh/path.zsh`: `PATH` and path-like variable setup, including the mise
-  shims directory. Shims are the only mise activation mechanism; `mise activate`
-  is deliberately not used, because shims also cover non-interactive and non-zsh
-  processes and running both mechanisms is unsupported.
+- `config/zsh/path.zsh`: login-shell `PATH` and path-like variable setup, sourced
+  by `config/zsh/.zprofile`. Managed prefixes are declared once in effective
+  precedence order, highest first. Mise shims lead that list and remain the only
+  mise activation mechanism; the shims directory is resolved the same way mise
+  resolves it (`MISE_DATA_DIR`, then `XDG_DATA_HOME`, then `~/.local/share`).
+  Version-specific `pip install --user` directories are explicitly excluded.
 - `config/zsh/env.zsh`: exported environment variables, including `FZF_*`
   defaults.
 - `config/zsh/completion.zsh`: completion system configuration.
@@ -81,11 +92,12 @@ macOS bootstrap interactive without coupling installer stdin to `curl`.
   - symlink targets listed above
   - package sets under `install/platforms/*/`
   - Node.js, Pi, and pnpm versions declared in `config/mise/config.toml`
+  - uv interpreter-selection behavior in `config/uv/uv.toml`
   - the Zsh Prompt Purification source and its reviewed upstream provenance
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - arbitrary files in `$HOME` not explicitly linked
-  - package managers outside `brew`, `mise`, `winget`, and `apt-get`
+  - package managers outside `brew`, `mise`, `uv`, `winget`, and `apt-get`
 
 ## Idempotency Goals
 
