@@ -74,11 +74,10 @@ After Brew Bundle completes, the bootstrap symlinks `config/mise/config.toml` to
 `${XDG_CONFIG_HOME:-~/.config}/mise/config.toml` and then runs `mise install` to
 install or verify the pinned Node.js, Pi, and pnpm versions. Because the config
 sits at the path mise reads by default, no environment variable is needed and
-every process resolves the same tools. Node.js 24 and pnpm 11 are the defaults;
-Node.js 22.12.0 is also installed for projects that select it through `.nvmrc`
-or `.node-version`, and Pi 0.82.1 provides the `pi` terminal agent. A project's
-`packageManager` field remains the source of truth for selecting another pnpm
-version through mise.
+every process resolves the same tools. Node.js 24 and pnpm 11 are the defaults,
+and mise provides the pinned `pi` terminal agent. Project `.nvmrc`,
+`.node-version`, and `packageManager` files remain the source of truth for
+selecting other versions through mise.
 
 Bootstrap also symlinks `config/uv/uv.toml` to
 `${XDG_CONFIG_HOME:-~/.config}/uv/uv.toml`. uv uses only uv-managed Python
@@ -99,10 +98,14 @@ sh install/bootstrap.sh --yes
 ```
 
 Node.js, Pi, and pnpm upgrades are intentional config changes rather than side
-effects of a Homebrew upgrade. Update the defaults and any required Node.js
-compatibility runtimes, review the diff, then rerun bootstrap. Keep project
-runtime and package-manager pins until their projects are tested on newer
-versions.
+effects of a Homebrew upgrade. Update the defaults, review the diff, then rerun
+bootstrap. Keep project runtime and package-manager pins until their projects
+are tested on newer versions.
+
+Pi is installed as a standalone executable, so `pi update` cannot replace the
+executable and may report its internal Bun path (`/$bunfs/root/pi`). Update the
+Pi pin in `config/mise/config.toml` and run `mise install` instead. Use
+`pi update --extensions` only to update configured Pi extensions.
 
 ```zsh
 ${EDITOR:-vi} ~/.dotfiles/config/mise/config.toml

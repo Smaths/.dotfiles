@@ -18,8 +18,8 @@ All notable changes to this dotfiles repo should be documented in this file.
 - Shared Bash/Zsh bootstrap behavior helpers in `install/lib/common.sh`, with
   cross-shell symlink and dry-run tests.
 - Shared Unix bootstrap UI helper: `install/lib/ui.sh`.
-- Managed Node.js 24 LTS default, Node.js 22.12.0 compatibility runtime, and
-  pnpm toolchain through `config/mise/config.toml`.
+- Managed Node.js 24 LTS default and pnpm toolchain through
+  `config/mise/config.toml`.
 - A plain shell validation entrypoint at `tests/check.sh`, also run by CI.
 - `jq` to the macOS Brewfile.
 - Herdr, shell validation tools, tmux, Neovim, bat, uv, Git utilities, cloud
@@ -29,7 +29,7 @@ All notable changes to this dotfiles repo should be documented in this file.
   Silicon, matching the app's platform requirement without breaking Intel Macs.
 - ChatGPT and Claude desktop clients plus the Codex and Claude Code terminal
   agents to the macOS package manifest.
-- Pi 0.82.1 as a mise-managed terminal agent.
+- Pi 0.83.0 as a mise-managed terminal agent.
 - Prompt Purification vendored at its reviewed upstream commit and loaded from
   the tracked Zsh config instead of an unmanaged file under `~/.config`.
 - A tracked uv configuration that prevents uv from falling back to Apple/Xcode
@@ -38,6 +38,12 @@ All notable changes to this dotfiles repo should be documented in this file.
 
 ### Changed
 
+- Removed the unneeded Node.js 22.12.0 global compatibility pin; projects can
+  continue to select their required Node.js version with `.nvmrc` or
+  `.node-version`.
+- Updated the mise-managed Pi pin from 0.82.1 to 0.83.0 and documented that
+  standalone Pi executables are upgraded through mise rather than Pi's internal
+  self-updater.
 - Zsh `PATH` initialization now runs once from `config/zsh/.zprofile`; the
   interactive `.zshrc` inherits it instead of sourcing `path.zsh` again.
 - Zsh PATH prefixes are now declared once in effective precedence order. The

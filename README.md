@@ -108,11 +108,10 @@ Debian-only:
   - Prompt Purification is vendored under `config/zsh/prompts/purification/`
     and loads from the repository, so Zsh uses the same prompt without a
     separate per-machine download.
-  - Node.js 24 LTS and pnpm 11 are the defaults, while Node.js 22.12.0 is
-    installed for project compatibility; the macOS bootstrap installs them
-    from `config/mise/config.toml` after Brew Bundle completes.
-  - Pi 0.82.1 is installed from the same mise config as the `pi` terminal
-    agent, independently of project Node.js versions.
+  - Node.js 24 LTS and pnpm 11 are the defaults; the macOS bootstrap installs
+    them from `config/mise/config.toml` after Brew Bundle completes.
+  - Pi is installed from the same mise config as the `pi` terminal agent,
+    independently of project Node.js versions.
   - Homebrew installs `uv`; the tracked uv config requires uv-managed Python
     interpreters. Apple/Xcode Python remains untouched and is not used as a
     global package environment. Standalone applications such as the official
@@ -148,9 +147,9 @@ Debian-only:
 
 - `mise` owns the Node.js and pnpm versions instead of Homebrew `node`, nvm, or
   a global Yarn install.
-- The tracked global config keeps Node.js 24 LTS and pnpm 11 as defaults, and
-  installs Node.js 22.12.0 for compatibility. Project `packageManager` fields
-  remain the source of truth for selecting other pnpm versions through mise.
+- The tracked global config keeps Node.js 24 LTS and pnpm 11 as defaults.
+  Project `.nvmrc`, `.node-version`, and `packageManager` files remain the
+  source of truth for selecting other versions through mise.
 - Bootstrap symlinks `config/mise/config.toml` to
   `${XDG_CONFIG_HOME:-~/.config}/mise/config.toml`, the path mise reads by
   default. No environment variable is required, so the toolchain is identical in

@@ -13,12 +13,11 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `config/mise/config.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`
-  (symlink on macOS). It declares the default Node.js and pnpm toolchain, a
-  Node.js compatibility runtime, and the Pi terminal agent; project `.nvmrc`,
-  `.node-version`, and `packageManager` metadata can override the active
-  versions. Linking it to the path mise already reads by default means every
-  process resolves the same toolchain, rather than only shells that source
-  `config/zsh/env.zsh`.
+  (symlink on macOS). It declares the default Node.js and pnpm toolchain plus
+  the Pi terminal agent; project `.nvmrc`, `.node-version`, and `packageManager`
+  metadata can override the active versions. Linking it to the path mise already
+  reads by default means every process resolves the same toolchain, rather than
+  only shells that source `config/zsh/env.zsh`.
 - `config/uv/uv.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml`
   (symlink on macOS). It confines uv operations to uv-managed Python
   interpreters instead of Apple/Xcode or Homebrew Python.
