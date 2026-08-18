@@ -1,6 +1,6 @@
 [tools]
 node = "24.18.1"
-pi = "0.83.0"
+pi = "latest"
 pnpm = "11.19.0"
 
 [settings]
