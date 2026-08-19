@@ -23,6 +23,7 @@
    - `install/lib/common.sh`
    - `install/lib/homebrew.sh`
    - `install/lib/ui.sh`
+   - `install/lib/zsh-plugins.sh`
 3. Documentation:
    - `README.md`
    - `docs/*.md`
@@ -60,6 +61,9 @@ zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
 zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
 zsh -i -c 'typeset -f prompt_purification_setup >/dev/null && echo ok'
+zsh -i -c '[[ -n $widgets[fzf-tab-complete] ]] && echo ok'
+zsh -i -c 'typeset -f z >/dev/null && echo ok'
+git config --get core.pager
 ```
 
 Run `mise current`, `node --version`, `pnpm --version`, and `pi --version` to
@@ -74,3 +78,6 @@ standalone native CLIs remain Homebrew-owned.
 - `install/bootstrap.sh` dispatches only to macOS and Debian bootstraps; use `install/bootstrap.ps1` for Windows.
 - Do not silently expand network dependencies beyond documented tools (`brew`,
   `mise`, `uv`, `winget`, `apt-get`, `git`, `curl`).
+- Do not write to `~/.gitconfig` beyond the single `include.path` entry for
+  `config/git/delta.gitconfig`; that file is user-owned.
+- Do not replace or reset a Zsh plugin directory that is not a git clone.

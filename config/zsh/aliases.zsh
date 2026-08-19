@@ -3,16 +3,31 @@
 # -----------------------------------------------------------------------------
 _has() { command -v "$1" >/dev/null 2>&1; }
 
-if [[ "$OSTYPE" == darwin* ]]; then
-  alias ls='ls -G'
+# eza takes over the ls family when present, keeping the same alias names and
+# adding a git status column. `command ls` still reaches coreutils, and the
+# fallback below keeps machines without eza on the original behavior.
+if _has eza; then
+  _eza='eza --group-directories-first --git --icons=auto'
+  alias ls="$_eza"
+  alias l="$_eza --long"
+  alias ll="$_eza --long --all --header"
+  alias lls="$_eza --long --all --header --sort=modified"
+  alias la="$_eza --all"
+  alias lc="$_eza --across --classify=auto"
+  alias lt="$_eza --tree --level=2"
+  unset _eza
 else
-  alias ls='ls --color=auto'
+  if [[ "$OSTYPE" == darwin* ]]; then
+    alias ls='ls -G'
+  else
+    alias ls='ls --color=auto'
+  fi
+  alias l='ls -l'
+  alias ll='ls -lahF'
+  alias lls='ls -lahFtr'
+  alias la='ls -A'
+  alias lc='ls -CF'
 fi
-alias l='ls -l'
-alias ll='ls -lahF'
-alias lls='ls -lahFtr'
-alias la='ls -A'
-alias lc='ls -CF'
 
 alias cp='cp -iv'
 alias mv='mv -iv'
@@ -69,6 +84,9 @@ alias gtd='git tag --delete'
 alias gtdr='git tag --delete origin'
 alias dif='git diff --no-index'
 alias gclean="git branch --merged | grep -v '\\*\\|master\\|develop' | xargs -n 1 git branch -d"
+if _has lazygit; then
+  alias lg='lazygit'
+fi
 alias gblog="git for-each-ref --sort=committerdate refs/heads/ --format='%(HEAD) %(color:red)%(refname:short)%(color:reset) - %(color:yellow)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:blue)%(committerdate:relative)%(color:reset))'"
 
 # -----------------------------------------------------------------------------

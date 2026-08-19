@@ -27,6 +27,15 @@ HOME="$path_test_home" ZSH_PATH_FILE="$REPO_DIR/config/zsh/path.zsh" zsh -fc '
   (( ${path[(Ie)/usr/bin]} > 0 ))
 '
 
+brewfile_path="install/platforms/macos/Brewfile"
+for retired in zsh-autocomplete zsh-autosuggestions zsh-syntax-highlighting; do
+  if grep -Fq "brew \"$retired\"" "$brewfile_path"; then
+    printf '%s is now a git clone in install/lib/zsh-plugins.sh; remove it from %s\n' \
+      "$retired" "$brewfile_path" >&2
+    exit 1
+  fi
+done
+
 prompt_path="config/zsh/prompts/purification/prompt_purification_setup"
 expected_prompt_blob="3b912f41672482c9c7da94ba930331182da799e8"
 [[ -f "$prompt_path" ]] || {
@@ -48,4 +57,6 @@ bash tests/install/common_test.sh
 zsh tests/install/common_test.sh
 bash tests/install/homebrew_test.sh
 zsh tests/install/homebrew_test.sh
+bash tests/install/zsh_plugins_test.sh
+zsh tests/install/zsh_plugins_test.sh
 git diff --check

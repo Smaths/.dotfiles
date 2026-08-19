@@ -29,6 +29,14 @@ Behavior:
 - Loads Prompt Purification from the vendored Zsh source in this repository;
   bootstrap performs no prompt-specific download and validates the source
   before linking `~/.zshrc`.
+- Clones the Zsh plugins listed in `install/lib/zsh-plugins.sh` into
+  `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins`. Missing plugins are cloned on
+  every run; existing clones are fast-forwarded only under
+  `--upgrade-packages`. This is the one place bootstrap fetches source outside
+  Homebrew, mise, and uv.
+- Links `config/git/delta.gitconfig` and adds a single `include.path` entry to
+  the otherwise unmanaged `~/.gitconfig`, and links `config/lazygit/config.yml`
+  into lazygit's config directory.
 - Uses MySQL 8.4 LTS through the keg-only `mysql@8.4` formula; Zsh adds its
   client and server binaries to `PATH`. Bootstrap installs or verifies the
   formula but leaves the Homebrew service state unchanged.
@@ -57,6 +65,9 @@ Behavior:
 - Prints recommended WSL commands to install `zsh`, `tmux`, `ripgrep`, and `fzf`, then link shell files in WSL.
 - The linked Zsh config loads the same vendored Prompt Purification source as
   macOS; Windows does not download a separate prompt copy.
+- Windows bootstrap does not clone the Zsh plugins. `config/zsh/plugins.zsh`
+  skips missing plugins, so a linked Windows or WSL shell still starts; clone
+  them manually under `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins` if wanted.
 - Skips Windows-host `~/.zshrc` and `~/.zprofile` links by default; enable with `--link-windows-shell`.
 - If `winget` is missing, package installation is skipped (non-destructive default).
 - Known scope gap: the preflight plan, confirmation prompt, and `--yes` flag are

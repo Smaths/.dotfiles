@@ -1,0 +1,14 @@
+# lazygit configuration, symlinked to lazygit's config directory
+# (`lazygit --print-config-dir`; on macOS ~/Library/Application Support/lazygit).
+#
+# lazygit does not read git's core.pager, so delta is wired in here separately
+# from config/git/delta.gitconfig. --paging=never is required: lazygit pages.
+#
+# lazygit rewrites this file in place when it migrates its own config schema
+# (git.paging became git.diffRenderers in 0.55). Because the link points into
+# this repo, such a migration shows up as a normal working-tree change here --
+# review and commit it rather than reverting it.
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --paging=never

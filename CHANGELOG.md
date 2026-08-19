@@ -35,6 +35,38 @@ All notable changes to this dotfiles repo should be documented in this file.
 - A tracked uv configuration that prevents uv from falling back to Apple/Xcode
   or Homebrew Python. The official OpenAI CLI is installed from its Homebrew tap
   instead of the legacy Python package entry point.
+- `zoxide`, `eza`, `git-delta`, and `lazygit` to the macOS package manifest.
+- A git-clone-based Zsh plugin set in `install/lib/zsh-plugins.sh`, installed to
+  `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins` by the macOS bootstrap:
+  fzf-tab, zsh-autosuggestions, and fast-syntax-highlighting. Missing plugins
+  are cloned on every run; existing clones fast-forward only under
+  `--upgrade-packages`, and a directory that is not a git clone is reported
+  rather than replaced.
+- Cross-shell tests for the plugin installer in
+  `tests/install/zsh_plugins_test.sh`, plus a check that the retired Homebrew
+  zsh plugin formulae do not reappear in the Brewfile.
+- fzf shell integration in `config/zsh/plugins.zsh`: `ctrl-r`, `ctrl-t`, and
+  `alt-c` key bindings from `fzf --zsh`, with file fallbacks for older builds.
+  The `FZF_*` environment defaults already existed but nothing had ever sourced
+  the key bindings.
+- zoxide `z`/`zi` frecency jumps, initialized after `compinit`. `cd`, `AUTO_CD`,
+  and the directory stack are unchanged.
+- `config/git/delta.gitconfig`, linked to
+  `${XDG_CONFIG_HOME:-~/.config}/git/delta.gitconfig` and included from
+  `~/.gitconfig` through a single `include.path` entry. That entry is the only
+  write this repo makes to `~/.gitconfig`, which stays user-owned because it
+  carries per-machine identity and signing settings.
+- `config/lazygit/config.yml`, linked into lazygit's config directory so the
+  TUI renders diffs through delta. lazygit does not read git's `core.pager`.
+- An `lt` alias for an `eza` two-level tree, and `lg` for lazygit.
+- `ffmpeg`, `ghostscript`, `mosh`, `nmap`, `pandoc`, `tcping`, and `wimlib` to
+  the macOS package manifest, plus the `libreoffice` and `opencode-desktop`
+  casks. All were installed by hand and would have been missing from a machine
+  built from this repo.
+- A warning in `README.md` that `brew bundle cleanup` removes every unlisted
+  Homebrew package. Measured against the manifest as it stood before this
+  change, that command would have uninstalled 54 formulae and 9 casks,
+  including ffmpeg, pandoc, nmap, LibreOffice, and iTerm2.
 
 ### Changed
 
@@ -153,3 +185,46 @@ All notable changes to this dotfiles repo should be documented in this file.
   implementation; Debian dry runs report link steps as planned rather than
   linked and verified.
 - Network-boundary documentation now includes mise runtime downloads.
+- Zsh plugins moved from Homebrew formulae to git clones under
+  `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins`. The load paths in
+  `config/zsh/plugins.zsh` no longer resolve through `brew --prefix`, so the
+  same config works on macOS and Linux.
+- `zsh-autocomplete` was replaced by fzf-tab, and `zsh-syntax-highlighting` by
+  fast-syntax-highlighting. `zsh-autosuggestions` is unchanged in behavior and
+  only moved to a clone.
+- `config/zsh/completion.zsh` now sets `menu no` when fzf-tab is installed, so
+  the plugin can capture the unambiguous prefix, and keeps `menu select=1` as
+  the fallback when it is not. It also sets the group-description format and
+  colors that fzf-tab renders.
+- The `ls` alias family is backed by `eza` when it is installed, adding a git
+  status column and directory grouping. `command ls` still reaches coreutils,
+  and the previous coreutils aliases remain the fallback, so the Debian bash
+  config is unaffected.
+- `pkg-config` is now listed under its real formula name, `pkgconf`. The old
+  name is an alias, so `brew leaves` never matched the manifest entry.
+- The macOS bootstrap grew from 9 to 12 steps: cloning Zsh plugins, linking the
+  delta config and registering its include, and linking the lazygit config.
+
+### Removed
+
+- `zsh-autocomplete`, `zsh-autosuggestions`, and `zsh-syntax-highlighting` from
+  the macOS Brewfile. Uninstall the leftover formulae with
+  `brew uninstall zsh-autocomplete zsh-autosuggestions zsh-syntax-highlighting`.
+- `automake`, `bison`, `gdbm`, and `libffi` from the macOS Brewfile. They were
+  leftovers from building Python from source; `uv` now downloads prebuilt
+  interpreters. Verified before removal: no installed formula depends on any of
+  them at runtime, and the Homebrew Python formulae do not list them at all.
+  `autoconf` was auto-removed with `automake`.
+- `libyaml` from the macOS Brewfile. It is installed automatically as an
+  `azure-cli` dependency, so listing it explicitly was redundant.
+- `rectangle` from the macOS Brewfile. It was never installed on the primary
+  machine; BetterTouchTool covers window management.
+- `googleworkspace-cli` from the machine; it was never tracked in the manifest
+  and is not wanted.
+- `warp` and `iterm2` from the machine. Both were untracked drift; Ghostty is
+  the managed terminal. Application preferences were left in place.
+- The `little-snitch` Homebrew record from the machine. LuLu replaced it, and
+  the application itself had already been deleted, leaving Homebrew tracking a
+  cask that was no longer installed. Its orphaned network system extension and
+  148 MB of logs under `/Library/Application Support/Objective Development`
+  require admin rights and are removed outside this repo.

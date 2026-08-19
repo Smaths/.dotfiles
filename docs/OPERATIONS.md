@@ -85,6 +85,12 @@ interpreters for projects and Python-package tools; Apple/Xcode Python and its
 user package directory are not modified or added to `PATH`. Standalone native
 applications such as the official OpenAI CLI are installed through Homebrew.
 
+Zsh plugins follow the same policy as Brewfile entries. Bootstrap clones any
+missing plugin from `install/lib/zsh-plugins.sh` on every run, but only
+fast-forwards existing clones when `--upgrade-packages` is passed. A clone with
+local commits fails the fast-forward loudly rather than being merged or reset,
+and a plugin directory that is not a git clone is reported and left alone.
+
 To intentionally upgrade outdated Homebrew packages and casks during bootstrap:
 
 ```zsh
@@ -171,6 +177,17 @@ zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
 zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
 zsh -i -c 'typeset -f fcd ffcd fview fstack >/dev/null && echo ok'
 zsh -i -c 'typeset -f prompt_purification_setup >/dev/null && echo ok'
+# Plugins: each clone present, and each one actually loaded into the shell.
+ls ${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins
+zsh -i -c '[[ -n $widgets[fzf-tab-complete] ]] && echo fzf-tab ok'
+zsh -i -c '[[ -n $widgets[fzf-history-widget] ]] && echo fzf-keybindings ok'
+zsh -i -c 'typeset -f _zsh_autosuggest_start >/dev/null && echo autosuggestions ok'
+zsh -i -c 'whence -w -- -fast-highlight-process >/dev/null && echo highlighting ok'
+zsh -i -c 'typeset -f z >/dev/null && echo zoxide ok'
+# Diff rendering.
+test -L ~/.config/git/delta.gitconfig && readlink ~/.config/git/delta.gitconfig
+git config --get core.pager
+test -L ~/Library/Application\ Support/lazygit/config.yml
 ```
 
 Windows equivalents:
@@ -202,6 +219,12 @@ Expected:
 - Windows `~/.zshrc` and `~/.zprofile` are linked only if `--link-windows-shell` was used.
 - `winget list --id ... -e` resolves each configured package.
 - `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`.
+- All three plugin clones exist and report ok from the interactive shell. A
+  missing clone degrades the shell instead of breaking it, so check the clone
+  list before concluding the config is wrong.
+- `git config --get core.pager` reports `delta`, which comes from the
+  `include.path` entry in `~/.gitconfig` rather than from any tracked copy of
+  that file.
 - Interactive Zsh defines `prompt_purification_setup` from the vendored prompt;
   it does not require `~/.config/prompt_purification`.
 - Debian `~/.bashrc` links to `~/.dotfiles/config/bash/.bashrc`.
@@ -228,7 +251,19 @@ are a no-op, so converged reruns do not create additional backups:
 - `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>[.N]` (macOS bootstrap only, if replaced)
 - `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml.bak.<timestamp>[.N]`
   (macOS bootstrap only, if replaced)
+- `${XDG_CONFIG_HOME:-$HOME/.config}/git/delta.gitconfig.bak.<timestamp>[.N]`
+  (macOS bootstrap only, if replaced)
+- `~/Library/Application Support/lazygit/config.yml.bak.<timestamp>[.N]`
+  (macOS bootstrap only, if replaced)
 - `~/.bashrc.bak.<timestamp>[.N]` (Debian bootstrap only, if replaced)
+
+`~/.gitconfig` is edited in place rather than backed up: bootstrap only appends
+one `include.path` entry with `git config --global --add`, and never rewrites
+anything else in that file. Revert it with:
+
+```zsh
+git config --global --unset include.path "${XDG_CONFIG_HOME:-$HOME/.config}/git/delta.gitconfig"
+```
 
 You can additionally snapshot the repo:
 

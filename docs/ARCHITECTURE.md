@@ -21,6 +21,16 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/uv/uv.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml`
   (symlink on macOS). It confines uv operations to uv-managed Python
   interpreters instead of Apple/Xcode or Homebrew Python.
+- `config/git/delta.gitconfig` ->
+  `${XDG_CONFIG_HOME:-$HOME/.config}/git/delta.gitconfig` (symlink on macOS),
+  plus one `include.path` entry appended to `~/.gitconfig`. That include is the
+  only write this repo makes to a file it does not own: `~/.gitconfig` holds
+  per-machine identity, signing, and credential settings, so it stays untracked.
+- `config/lazygit/config.yml` -> lazygit's config directory
+  (`lazygit --print-config-dir`; `~/Library/Application Support/lazygit` on
+  macOS). lazygit does not read git's `core.pager`, so delta is configured for
+  it separately. lazygit rewrites this file in place when migrating its own
+  config schema, which surfaces as a working-tree change in this repo.
 - `install/platforms/macos/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
 - `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
@@ -38,8 +48,15 @@ per-project version resolution. Interactive child shells inherit the resulting
 vendored prompt. Bootstrap validates that prompt source before linking the Zsh
 entrypoints, so a partial checkout fails before changing shell files.
 
+Zsh plugins are not symlinked. `install/lib/zsh-plugins.sh` clones them into
+`${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins`, and `config/zsh/.zshrc`
+resolves that same path into `ZSH_PLUGIN_DIR`. Cloning rather than installing
+Homebrew formulae keeps one set of load paths valid on macOS and Linux; keeping
+the clones outside the repo keeps upstream history out of it.
+
 `config/bash/.bashrc` is intentionally standalone for Debian servers. It mirrors
 only portable shell defaults and small aliases instead of sourcing zsh modules.
+Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
 
 ## Zsh Module Boundaries
 
@@ -55,8 +72,15 @@ only portable shell defaults and small aliases instead of sourcing zsh modules.
   Version-specific `pip install --user` directories are explicitly excluded.
 - `config/zsh/env.zsh`: exported environment variables, including `FZF_*`
   defaults.
-- `config/zsh/completion.zsh`: completion system configuration.
-- `config/zsh/plugins.zsh`: plugin/keybinding sourcing only (for example `~/.fzf.zsh`).
+- `config/zsh/completion.zsh`: completion system configuration, including every
+  `:completion:*` zstyle. The menu style is conditional: fzf-tab can only
+  capture the unambiguous prefix with zsh's own menu off, so `menu no` applies
+  only when that plugin is present and `menu select=1` remains the fallback.
+- `config/zsh/plugins.zsh`: tool shell integrations (fzf key bindings, zoxide)
+  and plugin sourcing, plus the `:fzf-tab:*` zstyles that belong with the plugin
+  they configure. Load order is load-bearing and documented in the file: fzf-tab
+  after `compinit` and before anything that wraps ZLE widgets,
+  fast-syntax-highlighting last. Every plugin is optional at runtime.
 - `config/zsh/functions/*.zsh`: interactive helper functions (for example `fcd`, `ffcd`, `fview`, `fstack`).
 - `config/zsh/aliases.zsh`: aliases and short shell convenience commands.
 
@@ -85,6 +109,12 @@ headers, aligned step output, status marks, and summary rendering.
 temporary file and executes it with terminal input intact. This keeps the
 macOS bootstrap interactive without coupling installer stdin to `curl`.
 
+`install/lib/zsh-plugins.sh` owns the Zsh plugin manifest and its installer. It
+clones missing plugins, fast-forwards existing clones only when the caller asks
+for an upgrade, and reports a directory that is not a git clone instead of
+rewriting it. It is shared with `tests/install/zsh_plugins_test.sh`, which
+exercises it in both Bash and Zsh against a stub `git`.
+
 ## Ownership and Scope
 
 - Managed by this repo:
@@ -93,8 +123,12 @@ macOS bootstrap interactive without coupling installer stdin to `curl`.
   - Node.js, Pi, and pnpm versions declared in `config/mise/config.toml`
   - uv interpreter-selection behavior in `config/uv/uv.toml`
   - the Zsh Prompt Purification source and its reviewed upstream provenance
+  - the Zsh plugin set in `install/lib/zsh-plugins.sh` and its clone directory
+  - delta and lazygit diff-rendering configuration
 - Not managed by this repo:
   - user secrets, keychains, tokens
+  - `~/.gitconfig` beyond the single `include.path` entry described above
+  - upstream plugin history; the clones are shallow and disposable
   - arbitrary files in `$HOME` not explicitly linked
   - package managers outside `brew`, `mise`, `uv`, `winget`, and `apt-get`
 
@@ -112,6 +146,11 @@ macOS bootstrap interactive without coupling installer stdin to `curl`.
 - Required package manifest and symlink targets must exist before mutation.
 - Zsh-linking bootstraps require the vendored Prompt Purification source before
   advertising or linking the managed Zsh configuration.
+- Zsh plugin clones are refreshed only under `--upgrade-packages`, and only by
+  fast-forward, so a locally modified clone fails loudly instead of being
+  silently merged or discarded.
+- A plugin directory that is not a git clone is reported and left untouched.
+- A missing plugin clone degrades the shell rather than breaking it.
 - `install/platforms/macos/settings.zsh` is interactive, standalone, and never
   invoked by bootstrap.
 - Debian package installation skips `apt-get update` and `apt-get install` when the apt manifest is already satisfied.

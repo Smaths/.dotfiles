@@ -17,6 +17,9 @@ set -euo pipefail
 # 6) Links uv configuration for isolated Python management
 # 7) Installs git via Homebrew when missing
 # 8) Safely links ~/.zshrc and ~/.zprofile to this repo
+# 9) Clones the Zsh plugins that config/zsh/plugins.zsh loads
+# 10) Links the Ghostty, tmux, delta, and lazygit configs, and registers the
+#     delta include in the user-owned ~/.gitconfig
 #
 # Safety behavior:
 # - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
@@ -39,9 +42,15 @@ GHOSTTY_CONFIG_TARGET="$DOTFILES_DIR/config/ghostty/config"
 GHOSTTY_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/ghostty/config"
 TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
+GIT_DELTA_CONFIG_TARGET="$DOTFILES_DIR/config/git/delta.gitconfig"
+GIT_DELTA_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/git/delta.gitconfig"
+# lazygit reads this path on macOS; confirm with `lazygit --print-config-dir`.
+LAZYGIT_CONFIG_TARGET="$DOTFILES_DIR/config/lazygit/config.yml"
+LAZYGIT_CONFIG_LINK_PATH="$HOME/Library/Application Support/lazygit/config.yml"
 COMMON_LIB="$DOTFILES_DIR/install/lib/common.sh"
 HOMEBREW_LIB="$DOTFILES_DIR/install/lib/homebrew.sh"
 UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
+ZSH_PLUGINS_LIB="$DOTFILES_DIR/install/lib/zsh-plugins.sh"
 DRY_RUN=0
 YES=0
 INSTALL_GIT=0
@@ -49,7 +58,9 @@ UPGRADE_PACKAGES=0
 VERBOSE=0
 BREW_BIN=""
 BREWFILE_PACKAGE_COUNT=0
-TOTAL_STEPS=9
+GIT_INCLUDE_STATUS=""
+ZSH_PLUGIN_ROOT=""
+TOTAL_STEPS=12
 
 usage() {
   cat <<'EOF'
@@ -129,6 +140,29 @@ count_brewfile_packages() {
   ' "$BREWFILE"
 }
 
+register_git_include() {
+  # ~/.gitconfig is not managed by this repo -- it carries per-machine identity
+  # and signing settings. Bootstrap adds one include.path entry pointing at the
+  # tracked delta config instead of owning that file. Sets GIT_INCLUDE_STATUS.
+  local include_path="$1"
+  local existing
+
+  if ((DRY_RUN)); then
+    printf '[dry-run] git config --global --add include.path %q (only when absent)\n' "$include_path"
+    GIT_INCLUDE_STATUS="planned"
+    return 0
+  fi
+
+  existing="$(git config --global --get-all include.path 2>/dev/null || true)"
+  if printf '%s\n' "$existing" | grep -Fxq "$include_path"; then
+    GIT_INCLUDE_STATUS="present"
+    return 0
+  fi
+
+  git config --global --add include.path "$include_path"
+  GIT_INCLUDE_STATUS="added"
+}
+
 print_preflight_plan() {
   echo
   echo "Bootstrap plan (macOS)"
@@ -149,6 +183,11 @@ print_preflight_plan() {
   echo "  Git: install with Homebrew only if missing"
   echo "  Shell links: ~/.zshrc and ~/.zprofile"
   echo "  Zsh prompt: vendored Prompt Purification"
+  if ((UPGRADE_PACKAGES)); then
+    echo "  Zsh plugins: clone missing and fast-forward existing clones in $ZSH_PLUGIN_ROOT"
+  else
+    echo "  Zsh plugins: clone missing entries only into $ZSH_PLUGIN_ROOT"
+  fi
   if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
     echo "  Ghostty link: $GHOSTTY_CONFIG_LINK_PATH"
   else
@@ -159,6 +198,9 @@ print_preflight_plan() {
   else
     echo "  tmux link: skipped (target missing)"
   fi
+  echo "  delta link: $GIT_DELTA_CONFIG_LINK_PATH"
+  echo "  Git include: add include.path to ~/.gitconfig if absent (no other edits)"
+  echo "  lazygit link: $LAZYGIT_CONFIG_LINK_PATH"
 }
 
 confirm_preflight() {
@@ -219,6 +261,14 @@ fi
 # shellcheck source=install/lib/homebrew.sh
 source "$HOMEBREW_LIB"
 
+if [[ ! -f "$ZSH_PLUGINS_LIB" ]]; then
+  echo "ERROR: Missing Zsh plugin helper: $ZSH_PLUGINS_LIB" >&2
+  exit 1
+fi
+# shellcheck source=install/lib/zsh-plugins.sh
+source "$ZSH_PLUGINS_LIB"
+ZSH_PLUGIN_ROOT="$(zsh_plugin_root)"
+
 ui_init "snarfum dotfiles bootstrap" "$TOTAL_STEPS"
 ui_print_header
 ui_start
@@ -262,6 +312,16 @@ fi
 
 if [[ ! -f "$UV_CONFIG_TARGET" ]]; then
   echo "ERROR: Missing uv config: $UV_CONFIG_TARGET" >&2
+  exit 1
+fi
+
+if [[ ! -f "$GIT_DELTA_CONFIG_TARGET" ]]; then
+  echo "ERROR: Missing delta git config: $GIT_DELTA_CONFIG_TARGET" >&2
+  exit 1
+fi
+
+if [[ ! -f "$LAZYGIT_CONFIG_TARGET" ]]; then
+  echo "ERROR: Missing lazygit config: $LAZYGIT_CONFIG_TARGET" >&2
   exit 1
 fi
 
@@ -401,6 +461,21 @@ else
   ui_step_ok "linked/verified"
 fi
 
+# Clone the plugins config/zsh/plugins.zsh loads. Existing clones are only
+# fast-forwarded with --upgrade-packages, mirroring the Brewfile policy.
+ui_step_start "Install Zsh plugins ($(zsh_plugin_count))"
+require_cmd git "git is required to clone the Zsh plugins."
+sync_zsh_plugins "$ZSH_PLUGIN_ROOT" "$UPGRADE_PACKAGES"
+if ((DRY_RUN)); then
+  ui_step_ok "planned"
+elif ((ZSH_PLUGINS_UNMANAGED > 0)); then
+  ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UNMANAGED left untouched"
+elif ((ZSH_PLUGINS_CLONED > 0 || ZSH_PLUGINS_UPDATED > 0)); then
+  ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UPDATED updated"
+else
+  ui_step_skip "already cloned"
+fi
+
 # Link Ghostty config to XDG default path when present.
 ui_step_start "Link Ghostty config"
 if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
@@ -426,6 +501,28 @@ if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
   fi
 else
   ui_step_skip "target missing"
+fi
+
+# Link the tracked delta config and include it from the user-owned ~/.gitconfig.
+# The include is the only write this bootstrap makes to that file.
+ui_step_start "Link Git delta config"
+run_cmd mkdir -p "${GIT_DELTA_CONFIG_LINK_PATH:h}"
+link_with_backup "$GIT_DELTA_CONFIG_TARGET" "$GIT_DELTA_CONFIG_LINK_PATH"
+register_git_include "$GIT_DELTA_CONFIG_LINK_PATH"
+case "$GIT_INCLUDE_STATUS" in
+  planned) ui_step_ok "planned" ;;
+  added) ui_step_ok "linked; include.path added to ~/.gitconfig" ;;
+  *) ui_step_ok "linked; include.path already present" ;;
+esac
+
+# lazygit does not read git's core.pager, so it gets delta through its own config.
+ui_step_start "Link lazygit config"
+run_cmd mkdir -p "${LAZYGIT_CONFIG_LINK_PATH:h}"
+link_with_backup "$LAZYGIT_CONFIG_TARGET" "$LAZYGIT_CONFIG_LINK_PATH"
+if ((DRY_RUN)); then
+  ui_step_ok "planned"
+else
+  ui_step_ok "linked/verified"
 fi
 
 ui_summary

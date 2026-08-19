@@ -10,6 +10,23 @@ setopt AUTO_LIST
 setopt AUTO_MENU
 setopt COMPLETE_IN_WORD
 zmodload zsh/complist
-zstyle ':completion:*' menu select=1
+
+# fzf-tab replaces the completion menu with an fzf picker, and can only capture
+# the unambiguous prefix while zsh's own menu is off. Keep the built-in menu on
+# machines where the plugin is not cloned yet, so completion still degrades to
+# arrow-key selection rather than a plain list.
+if [[ -r "$ZSH_PLUGIN_DIR/fzf-tab/fzf-tab.plugin.zsh" ]]; then
+  zstyle ':completion:*' menu no
+else
+  zstyle ':completion:*' menu select=1
+fi
+
 zstyle ':completion:*' list-dirs-first true
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+# Group headings. fzf-tab renders these as its group labels and ignores color
+# escapes in them, so this format is deliberately plain.
+zstyle ':completion:*:descriptions' format '[%d]'
+# Colorize candidates when the environment provides a palette.
+[[ -n "$LS_COLORS" ]] && zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+# git already returns checkout candidates in a meaningful order.
+zstyle ':completion:*:git-checkout:*' sort false

@@ -20,10 +20,13 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Debian install/bootstrap: `install/platforms/debian/bootstrap.sh`
 - Optional macOS settings: `install/platforms/macos/settings.zsh`
 - Shared Unix bootstrap helpers: `install/lib/common.sh`,
-  `install/lib/homebrew.sh`, `install/lib/ui.sh`
+  `install/lib/homebrew.sh`, `install/lib/ui.sh`,
+  `install/lib/zsh-plugins.sh`
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
+- Zsh plugin manifest: `install/lib/zsh-plugins.sh`
+- Diff rendering config: `config/git/delta.gitconfig`, `config/lazygit/config.yml`
 - Zsh startup chain: `config/zsh/.zprofile` -> `config/zsh/path.zsh`, then
   `config/zsh/.zshrc` -> interactive `config/zsh/*.zsh` modules
 - Debian bash entrypoint: `config/bash/.bashrc`
@@ -35,6 +38,10 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Never commit secrets, tokens, keys, or credentials.
 - Do not expand network behavior beyond documented tools (`brew`, `mise`, `uv`,
   `winget`, `apt-get`, `git`, `curl`) without explicit documentation updates.
+- `~/.gitconfig` is user-owned. The only permitted write is the single
+  `include.path` entry for `config/git/delta.gitconfig`.
+- Zsh plugin clones are fast-forward only, and a directory that is not a git
+  clone is reported rather than replaced.
 
 ## Change Workflow
 

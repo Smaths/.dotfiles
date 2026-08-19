@@ -125,7 +125,18 @@ Debian-only:
   - `fzf` defaults are wired to `fd` (`FZF_DEFAULT_COMMAND`, `FZF_CTRL_T_COMMAND`)
     with hidden files included and shared excludes for heavy paths (for example:
     `.git`, `node_modules`, `.cache`, `dist`, `build`, `.next`, `.turbo`,
-    `coverage`, `target`).
+    `coverage`, `target`). `config/zsh/plugins.zsh` also loads fzf's key
+    bindings, so `ctrl-r`, `ctrl-t`, and `alt-c` are available in the shell.
+  - Zsh plugins are git clones under
+    `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins` rather than Homebrew
+    formulae, so one set of load paths works on macOS and Linux.
+  - `zoxide` adds `z` and `zi` frecency jumps; `cd`, `AUTO_CD`, and the
+    directory stack are deliberately left alone.
+  - `eza` backs the `ls` family when installed, adding a git status column.
+    `command ls` still reaches coreutils, and machines without `eza` keep the
+    original coreutils aliases.
+  - `delta` renders git diffs through a tracked include, and `lazygit` is
+    configured to page through the same renderer.
   - 1Password SSH agent routing is configured in `config/zsh/env.zsh` via `SSH_AUTH_SOCK` when the socket exists; keep app-injected shell snippets in `config/zsh/local.zsh` instead of tracked entrypoints.
   - Alias modules load from `config/zsh/aliases/*.zsh` in lexical order; keep project/machine-specific overrides in `config/zsh/local.zsh`.
 
@@ -177,6 +188,41 @@ Debian-only:
 - `ffcd [root]`: fuzzy-select a file and change into that file's directory.
 - `fview [root]`: fuzzy-select a file and view it in-terminal (`bat`/`less`).
 - `fstack`: fuzzy-select a `dirs -v` stack entry and jump to it.
+- fzf key bindings: `ctrl-r` history search, `ctrl-t` file picker, `alt-c` cd.
+- `z <partial>` / `zi`: zoxide frecency jumps.
+
+### Managed Zsh Plugins
+
+- The plugin set lives in `install/lib/zsh-plugins.sh` and is cloned to
+  `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins`:
+  - [fzf-tab](https://github.com/Aloxaf/fzf-tab): replaces the Tab completion
+    menu with an fzf picker and file/directory previews.
+  - [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions):
+    inline suggestions from history.
+  - [fast-syntax-highlighting](https://github.com/zdharma-continuum/fast-syntax-highlighting):
+    command-line syntax highlighting.
+- Load order in `config/zsh/plugins.zsh` is load-bearing: fzf-tab loads after
+  `compinit` and before anything that wraps ZLE widgets, and
+  fast-syntax-highlighting loads last so it sees every widget the earlier
+  plugins created.
+- Every plugin is optional at runtime. A missing clone is skipped rather than
+  erroring, and completion falls back to zsh's built-in menu, so a machine that
+  has not been bootstrapped still gets a working shell.
+- Bootstrap clones missing plugins on every run and only fast-forwards existing
+  clones when `--upgrade-packages` is passed, matching the Brewfile policy. A
+  directory that is not a git clone is reported and left untouched.
+
+### Delta Diff Rendering
+
+- `config/git/delta.gitconfig` is tracked and linked to
+  `${XDG_CONFIG_HOME:-~/.config}/git/delta.gitconfig`.
+- `~/.gitconfig` stays user-owned: bootstrap adds a single `include.path` entry
+  pointing at the linked file and changes nothing else in it. Removing that one
+  line restores git's built-in pager.
+- lazygit does not read git's `core.pager`, so `config/lazygit/config.yml`
+  wires the same renderer into the TUI. lazygit rewrites that file in place when
+  it migrates its own config schema; because it is linked into this repo, such a
+  migration appears as a normal working-tree change to review and commit.
 
 ## What Gets Managed
 
@@ -190,9 +236,9 @@ Debian-only:
     `config/zsh/prompts/purification/`.
 - macOS:
   - Homebrew packages and casks from `install/platforms/macos/Brewfile`
-    (includes jq, shell validation tools, Herdr, mise, Hex voice-to-text on
-    Apple Silicon, Unity Hub, VS Code, Zed, Sublime Text, ChatGPT, Claude,
-    Codex, and Claude Code).
+    (includes jq, shell validation tools, Herdr, mise, eza, zoxide, git-delta,
+    lazygit, Hex voice-to-text on Apple Silicon, Unity Hub, VS Code, Zed,
+    Sublime Text, ChatGPT, Claude, Codex, and Claude Code).
   - Bootstrap installs missing Brewfile entries without upgrading existing packages by default; pass `--upgrade-packages` to upgrade outdated entries.
   - Pinned Node.js, Pi, and pnpm versions from `config/mise/config.toml`.
   - mise config symlink:
@@ -206,10 +252,17 @@ Debian-only:
   - First-time Homebrew setup downloads the official installer to a temporary
     file before running it, preserving terminal input for confirmation and
     `sudo` prompts; the temporary file is removed on success or failure.
+  - Zsh plugin clones from `install/lib/zsh-plugins.sh` in
+    `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins`.
   - Ghostty symlink:
     - `$XDG_CONFIG_HOME/ghostty/config` -> `~/.dotfiles/config/ghostty/config`
   - tmux symlink:
     - `~/.tmux.conf` -> `~/.dotfiles/config/tmux/tmux.conf`
+  - delta symlink, plus one `include.path` entry in the otherwise unmanaged
+    `~/.gitconfig`:
+    - `$XDG_CONFIG_HOME/git/delta.gitconfig` -> `~/.dotfiles/config/git/delta.gitconfig`
+  - lazygit symlink:
+    - `~/Library/Application Support/lazygit/config.yml` -> `~/.dotfiles/config/lazygit/config.yml`
   - Optional standalone interactive system defaults in `install/platforms/macos/settings.zsh`.
 - Windows:
   - Packages from `install/platforms/windows/winget-packages.txt` via `winget` (when available).
@@ -228,11 +281,22 @@ Debian-only:
 3. Optionally uninstall managed packages.
 4. Remove the repo clone.
 
+> [!WARNING]
+> `brew bundle cleanup` uninstalls everything Homebrew manages that the Brewfile
+> does not list, including transitive dependencies. Run
+> `brew bundle cleanup --file ...` without `--force` first and read the list:
+> any package installed by hand and never added to the manifest is removed. Only
+> use `--force` once that list contains nothing you want to keep.
+
 macOS cleanup commands:
 
 ```zsh
 rm -f ~/.zshrc ~/.zprofile
 rm -f ${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config
+rm -f ${XDG_CONFIG_HOME:-$HOME/.config}/git/delta.gitconfig
+git config --global --unset include.path "${XDG_CONFIG_HOME:-$HOME/.config}/git/delta.gitconfig"
+rm -f ~/Library/Application\ Support/lazygit/config.yml
+rm -rf ${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins
 brew bundle cleanup --file ~/.dotfiles/install/platforms/macos/Brewfile --force
 rm -rf ~/.dotfiles
 ```
@@ -269,6 +333,7 @@ Other Linux cleanup:
 - Shared Unix bootstrap behavior: `install/lib/common.sh`
 - Homebrew installer helper: `install/lib/homebrew.sh`
 - Shared Unix bootstrap UI: `install/lib/ui.sh`
+- Zsh plugin manifest and installer: `install/lib/zsh-plugins.sh`
 - macOS package manifest: `install/platforms/macos/Brewfile`
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`

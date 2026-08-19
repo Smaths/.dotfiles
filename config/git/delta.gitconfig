@@ -1,0 +1,22 @@
+# Delta diff rendering for git, included from ~/.gitconfig via include.path.
+#
+# Kept out of ~/.gitconfig itself so the identity, signing, and credential
+# settings on each machine stay user-owned and untracked. The macOS bootstrap
+# links this file and registers the include; deleting that single include.path
+# line restores git's built-in pager.
+
+[core]
+  pager = delta
+
+[interactive]
+  diffFilter = delta --color-only
+
+[delta]
+  navigate = true
+  line-numbers = true
+
+[diff]
+  colorMoved = default
+
+[merge]
+  conflictStyle = zdiff3
