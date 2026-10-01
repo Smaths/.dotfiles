@@ -70,6 +70,8 @@ All notable changes to this dotfiles repo should be documented in this file.
 
 ### Changed
 
+- Collidascope Linux server deployment now selects the newest archive with
+  native Zsh glob sorting, avoiding conflicts with interactive `ls` aliases.
 - Removed the unneeded Node.js 22.12.0 global compatibility pin; projects can
   continue to select their required Node.js version with `.nvmrc` or
   `.node-version`.
