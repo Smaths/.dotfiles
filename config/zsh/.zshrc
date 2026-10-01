@@ -33,3 +33,6 @@ source "$ZSH_CONFIG_DIR/aliases.zsh"
 if [[ "$ZSH_PROFILE_STARTUP" == "1" ]]; then
   zprof
 fi
+
+# Unity CLI
+. "/Users/snarfum/.unity/env"
