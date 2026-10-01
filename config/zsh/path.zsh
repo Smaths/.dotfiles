@@ -23,6 +23,7 @@ typeset -ga DOTFILES_PATH_PREFIXES
 [[ -d /opt/homebrew/bin ]] && DOTFILES_PATH_PREFIXES+=(/opt/homebrew/bin /opt/homebrew/sbin)
 [[ -d /usr/local/bin ]] && DOTFILES_PATH_PREFIXES+=(/usr/local/bin /usr/local/sbin)
 [[ -d "$HOME/.config/mcp/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.config/mcp/bin")
+[[ -d "$HOME/.opencode/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.opencode/bin")
 [[ -d "$HOME/.local/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.local/bin")
 [[ -d "$HOME/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/bin")
 
