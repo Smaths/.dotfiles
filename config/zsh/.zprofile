@@ -16,4 +16,3 @@ done
 unset _brew
 
 source "$DOTFILES_DIR/config/zsh/path.zsh"
-export PATH="/opt/homebrew/opt/python@3.14/libexec/bin:$PATH"

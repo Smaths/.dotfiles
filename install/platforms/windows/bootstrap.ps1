@@ -2,42 +2,15 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# -----------------------------------------------------------------------------
-# Dotfiles Bootstrap (Windows)
-#
-# Purpose:
-# - Set up a fresh or existing Windows machine using this dotfiles repo.
-# - Keep reruns safe (idempotent where possible, with backups before relinking).
-# - Prefer WSL for shell tooling; keep Windows-host shell linking opt-in.
-#
-# What this script does:
-# 1) Validates runtime platform
-# 2) Resolves winget
-# 3) Optionally installs packages from install/platforms/windows/winget-packages.txt
-# 4) Prints WSL-first shell guidance (including tmux install)
-# 5) Optionally links Windows ~/.zshrc and ~/.zprofile to this repo
-#
-# Safety behavior:
-# - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
-#   before symlinks are replaced.
-# - --dry-run prints commands and planned changes without modifying the system.
-# -----------------------------------------------------------------------------
-
-$DotfilesDir = if ($env:DOTFILES_DIR) { $env:DOTFILES_DIR } else { Join-Path $HOME ".dotfiles" }
+# Windows bootstrap manages host applications only. Shell tooling belongs in WSL.
 $ScriptDir = Split-Path -Parent $PSCommandPath
 $WingetManifest = Join-Path $ScriptDir "winget-packages.txt"
-$ZshrcTarget = Join-Path $DotfilesDir "config/zsh/.zshrc"
-$ZprofileTarget = Join-Path $DotfilesDir "config/zsh/.zprofile"
-$PromptPurificationTarget = Join-Path $DotfilesDir "config/zsh/prompts/purification/prompt_purification_setup"
-$HomePath = [Environment]::GetFolderPath("UserProfile")
-
 $DryRun = $false
 $SkipPackages = $false
-$LinkWindowsShell = $false
+$Yes = $false
 $VerboseOutput = $false
-$TotalSteps = 6
+$TotalSteps = 4
 $CurrentStep = 0
-$CurrentStepLabel = ""
 $OkCount = 0
 $SkipCount = 0
 $StartTime = Get-Date
@@ -47,11 +20,10 @@ function Show-Usage {
 Usage: bootstrap-windows.ps1 [options]
 
 Options:
-  --dry-run         Print actions without changing anything
+  --dry-run         Print the package plan without changing anything
+  --yes             Confirm package installation (required for noninteractive runs)
   --verbose         Show more command details
   --skip-packages   Skip winget package installation
-  --link-windows-shell
-                    Also link Windows ~/.zshrc and ~/.zprofile (WSL-first default is skip)
   -h, --help        Show this help
 "@
 }
@@ -61,384 +33,129 @@ foreach ($arg in $args) {
     "--dry-run" { $DryRun = $true }
     "--verbose" { $VerboseOutput = $true }
     "--skip-packages" { $SkipPackages = $true }
-    "--link-windows-shell" { $LinkWindowsShell = $true }
-    "--help" {
-      Show-Usage
-      exit 0
-    }
-    "-h" {
-      Show-Usage
-      exit 0
-    }
-    default {
-      Write-Error "Unknown option: $arg"
-      Show-Usage
-      exit 1
-    }
+    "--yes" { $Yes = $true }
+    "--link-windows-shell" { throw "--link-windows-shell was removed; Windows Zsh linking is not managed. Use WSL guidance instead." }
+    "--help" { Show-Usage; exit 0 }
+    "-h" { Show-Usage; exit 0 }
+    default { throw "Unknown option: $arg`n$(Show-Usage)" }
   }
 }
 
-function Write-Info {
-  param([string]$Message)
-  Write-Host $Message
-}
-
-function Write-VerboseLine {
-  param([string]$Message)
-  if ($VerboseOutput) {
-    Write-Info $Message
-  }
-}
-
-function Step-Start {
-  param([string]$Label)
-  $script:CurrentStep += 1
-  $script:CurrentStepLabel = $Label
-}
-
-function Step-Ok {
-  param([string]$Detail)
-  $script:OkCount += 1
-  Write-Info ("[{0}/{1}] {2,-28} [OK] {3}" -f $CurrentStep, $TotalSteps, $CurrentStepLabel, $Detail)
-}
-
-function Step-Skip {
-  param([string]$Detail)
-  $script:SkipCount += 1
-  Write-Info ("[{0}/{1}] {2,-28} [SKIP] {3}" -f $CurrentStep, $TotalSteps, $CurrentStepLabel, $Detail)
-}
-
-function Invoke-ManagedCommand {
-  param(
-    [Parameter(Mandatory = $true)][string]$Display,
-    [Parameter(Mandatory = $true)][scriptblock]$Command
-  )
-
-  if ($DryRun) {
-    Write-Info "[dry-run] $Display"
-    return
-  }
-
-  & $Command
-}
+function Write-Info { param([string]$Message) Write-Host $Message }
+function Write-VerboseLine { param([string]$Message) if ($VerboseOutput) { Write-Info $Message } }
+function Step-Start { param([string]$Label) $script:CurrentStep += 1; $script:CurrentStepLabel = $Label }
+function Step-Ok { param([string]$Detail) $script:OkCount += 1; Write-Info ("[{0}/{1}] {2,-28} [OK] {3}" -f $CurrentStep, $TotalSteps, $CurrentStepLabel, $Detail) }
+function Step-Skip { param([string]$Detail) $script:SkipCount += 1; Write-Info ("[{0}/{1}] {2,-28} [SKIP] {3}" -f $CurrentStep, $TotalSteps, $CurrentStepLabel, $Detail) }
 
 function Resolve-WingetBin {
-  $wingetCommand = Get-Command winget -ErrorAction SilentlyContinue
-  if ($wingetCommand) {
-    return $wingetCommand.Source
-  }
+  $command = Get-Command winget -ErrorAction SilentlyContinue
+  if ($command) { return $command.Source }
   return $null
 }
 
 function Get-WingetPackageIds {
   param([Parameter(Mandatory = $true)][string]$ManifestPath)
-
+  if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw "Winget manifest not found at $ManifestPath" }
   $ids = @()
   foreach ($line in Get-Content -LiteralPath $ManifestPath) {
-    $trimmed = $line.Trim()
-    if ([string]::IsNullOrWhiteSpace($trimmed)) {
-      continue
-    }
-    if ($trimmed.StartsWith("#")) {
-      continue
-    }
-    $ids += $trimmed
+    $id = $line.Trim()
+    if (-not $id -or $id.StartsWith("#")) { continue }
+    if ($id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') { throw "Invalid winget package ID in manifest: '$id'" }
+    $ids += $id
   }
-
-  return $ids
+  return ,$ids
 }
 
-function Resolve-NormalizedPath {
-  param([Parameter(Mandatory = $true)][string]$Path)
-
-  try {
-    return (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath
-  } catch {
-    return $null
-  }
+function Get-WingetInstalledState {
+  param([Parameter(Mandatory = $true)][string]$WingetPath, [Parameter(Mandatory = $true)][string]$PackageId)
+  $output = (& $WingetPath "list" "--id" $PackageId "-e" "--accept-source-agreements" 2>&1 | Out-String)
+  $exitCode = $LASTEXITCODE
+  # winget reports an exact-ID miss with APPINSTALLER_CLI_ERROR_NO_APPLICATIONS_FOUND.
+  # PowerShell can expose the HRESULT as either its signed or unsigned value.
+  if ($exitCode -eq -1978335212 -or $exitCode -eq 2316632084) { return $false }
+  if ($exitCode -ne 0) { throw "winget list failed for '$PackageId' (exit $exitCode): $output" }
+  # The package ID column is stable across localized winget output; avoid matching localized prose.
+  $escapedId = [regex]::Escape($PackageId)
+  if ($output -match "(?im)^.*\s+$escapedId(?:\s|$)") { return $true }
+  return $false
 }
 
-function Test-IsAdministrator {
-  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-  $principal = [Security.Principal.WindowsPrincipal]::new($identity)
-  return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-function Test-DeveloperModeEnabled {
-  try {
-    $keyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock"
-    $value = (Get-ItemProperty -LiteralPath $keyPath -Name "AllowDevelopmentWithoutDevLicense" -ErrorAction Stop).AllowDevelopmentWithoutDevLicense
-    return ($value -eq 1)
-  } catch {
-    return $false
-  }
-}
-
-function Assert-SymlinkCapability {
-  $isAdmin = Test-IsAdministrator
-  $developerModeEnabled = Test-DeveloperModeEnabled
-  if (-not $isAdmin -and -not $developerModeEnabled) {
-    throw "Symbolic link creation requires Developer Mode or elevated permissions. Enable Developer Mode or run PowerShell as Administrator."
-  }
-
-  Write-VerboseLine "  symlink capability: administrator=$isAdmin developer_mode=$developerModeEnabled"
-}
-
-function Assert-WingetPackageIdsExist {
-  param(
-    [Parameter(Mandatory = $true)][string]$WingetPath,
-    [Parameter(Mandatory = $true)][string[]]$PackageIds
-  )
-
-  $missingPackageIds = @()
-  foreach ($packageId in $PackageIds) {
-    $searchOutput = (& $WingetPath "search" "--id" $packageId "-e" "--accept-source-agreements" 2>&1 | Out-String)
-    if ($LASTEXITCODE -ne 0) {
-      throw "winget search failed for '$packageId': $searchOutput"
-    }
-
-    if ($searchOutput -match "No package found matching input criteria") {
-      $missingPackageIds += $packageId
-      continue
-    }
-
-    Write-VerboseLine "  package check: found $packageId"
-  }
-
-  if ($missingPackageIds.Count -gt 0) {
-    throw "The following package IDs were not found in winget sources: $($missingPackageIds -join ', ')"
-  }
-}
-
-function Assert-ExpectedLink {
-  param(
-    [Parameter(Mandatory = $true)][string]$LinkPath,
-    [Parameter(Mandatory = $true)][string]$ExpectedTarget
-  )
-
-  $item = Get-Item -LiteralPath $LinkPath -Force -ErrorAction SilentlyContinue
-  if ($null -eq $item) {
-    throw "Expected link is missing: $LinkPath"
-  }
-
-  if (-not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-    throw "Expected symbolic link at $LinkPath but found a regular file/directory."
-  }
-
-  $currentTarget = $item.Target
-  if ($currentTarget -is [array]) {
-    $currentTarget = $currentTarget[0]
-  }
-
-  if ([string]::IsNullOrWhiteSpace($currentTarget)) {
-    throw "Could not resolve symbolic link target for $LinkPath"
-  }
-
-  if (-not [IO.Path]::IsPathRooted($currentTarget)) {
-    $currentTarget = Join-Path (Split-Path -Parent $LinkPath) $currentTarget
-  }
-
-  $normalizedCurrent = Resolve-NormalizedPath -Path $currentTarget
-  $normalizedExpected = Resolve-NormalizedPath -Path $ExpectedTarget
-  if (-not $normalizedCurrent -or -not $normalizedExpected -or $normalizedCurrent -ne $normalizedExpected) {
-    throw "Symbolic link mismatch for $LinkPath. Expected '$ExpectedTarget', found '$currentTarget'."
-  }
-}
-
-function Convert-ToWslPath {
-  param([Parameter(Mandatory = $true)][string]$WindowsPath)
-
-  $normalized = $WindowsPath.Replace("\", "/")
-  if ($normalized -match "^([A-Za-z]):/(.*)$") {
-    $drive = $matches[1].ToLowerInvariant()
-    $tail = $matches[2]
-    return "/mnt/$drive/$tail"
-  }
-
-  return $normalized
-}
-
-function Get-WslDistros {
-  $wslCommand = Get-Command wsl.exe -ErrorAction SilentlyContinue
-  if (-not $wslCommand) {
-    return @()
-  }
-
-  $output = (& $wslCommand.Source "-l" "-q" 2>$null)
-  if ($LASTEXITCODE -ne 0 -or $null -eq $output) {
-    return @()
-  }
-
-  return @($output | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-}
-
-function Link-WithBackup {
-  param(
-    [Parameter(Mandatory = $true)][string]$LinkTarget,
-    [Parameter(Mandatory = $true)][string]$LinkPath
-  )
-
-  if (-not (Test-Path -LiteralPath $LinkTarget)) {
-    throw "Missing symlink target: $LinkTarget"
-  }
-
-  $linkParent = Split-Path -Parent $LinkPath
-  if (-not (Test-Path -LiteralPath $linkParent)) {
-    Invoke-ManagedCommand `
-      -Display "New-Item -ItemType Directory -Path $linkParent -Force" `
-      -Command { New-Item -ItemType Directory -Path $linkParent -Force | Out-Null }
-  }
-
-  $item = Get-Item -LiteralPath $LinkPath -Force -ErrorAction SilentlyContinue
-  if ($null -ne $item) {
-    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-      $currentTarget = $item.Target
-      if ($currentTarget -is [array]) {
-        $currentTarget = $currentTarget[0]
-      }
-
-      if (-not [string]::IsNullOrWhiteSpace($currentTarget)) {
-        if (-not [IO.Path]::IsPathRooted($currentTarget)) {
-          $currentTarget = Join-Path (Split-Path -Parent $LinkPath) $currentTarget
-        }
-        $normalizedCurrent = Resolve-NormalizedPath -Path $currentTarget
-        $normalizedExpected = Resolve-NormalizedPath -Path $LinkTarget
-        if ($normalizedCurrent -and $normalizedExpected -and ($normalizedCurrent -eq $normalizedExpected)) {
-          Write-VerboseLine "  link: already correct ($LinkPath -> $LinkTarget)"
-          return
-        }
-      }
-    }
-
-    $backupPath = "$LinkPath.bak.$(Get-Date -Format 'yyyyMMddHHmmss')"
-    if ($DryRun) {
-      Write-Info "  link: would back up $LinkPath -> $backupPath"
-    } else {
-      Move-Item -LiteralPath $LinkPath -Destination $backupPath -Force
-      Write-VerboseLine "  link: backed up $LinkPath -> $backupPath"
-    }
-  }
-
-  if ($DryRun) {
-    Write-Info "  link: would create $LinkPath -> $LinkTarget"
-    return
-  }
-
-  try {
-    New-Item -ItemType SymbolicLink -Path $LinkPath -Target $LinkTarget -Force | Out-Null
-    Write-VerboseLine "  link: created $LinkPath -> $LinkTarget"
-  } catch {
-    throw "Failed to create symlink at $LinkPath. Enable Developer Mode or run with elevated permissions, then retry."
-  }
+function Confirm-PackagePlan {
+  param([string[]]$PackageIds)
+  Write-Info "Windows host application plan ($($PackageIds.Count) missing package(s)):"
+  foreach ($id in $PackageIds) { Write-Info "  $id" }
+  if ($DryRun -or $PackageIds.Count -eq 0) { return $false }
+  if ($Yes) { return $true }
+  if ([Console]::IsInputRedirected) { throw "Refusing package installation without an interactive console; rerun with --yes to confirm." }
+  $answer = Read-Host "Install these packages? [y/N]"
+  if ($answer -notmatch '^(?i)y(es)?$') { return $false }
+  return $true
 }
 
 Write-Info "dotfiles bootstrap (Windows)"
 Write-Info ""
-
 $isWindowsRuntime = $false
-if (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue) {
-  $isWindowsRuntime = [bool]$IsWindows
-} elseif ($env:OS -eq "Windows_NT") {
-  $isWindowsRuntime = $true
-}
-
-if (-not $isWindowsRuntime) {
-  throw "This bootstrap is intended for Windows. Detected: $([System.Runtime.InteropServices.RuntimeInformation]::OSDescription)"
-}
-
-if (-not (Test-Path -LiteralPath $ZshrcTarget)) {
-  throw "Missing symlink target: $ZshrcTarget"
-}
-
-if (-not (Test-Path -LiteralPath $ZprofileTarget)) {
-  throw "Missing symlink target: $ZprofileTarget"
-}
-
-if (-not (Test-Path -LiteralPath $PromptPurificationTarget)) {
-  throw "Missing vendored prompt: $PromptPurificationTarget"
-}
-
-Step-Start "Run preflight checks"
-if (-not (Test-Path -LiteralPath $DotfilesDir)) {
-  throw "Dotfiles directory not found at $DotfilesDir"
-}
-if ($LinkWindowsShell) {
-  Assert-SymlinkCapability
-  Step-Ok "environment ready (Windows shell linking enabled)"
-} else {
-  Step-Ok "environment ready (WSL-first mode)"
-}
-
-$WingetBin = $null
+if (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue) { $isWindowsRuntime = [bool]$IsWindows }
+elseif ($env:OS -eq "Windows_NT") { $isWindowsRuntime = $true }
+if (-not $isWindowsRuntime) { throw "This bootstrap is intended for Windows." }
 
 Step-Start "Resolve winget"
 $WingetBin = Resolve-WingetBin
-if ([string]::IsNullOrWhiteSpace($WingetBin)) {
-  $SkipPackages = $true
-  Step-Skip "winget not found; package install skipped"
-} else {
-  Step-Ok $WingetBin
-}
+if (-not $SkipPackages -and -not $WingetBin) { throw "winget not found; use --skip-packages to continue without host applications." }
+if ($SkipPackages) { Step-Skip "skipped (--skip-packages)" } else { Step-Ok $WingetBin }
 
-Step-Start "Install winget packages"
+Step-Start "Preflight package plan"
+$missingPackageIds = @()
 if ($SkipPackages) {
-  Step-Skip "skipped (--skip-packages or winget missing)"
+  Step-Skip "skipped"
 } else {
-  if (-not (Test-Path -LiteralPath $WingetManifest)) {
-    throw "Winget manifest not found at $WingetManifest"
-  }
-
   $packageIds = Get-WingetPackageIds -ManifestPath $WingetManifest
-  if ($packageIds.Count -eq 0) {
-    Step-Skip "manifest empty"
-  } else {
-    Assert-WingetPackageIdsExist -WingetPath $WingetBin -PackageIds $packageIds
-    foreach ($packageId in $packageIds) {
-      Invoke-ManagedCommand `
-        -Display "$WingetBin install --id $packageId -e --silent --accept-package-agreements --accept-source-agreements" `
-        -Command { & $WingetBin "install" "--id" $packageId "-e" "--silent" "--accept-package-agreements" "--accept-source-agreements" }
-    }
-    Step-Ok ("{0} package(s) processed" -f $packageIds.Count)
+  foreach ($packageId in $packageIds) {
+    if (Get-WingetInstalledState -WingetPath $WingetBin -PackageId $packageId) {
+      Write-VerboseLine "  already installed: $packageId"
+    } else { $missingPackageIds += $packageId }
   }
+  $shouldInstall = Confirm-PackagePlan -PackageIds $missingPackageIds
+  Step-Ok ("{0} missing, {1} already installed" -f $missingPackageIds.Count, ($packageIds.Count - $missingPackageIds.Count))
 }
 
-Step-Start "Show WSL-first guidance"
-$wslDistros = Get-WslDistros
+Step-Start "Install host applications"
+if ($SkipPackages -or $DryRun -or -not $shouldInstall -or $missingPackageIds.Count -eq 0) {
+  Step-Skip $(if ($DryRun) { "dry-run; no packages installed" } elseif ($SkipPackages) { "skipped" } elseif (-not $shouldInstall) { "not confirmed" } else { "nothing missing" })
+} else {
+  $installedCount = 0
+  foreach ($packageId in $missingPackageIds) {
+    $output = (& $WingetBin "install" "--id" $packageId "-e" "--silent" "--accept-package-agreements" "--accept-source-agreements" 2>&1 | Out-String)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) { throw "winget install failed for '$packageId' (exit $exitCode): $output" }
+    $installedCount++
+  }
+  Step-Ok ("{0} installed, {1} skipped as already installed" -f $installedCount, ($packageIds.Count - $missingPackageIds.Count))
+}
+
+Step-Start "Show WSL guidance"
+$wslCommand = Get-Command wsl.exe -ErrorAction SilentlyContinue
+$wslDistros = @()
+if ($wslCommand) {
+  $wslOutput = (& $wslCommand.Source "-l" "-q" 2>$null)
+  $wslExit = $LASTEXITCODE
+  if ($wslExit -eq 0 -and $null -ne $wslOutput) { $wslDistros = @($wslOutput | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+}
+# A missing distro is an expected state, not the bootstrap's exit status.
+$global:LASTEXITCODE = 0
 if ($wslDistros.Count -eq 0) {
-  Step-Skip "no WSL distro found; run 'wsl --install -d Ubuntu' then rerun"
+  Write-Info "No WSL distro detected. Install Ubuntu with: wsl --install -d Ubuntu"
+  Step-Skip "no WSL distro detected"
 } else {
-  $wslDotfilesPath = Convert-ToWslPath -WindowsPath $DotfilesDir
   Write-Info "Detected WSL distro(s): $($wslDistros -join ', ')"
-  Write-Info "Recommended next steps (inside WSL):"
-  Write-Info "  sudo apt update && sudo apt install -y zsh tmux ripgrep fzf"
-  Write-Info "  ln -sfn '$wslDotfilesPath/config/zsh/.zshrc' ~/.zshrc"
-  Write-Info "  ln -sfn '$wslDotfilesPath/config/zsh/.zprofile' ~/.zprofile"
-  Write-Info "  exec zsh"
-  Step-Ok "printed WSL shell/tmux setup commands"
-}
-
-Step-Start "Link Windows shell files"
-if (-not $LinkWindowsShell) {
-  Step-Skip "skipped by default (pass --link-windows-shell to enable)"
-} else {
-  Link-WithBackup -LinkTarget $ZshrcTarget -LinkPath (Join-Path $HomePath ".zshrc")
-  Link-WithBackup -LinkTarget $ZprofileTarget -LinkPath (Join-Path $HomePath ".zprofile")
-  Step-Ok "linked/verified"
-}
-
-Step-Start "Verify linked files"
-if (-not $LinkWindowsShell) {
-  Step-Skip "skipped (Windows shell links not requested)"
-} elseif ($DryRun) {
-  Step-Skip "skipped in dry-run"
-} else {
-  Assert-ExpectedLink -LinkPath (Join-Path $HomePath ".zshrc") -ExpectedTarget $ZshrcTarget
-  Assert-ExpectedLink -LinkPath (Join-Path $HomePath ".zprofile") -ExpectedTarget $ZprofileTarget
-  Step-Ok "links verified"
+  Write-Info "In Debian/Ubuntu WSL, clone this repo inside the Linux filesystem (not /mnt/c), then run:"
+  Write-Info "  git clone <repository-url> ~/.dotfiles"
+  Write-Info "  sh ~/.dotfiles/install/bootstrap.sh --dry-run"
+  Write-Info "  sh ~/.dotfiles/install/bootstrap.sh"
+  Write-Info "The supported WSL setup is Bash/tmux; native Windows Zsh links are not managed."
+  Step-Ok "printed supported WSL bootstrap guidance"
 }
 
 $elapsedSeconds = [int]((Get-Date) - $StartTime).TotalSeconds
 Write-Info ""
 Write-Info ("Completed in {0}s  |  {1} succeeded  |  {2} skipped" -f $elapsedSeconds, $OkCount, $SkipCount)
-Write-Info "Optional local overrides:"
-Write-Info "  Copy-Item `"$HOME\.dotfiles\config\zsh\local.example.zsh`" `"$HOME\.dotfiles\config\zsh\local.zsh`""

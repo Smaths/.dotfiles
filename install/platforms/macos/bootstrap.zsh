@@ -13,7 +13,7 @@ set -euo pipefail
 # 2) Installs Homebrew if missing
 # 3) Installs packages/apps from Brewfile
 # 4) Links config/mise/config.toml to the XDG path mise reads by default
-# 5) Installs pinned Node.js, Pi, and pnpm versions with mise
+# 5) Installs pinned Go, Node.js, Pi, and pnpm versions with mise
 # 6) Links uv configuration for isolated Python management
 # 7) Installs git via Homebrew when missing
 # 8) Safely links ~/.zshrc and ~/.zprofile to this repo
@@ -178,7 +178,7 @@ print_preflight_plan() {
     echo "  Brewfile packages: install missing entries only"
   fi
   echo "  mise config link: $MISE_CONFIG_LINK_PATH"
-  echo "  mise tools: install pinned Node.js, Pi, and pnpm versions"
+  echo "  mise tools: install pinned Go, Node.js, Pi, and pnpm versions"
   echo "  uv config link: $UV_CONFIG_LINK_PATH"
   echo "  Git: install with Homebrew only if missing"
   echo "  Shell links: ~/.zshrc and ~/.zprofile"
@@ -390,14 +390,14 @@ else
     fi
   fi
 
-  if ((BREWFILE_READY && !INSTALL_GIT)); then
+  if ((BREWFILE_READY && ! INSTALL_GIT)); then
     if ((UPGRADE_PACKAGES)); then
       ui_step_skip "already installed/up to date"
     else
       ui_step_skip "already installed"
     fi
   else
-    if ((!BREWFILE_READY)); then
+    if ((! BREWFILE_READY)); then
       show_brewfile_misses
       echo "  installing Brewfile entries with live Homebrew output (up to 4 parallel jobs)"
       if ((UPGRADE_PACKAGES)); then
@@ -420,8 +420,8 @@ else
   fi
 fi
 
-# Link the tracked mise config to the path mise reads by default, so every
-# process resolves the same toolchain -- not just shells that source .zshrc.
+# Link the tracked mise config to the path mise reads by default. Managed login
+# shells expose its shims; unrelated GUI processes may not inherit that PATH.
 ui_step_start "Link mise config"
 run_cmd mkdir -p "${MISE_CONFIG_LINK_PATH:h}"
 link_with_backup "$MISE_CONFIG_TARGET" "$MISE_CONFIG_LINK_PATH"
@@ -432,7 +432,7 @@ else
 fi
 
 ui_step_start "Install mise tools"
-if ((!DRY_RUN)) && ! command -v mise >/dev/null 2>&1; then
+if ((! DRY_RUN)) && ! command -v mise >/dev/null 2>&1; then
   echo "ERROR: mise was not installed by Brew Bundle." >&2
   exit 1
 fi
@@ -440,7 +440,7 @@ run_cmd mise install --yes
 if ((DRY_RUN)); then
   ui_step_ok "planned"
 else
-  ui_step_ok "Node.js, Pi, and pnpm installed/verified"
+  ui_step_ok "Go, Node.js, Pi, and pnpm installed/verified"
 fi
 
 ui_step_start "Link uv config"

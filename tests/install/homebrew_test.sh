@@ -70,9 +70,10 @@ fi
 [[ "$exit_code" -eq 23 ]] || fail 'curl failure returned the wrong exit code'
 [[ -z "$(find "$INSTALL_TMP" -mindepth 1 -print -quit)" ]] || fail 'curl failure left a temporary file'
 
-if FAKE_INSTALLER_EXIT=17 HOMEBREW_TEST_RESULT="$RESULT_PATH" TMPDIR="$INSTALL_TMP" install_homebrew <<'EOF'; then
+if FAKE_INSTALLER_EXIT=17 HOMEBREW_TEST_RESULT="$RESULT_PATH" TMPDIR="$INSTALL_TMP" install_homebrew <<'EOF'
 prompt-response
 EOF
+then
   fail 'installer failure was not propagated'
 else
   exit_code=$?

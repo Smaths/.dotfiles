@@ -7,10 +7,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   static:
     name: Validation
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -26,3 +31,18 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/dotfiles-home"
           HOME="$RUNNER_TEMP/dotfiles-home" DOTFILES_DIR="$GITHUB_WORKSPACE" sh install/bootstrap.sh --dry-run --skip-packages
+
+  windows:
+    name: Windows PowerShell validation
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate with Windows PowerShell 5.1
+        shell: powershell
+        run: .\tests\windows\check.ps1
+
+      - name: Validate with PowerShell 7
+        shell: pwsh
+        run: ./tests/windows/check.ps1

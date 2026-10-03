@@ -2,13 +2,13 @@
 
 ## Goal
 
-Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstation and Debian server setup.
+Maintain a safe, idempotent dotfiles repo for a macOS-first workstation, Windows host applications, and Debian/Ubuntu WSL or Debian server shell setup.
 
 ## Supported Platforms
 
 - Primary: macOS 14+
-- Secondary: Windows bootstrap via PowerShell
-- Secondary: Debian server bootstrap via bash
+- Secondary: Windows host-app bootstrap via PowerShell; shell setup belongs in Debian/Ubuntu WSL
+- Secondary: Debian server and WSL bootstrap via bash
 - Secondary: Other Linux config reuse only
 
 ## Canonical Entrypoints
@@ -22,7 +22,9 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Shared Unix bootstrap helpers: `install/lib/common.sh`,
   `install/lib/homebrew.sh`, `install/lib/ui.sh`,
   `install/lib/zsh-plugins.sh`
-- macOS package manifest: `install/platforms/macos/Brewfile`
+- macOS core package manifest: `install/platforms/macos/Brewfile`
+- Optional macOS creative/audio manifest: `install/platforms/macos/Brewfile.creative`
+  (manual only; never consumed by bootstrap)
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
 - Zsh plugin manifest: `install/lib/zsh-plugins.sh`
@@ -36,8 +38,13 @@ Maintain a safe, idempotent dotfiles repo for reproducible macOS-first workstati
 - Idempotency first: reruns should converge and avoid duplicate state.
 - No destructive operations without explicit `--force` style opt-in.
 - Never commit secrets, tokens, keys, or credentials.
-- Do not expand network behavior beyond documented tools (`brew`, `mise`, `uv`,
-  `winget`, `apt-get`, `git`, `curl`) without explicit documentation updates.
+- Keep network behavior within the documented tools (`brew`, `mise`, `uv`,
+  `winget`, `apt-get`, `git`, `curl`); document and justify any proposed addition before implementation.
+- Windows bootstrap manages host apps only. Do not add native Windows Zsh linking; WSL shell setup uses Debian/Ubuntu Bash/tmux.
+- Keep machine-specific/project-only shell modules in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`; do not add them to tracked shared modules.
+- The macOS `Brewfile` is the core workstation manifest. `Brewfile.creative` is optional/manual; do not add package profiles or imply bootstrap consumes it.
+- Keep package ownership explicit: Homebrew owns macOS native apps, mise its declared runtimes/tools, uv Python interpreters/environments, winget Windows host apps, and apt Debian packages. Project dependencies belong in project manifests and lockfiles.
+- mise shims are exposed through the managed Zsh login PATH; do not claim all GUI or non-shell processes inherit that PATH.
 - `~/.gitconfig` is user-owned. The only permitted write is the single
   `include.path` entry for `config/git/delta.gitconfig`.
 - Zsh plugin clones are fast-forward only, and a directory that is not a git

@@ -37,6 +37,9 @@ Do:
 
 - Keep scripts idempotent and non-destructive by default.
 - Preserve user files via backup-before-relink patterns.
+- Keep machine/project-only shell commands in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`, not tracked shared aliases.
+- Keep package ownership clear: Homebrew owns native apps, mise its declared tools, uv Python environments, winget Windows host applications, and apt Debian packages; project dependencies remain project-local.
+- Treat mise shim availability as PATH-dependent: managed Zsh login shells receive it, but GUI and arbitrary non-shell processes do not necessarily inherit it.
 - Add comments only where logic is non-obvious.
 - Update docs when behavior changes.
 
@@ -75,9 +78,10 @@ standalone native CLIs remain Homebrew-owned.
 
 - Never commit secrets.
 - Do not assume generic Linux bootstrap support exists; Debian is the supported Linux server bootstrap target.
-- `install/bootstrap.sh` dispatches only to macOS and Debian bootstraps; use `install/bootstrap.ps1` for Windows.
+- `install/bootstrap.sh` dispatches only to macOS and Debian (including Debian/Ubuntu WSL); use `install/bootstrap.ps1` for Windows host applications. Native Windows shell links are not managed.
 - Do not silently expand network dependencies beyond documented tools (`brew`,
   `mise`, `uv`, `winget`, `apt-get`, `git`, `curl`).
 - Do not write to `~/.gitconfig` beyond the single `include.path` entry for
   `config/git/delta.gitconfig`; that file is user-owned.
 - Do not replace or reset a Zsh plugin directory that is not a git clone.
+- Keep `install/platforms/macos/Brewfile` as the core manifest; `Brewfile.creative` remains optional/manual. Do not introduce more package profiles.

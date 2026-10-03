@@ -27,12 +27,12 @@ for f in "$ZSH_CONFIG_DIR"/functions/*.zsh(N); do
 done
 source "$ZSH_CONFIG_DIR/aliases.zsh"
 
-# Local machine overrides are opt-in and gitignored by convention.
+# Local machine overrides stay gitignored; source snippets in stable name order.
 [[ -r "$ZSH_CONFIG_DIR/local.zsh" ]] && source "$ZSH_CONFIG_DIR/local.zsh"
+for f in "$ZSH_CONFIG_DIR"/local.d/*.zsh(N); do
+  [[ -r "$f" ]] && source "$f"
+done
 
 if [[ "$ZSH_PROFILE_STARTUP" == "1" ]]; then
   zprof
 fi
-
-# Unity CLI
-. "/Users/snarfum/.unity/env"

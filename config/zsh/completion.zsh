@@ -1,4 +1,7 @@
-# Homebrew and custom completion paths.
+# Homebrew and custom completion paths. Login shells normally inherit this
+# entry from `brew shellenv`; keep fpath unique when adding it as a fallback for
+# interactive non-login shells.
+typeset -gU fpath
 if command -v brew >/dev/null 2>&1; then
   fpath=("$(brew --prefix)/share/zsh/site-functions" $fpath)
 fi

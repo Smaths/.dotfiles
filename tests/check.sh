@@ -35,6 +35,26 @@ for retired in zsh-autocomplete zsh-autosuggestions zsh-syntax-highlighting; do
     exit 1
   fi
 done
+if grep -Eq '^[[:space:]]*brew "(go(@[^"]*)?|node(@[^"]*)?|pnpm)"' "$brewfile_path"; then
+  printf 'Go, Node.js, and pnpm are mise-managed; remove duplicate runtimes from %s\n' \
+    "$brewfile_path" >&2
+  exit 1
+fi
+
+creative_brewfile_path="install/platforms/macos/Brewfile.creative"
+[[ -f "$creative_brewfile_path" ]] || {
+  printf 'missing optional creative manifest: %s\n' "$creative_brewfile_path" >&2
+  exit 1
+}
+if grep -Eq '^[[:space:]]*cask "unity"' "$brewfile_path" "$creative_brewfile_path"; then
+  printf 'manage exact Unity editors through Hub/Unity CLI, not the rolling unity cask\n' >&2
+  exit 1
+fi
+if grep -Fq 'cask "unity-hub"' "$brewfile_path" ||
+  ! grep -Fxq 'cask "unity-hub"' "$creative_brewfile_path"; then
+  printf 'Unity Hub belongs only in %s\n' "$creative_brewfile_path" >&2
+  exit 1
+fi
 
 prompt_path="config/zsh/prompts/purification/prompt_purification_setup"
 expected_prompt_blob="3b912f41672482c9c7da94ba930331182da799e8"
@@ -47,10 +67,25 @@ expected_prompt_blob="3b912f41672482c9c7da94ba930331182da799e8"
   exit 1
 }
 
-git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.bash' 'config/bash/.bashrc' | xargs -0 shellcheck
-git ls-files -z --cached --others --exclude-standard -- '*.zsh' | xargs -0 zsh -n
+shell_files=()
+zsh_files=()
+format_files=()
+while IFS= read -r -d '' path; do
+  [[ -f "$path" ]] || continue
+  case "$path" in
+    *.sh | *.bash | config/bash/.bashrc) shell_files+=("$path") ;;
+  esac
+  case "$path" in
+    *.zsh) zsh_files+=("$path") ;;
+  esac
+  case "$path" in
+    *.sh | *.zsh | *.bash | config/bash/.bashrc) format_files+=("$path") ;;
+  esac
+done < <(git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.zsh' '*.bash' 'config/bash/.bashrc')
+shellcheck "${shell_files[@]}"
+for path in "${zsh_files[@]}"; do zsh -n "$path"; done
 zsh -n "$prompt_path"
-git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.zsh' '*.bash' 'config/bash/.bashrc' | xargs -0 shfmt -d -i 2 -ci
+shfmt -d -i 2 -ci "${format_files[@]}"
 sh -n install/bootstrap.sh
 ZSH_CONFIG_DIR="$REPO_DIR/config/zsh" zsh -fc 'source "$ZSH_CONFIG_DIR/options.zsh"; typeset -f prompt_purification_setup >/dev/null'
 bash tests/install/common_test.sh

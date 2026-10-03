@@ -3,7 +3,7 @@ fpath=("$ZSH_CONFIG_DIR/prompts/purification" $fpath)
 autoload -Uz prompt_purification_setup && prompt_purification_setup
 
 # Navigation
-DIRSTACKSIZE=20          # Keep up to 10 entries in the directory stack.
+DIRSTACKSIZE=20          # Keep up to 20 entries in the directory stack.
 setopt AUTO_CD           # Entering a directory name alone runs `cd <dir>`.
 setopt AUTO_PUSHD        # `cd` pushes previous directory onto the directory stack.
 setopt PUSHD_IGNORE_DUPS # Do not store duplicate directories in the stack.

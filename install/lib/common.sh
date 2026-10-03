@@ -79,7 +79,7 @@ link_with_backup() {
   fi
 
   run_cmd ln -s "$link_target" "$link_path"
-  if ((VERBOSE && !DRY_RUN)); then
+  if ((VERBOSE && ! DRY_RUN)); then
     printf '  link: created %s -> %s\n' "$link_path" "$link_target"
   fi
 }

@@ -13,11 +13,12 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `config/mise/config.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`
-  (symlink on macOS). It declares the default Node.js and pnpm toolchain plus
-  the Pi terminal agent; project `.nvmrc`, `.node-version`, and `packageManager`
-  metadata can override the active versions. Linking it to the path mise already
-  reads by default means every process resolves the same toolchain, rather than
-  only shells that source `config/zsh/env.zsh`.
+  (symlink on macOS). It declares the default Go, Node.js, and pnpm toolchain
+  plus the Pi terminal agent; project mise configs, `.nvmrc`, `.node-version`,
+  and `packageManager` metadata can override the active versions. Linking it to
+  the path mise reads by default avoids environment-variable selection drift.
+  The managed Zsh login PATH adds the mise shims; GUI and arbitrary non-shell
+  processes do not necessarily inherit that PATH.
 - `config/uv/uv.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml`
   (symlink on macOS). It confines uv operations to uv-managed Python
   interpreters instead of Apple/Xcode or Homebrew Python.
@@ -31,18 +32,24 @@ The design goal is predictable bootstrap behavior with minimal surprise.
   macOS). lazygit does not read git's `core.pager`, so delta is configured for
   it separately. lazygit rewrites this file in place when migrating its own
   config schema, which surfaces as a working-tree change in this repo.
-- `install/platforms/macos/Brewfile` is consumed by macOS bootstrap via `brew bundle`.
+- `install/platforms/macos/Brewfile` is the core development/workstation
+  manifest consumed by macOS bootstrap via `brew bundle`.
+- `install/platforms/macos/Brewfile.creative` is a manual specialist
+  creative/audio manifest. Bootstrap does not consume it. Ableton Live is left
+  to its vendor installer; the manifest owns Unity Hub, while exact Unity editor
+  versions follow each project's `ProjectSettings/ProjectVersion.txt` through
+  Hub or the Unity CLI.
 - `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
-- Windows bootstrap is WSL-first: it provides WSL shell setup commands by default and only links Windows shell files when `--link-windows-shell` is passed.
+- Windows bootstrap manages host applications through winget and provides WSL setup guidance. It never links native Windows shell files; Debian/Ubuntu WSL uses the Debian Bash/tmux bootstrap.
 
 `config/zsh/.zprofile` runs `brew shellenv` and then sources
 `config/zsh/path.zsh`, once, for login shells. That order is load-bearing:
 `brew shellenv` prepends the Homebrew prefix to `PATH`, so running it after
 `path.zsh` would place Homebrew's runtimes ahead of the mise shims and defeat
-per-project version resolution. Interactive child shells inherit the resulting
-`PATH`; the remaining modules under `config/zsh/*.zsh` are sourced by
-`config/zsh/.zshrc`.
+per-project version resolution. Interactive shells inherit the resulting `PATH`; this does not imply that GUI
+or arbitrary non-shell processes inherit it. Remaining tracked shared modules
+under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
 `config/zsh/options.zsh` adds the tracked
 `config/zsh/prompts/purification/` directory to `fpath` and initializes the
 vendored prompt. Bootstrap validates that prompt source before linking the Zsh
@@ -82,7 +89,7 @@ Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
   after `compinit` and before anything that wraps ZLE widgets,
   fast-syntax-highlighting last. Every plugin is optional at runtime.
 - `config/zsh/functions/*.zsh`: interactive helper functions (for example `fcd`, `ffcd`, `fview`, `fstack`).
-- `config/zsh/aliases.zsh`: aliases and short shell convenience commands.
+- `config/zsh/aliases.zsh`: tracked shared aliases and short shell convenience commands. Machine/project-only overrides and modules belong in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`.
 
 ## Symlink Strategy
 
@@ -119,8 +126,9 @@ exercises it in both Bash and Zsh against a stub `git`.
 
 - Managed by this repo:
   - symlink targets listed above
-  - package sets under `install/platforms/*/`
-  - Node.js, Pi, and pnpm versions declared in `config/mise/config.toml`
+  - core package sets under `install/platforms/*/` and the optional, manually
+    installed macOS creative/audio cask set
+  - Go, Node.js, Pi, and pnpm versions declared in `config/mise/config.toml`
   - uv interpreter-selection behavior in `config/uv/uv.toml`
   - the Zsh Prompt Purification source and its reviewed upstream provenance
   - the Zsh plugin set in `install/lib/zsh-plugins.sh` and its clone directory
@@ -130,7 +138,7 @@ exercises it in both Bash and Zsh against a stub `git`.
   - `~/.gitconfig` beyond the single `include.path` entry described above
   - upstream plugin history; the clones are shallow and disposable
   - arbitrary files in `$HOME` not explicitly linked
-  - package managers outside `brew`, `mise`, `uv`, `winget`, and `apt-get`
+  - network tools outside `brew`, `mise`, `uv`, `winget`, `apt-get`, `git`, and `curl`
 
 ## Idempotency Goals
 

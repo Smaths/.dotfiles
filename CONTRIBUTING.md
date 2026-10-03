@@ -3,7 +3,9 @@
 ## Scope
 
 This repo prioritizes safe, repeatable workstation setup. Contributions should
-preserve idempotency and avoid unexpected side effects.
+preserve idempotency and avoid unexpected side effects. Windows changes manage
+host applications only; shell setup belongs in Debian/Ubuntu WSL or the Debian
+server bootstrap.
 
 ## Standards
 
@@ -20,12 +22,15 @@ preserve idempotency and avoid unexpected side effects.
 
 Allowed by default:
 
-- `brew` (package management)
+- `brew` (macOS package management)
+- `mise` (managed runtimes/tools)
+- `uv` (Python interpreters/environments/tools)
+- `winget` (Windows host applications)
 - `apt-get` (Debian package management)
 - `git` (source sync)
 - `curl` (bootstrap/downloads)
 
-Anything beyond this should be justified in docs/PR description and kept minimal.
+Keep network access within these canonical tools. Any proposed addition must be justified in the documentation/PR description and kept minimal. Homebrew owns native standalone apps; mise owns the declared runtime tools; uv owns Python interpreters and environments; project dependencies belong in project manifests and lockfiles. The macOS Brewfile is the core manifest; the creative manifest is optional and manual.
 
 ## Lint and Formatting
 

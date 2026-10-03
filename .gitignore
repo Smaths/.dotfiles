@@ -13,8 +13,9 @@ Icon?
 *.swp
 *.swo
 
-# Local-only zsh overrides (template is tracked)
+# Local-only zsh overrides (templates are tracked)
 config/zsh/local.zsh
+config/zsh/local.d/*.zsh
 
 # Local-only bash overrides (template is tracked)
 config/bash/local.bash
@@ -25,5 +26,6 @@ config/bash/local.bash
 .zsh_history
 .zsh-plugins/
 
-# Codex local/runtime artifacts
-.codex/*
+# Local agent/runtime artifacts
+/.claude/settings.local.json
+/.codex/

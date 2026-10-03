@@ -69,20 +69,12 @@ cask "lulu"
 cask "opencode-desktop"
 cask "sublime-text"
 cask "transmit"
-cask "unity-hub"
 cask "visual-studio-code"
 cask "yaak"
 cask "zed"
 
-# Optional/personal apps
-cask "ableton-live-suite"
-cask "audio-hijack"
+# Workspace utilities
 cask "bettertouchtool"
-cask "blender"
-cask "ilok-license-manager"
 cask "kitlangton-hex" if Hardware::CPU.arm?
-cask "midi-monitor"
-cask "ogdesign-eagle"
 cask "shottr"
-cask "soulseek"
 cask "transmission"

@@ -1,9 +1,11 @@
 [tools]
+go = "1.27.1"
 node = "24.18.1"
-pi = "latest"
+pi = "0.99.1"
 pnpm = "11.19.0"
 
 [settings]
-# Honor project-native Node.js and pnpm version declarations.
+# Honor project-native Node.js and pnpm version declarations. Go uses the
+# global pin unless a project explicitly provides its own mise configuration.
 idiomatic_version_file_enable_tools = ["node", "pnpm"]
 paranoid = true

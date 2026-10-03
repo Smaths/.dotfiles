@@ -24,18 +24,18 @@ sh ~/.dotfiles/install/bootstrap.sh
 Useful flags:
 
 - `--dry-run`: print intended actions without mutating.
-- `--yes`: run without interactive confirmation.
+- `--yes`: run without interactive confirmation on macOS, Windows, and Debian.
 - `--verbose`: show extra command detail.
 - `--upgrade-packages` (macOS only): upgrade outdated Brewfile entries during
   bootstrap.
 - `--skip-packages` (Windows only): skip `winget` installs.
-- `--link-windows-shell` (Windows only): also link Windows `~/.zshrc` and `~/.zprofile` (default is WSL-first skip).
+- Windows does not support native shell linking; the retired `--link-windows-shell` option is rejected. Use the Debian/Ubuntu bootstrap inside WSL.
 - `--skip-packages` (Debian only): skip `apt-get` installs.
 - `--force-shell` (Debian only): change the current user's login shell to bash.
 
-Interactive Unix runs print a preflight plan and ask for confirmation before
-installing packages or relinking config. Non-TTY mutation requires `--yes`;
-otherwise use `--dry-run` to inspect the plan.
+Interactive runs print a preflight plan and ask for confirmation before
+mutation. Noninteractive mutation requires `--yes`; otherwise use `--dry-run`
+to inspect the plan.
 
 macOS settings are separate from bootstrap. Run them explicitly when wanted:
 
@@ -48,6 +48,24 @@ The settings script offers three modes:
 - `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
 - `2) Choose settings`: set defaults for each setting, then proceed.
 - `3) Skip`: exits macOS tuning without applying defaults.
+
+Creative and audio applications are not part of the automatic development
+workstation bootstrap. Install the optional cask set explicitly on a machine
+that needs it:
+
+```zsh
+brew bundle install --no-upgrade \
+  --file ~/.dotfiles/install/platforms/macos/Brewfile.creative
+```
+
+Ableton Live is intentionally absent from both manifests and should be installed
+and updated directly from Ableton. The creative manifest installs Unity Hub, but
+not Homebrew's rolling `unity` editor cask. Install each project's exact editor
+through Hub or the Unity CLI using its
+`ProjectSettings/ProjectVersion.txt`. The optional manifest is independent for
+installation only: cleanup against either manifest treats entries from the other
+as unlisted. Preview any `brew bundle cleanup` operation carefully and compare it
+against both manifests before considering `--force`.
 
 ## Update (Existing Machine)
 
@@ -72,12 +90,13 @@ Prompt Purification requires no separate install step. It is vendored under
 copy. Bootstrap validates the prompt file before relinking shell configuration.
 After Brew Bundle completes, the bootstrap symlinks `config/mise/config.toml` to
 `${XDG_CONFIG_HOME:-~/.config}/mise/config.toml` and then runs `mise install` to
-install or verify the pinned Node.js, Pi, and pnpm versions. Because the config
-sits at the path mise reads by default, no environment variable is needed and
-every process resolves the same tools. Node.js 24 and pnpm 11 are the defaults,
-and mise provides the pinned `pi` terminal agent. Project `.nvmrc`,
-`.node-version`, and `packageManager` files remain the source of truth for
-selecting other versions through mise.
+install or verify the pinned Go, Node.js, Pi, and pnpm versions. Because the
+config sits at the path mise reads by default, no environment variable is needed.
+Go 1.27, Node.js 24, and pnpm 11 are the defaults, and mise provides the pinned
+`pi` terminal agent. Project mise configs, `.nvmrc`, `.node-version`, and
+`packageManager` files remain the source of truth for selecting other versions
+through mise. The shims are added by the managed Zsh login PATH; GUI apps and
+arbitrary non-shell processes do not necessarily inherit that PATH.
 
 Bootstrap also symlinks `config/uv/uv.toml` to
 `${XDG_CONFIG_HOME:-~/.config}/uv/uv.toml`. uv uses only uv-managed Python
@@ -103,10 +122,10 @@ For unattended maintenance, pass `--yes` explicitly:
 sh install/bootstrap.sh --yes
 ```
 
-Node.js, Pi, and pnpm upgrades are intentional config changes rather than side
-effects of a Homebrew upgrade. Update the defaults, review the diff, then rerun
-bootstrap. Keep project runtime and package-manager pins until their projects
-are tested on newer versions.
+Go, Node.js, Pi, and pnpm upgrades are intentional config changes rather than
+side effects of a Homebrew upgrade. Update the defaults, review the diff, then
+rerun bootstrap. Keep project runtime and package-manager pins until their
+projects are tested on newer versions.
 
 Pi is installed as a standalone executable, so `pi update` cannot replace the
 executable and may report its internal Bun path (`/$bunfs/root/pi`). Update the
@@ -124,6 +143,7 @@ dependencies:
 
 ```zsh
 mise current
+go version
 node --version
 npm --version   # npm projects
 pnpm --version  # pnpm projects
@@ -161,6 +181,7 @@ test -L ~/.zprofile && readlink ~/.zprofile
 brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile
 test -L ~/.config/mise/config.toml && readlink ~/.config/mise/config.toml
 mise current
+go version
 node --version
 pnpm --version
 pi --version
@@ -170,8 +191,8 @@ openai --version
 # Apple/Xcode Python remains available, but its user scripts are not global.
 /usr/bin/python3 --version
 zsh -lc '[[ ":$PATH:" != *":$HOME/Library/Python/3.9/bin:"* ]]'
-# Same tools outside zsh: this is what scripts, editors, and hooks see.
-bash -c 'node --version; pnpm --version; pi --version'
+# A child process launched from this configured login shell inherits its PATH.
+bash -c 'go version; node --version; pnpm --version; pi --version'
 test -f ~/.dotfiles/config/zsh/prompts/purification/prompt_purification_setup
 zsh -i -c 'echo $FZF_DEFAULT_COMMAND'
 zsh -i -c 'echo $FZF_CTRL_T_COMMAND'
@@ -193,8 +214,6 @@ test -L ~/Library/Application\ Support/lazygit/config.yml
 Windows equivalents:
 
 ```powershell
-Get-Item $HOME/.zshrc | Select-Object FullName, LinkType, Target
-Get-Item $HOME/.zprofile | Select-Object FullName, LinkType, Target
 Get-Content $HOME/.dotfiles/install/platforms/windows/winget-packages.txt | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { winget list --id $_ -e --accept-source-agreements }
 wsl -l -q
 ```
@@ -209,14 +228,15 @@ sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 
 Expected:
 
-- `mise current` resolves the Node.js, Pi, and pnpm versions pinned in
-  `config/mise/config.toml`, and reports the same versions under `bash -c`. A
-  mismatch between the two means the mise config symlink is missing.
+- `mise current` resolves the Go, Node.js, Pi, and pnpm versions pinned in
+  `config/mise/config.toml`; a `bash -c` launched from that shell inherits the
+  same PATH and should report those versions. This does not guarantee PATH
+  inheritance by GUI apps or unrelated non-shell processes.
 - `uv python list --only-installed` reports uv-owned interpreters, `openai`
   resolves from Homebrew, and the PATH does not contain a version-specific
   Apple Python user-package directory.
-- WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes the WSL shell/tmux setup commands.
-- Windows `~/.zshrc` and `~/.zprofile` are linked only if `--link-windows-shell` was used.
+- WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes WSL guidance. Run Debian/Ubuntu shell setup inside the WSL distro.
+- The Windows bootstrap does not create native Windows shell links.
 - `winget list --id ... -e` resolves each configured package.
 - `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`.
 - All three plugin clones exist and report ok from the interactive shell. A
@@ -278,18 +298,28 @@ git tag backup-$(date +%Y%m%d-%H%M%S)
 2. Move chosen `*.bak.<timestamp>[.N]` back to original path.
 3. Start a new shell.
 
-Example:
+Example—remove the current path only when it is the expected repo-owned link:
 
 ```zsh
-rm -f ~/.zshrc
-mv ~/.zshrc.bak.20260224010101 ~/.zshrc
-exec zsh
+expected="$HOME/.dotfiles/config/zsh/.zshrc"
+if [[ -L "$HOME/.zshrc" && "$(readlink "$HOME/.zshrc")" == "$expected" ]]; then
+  rm -- "$HOME/.zshrc"
+  mv ~/.zshrc.bak.20260224010101 ~/.zshrc
+  exec zsh
+else
+  echo "Refusing to remove ~/.zshrc: it is not the expected managed link" >&2
+fi
 ```
 
 Debian bash example:
 
 ```bash
-rm -f ~/.bashrc
-mv ~/.bashrc.bak.20260224010101 ~/.bashrc
-exec bash
+expected="$HOME/.dotfiles/config/bash/.bashrc"
+if [ -L "$HOME/.bashrc" ] && [ "$(readlink "$HOME/.bashrc")" = "$expected" ]; then
+  rm -- "$HOME/.bashrc"
+  mv ~/.bashrc.bak.20260224010101 ~/.bashrc
+  exec bash
+else
+  echo "Refusing to remove ~/.bashrc: it is not the expected managed link" >&2
+fi
 ```
