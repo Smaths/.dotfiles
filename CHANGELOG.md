@@ -16,3 +16,5 @@ All notable user-visible changes are summarized here. Older implementation detai
   local-only module on the existing machine.
 - Clarified safe rollback, package ownership, local-only shell modules, and
   platform support across project documentation.
+- Pinned CI's Zsh-aware formatter and checksum verification so shell checks use
+  the same formatting rules locally and on Ubuntu.

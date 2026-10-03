@@ -180,6 +180,11 @@ installs only the missing package names.
 
 ## Doctor (Health Checks)
 
+CI installs ShellCheck and Zsh from Ubuntu, then downloads the pinned upstream
+`shfmt` release with `curl` and verifies its SHA-256 checksum. The Ubuntu
+package is not used because it cannot parse the repository's Zsh syntax; the
+pinned release keeps local and CI formatting behavior consistent.
+
 Manual checks:
 
 ```zsh

@@ -22,8 +22,20 @@ jobs:
       - name: Install shell tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends shellcheck shfmt zsh
+          sudo apt-get install -y --no-install-recommends shellcheck zsh
 
+          # Noble's shfmt cannot parse the repo's Zsh files. Use the pinned
+          # upstream release so local and CI formatting rules agree.
+          tools_dir="$RUNNER_TEMP/shell-tools"
+          mkdir -p "$tools_dir"
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output "$tools_dir/shfmt" \
+            https://github.com/mvdan/sh/releases/download/v3.14.0/shfmt_v3.14.0_linux_amd64
+          echo 'fe42021c7272ef2d67ea36cbc3031683c625d0badec733ef3a57b567246a0b66  shfmt' \
+            | (cd "$tools_dir" && sha256sum --check --status -)
+          chmod +x "$tools_dir/shfmt"
+          echo "$tools_dir" >> "$GITHUB_PATH"
+          "$tools_dir/shfmt" --version
       - name: Run checks
         run: bash tests/check.sh
 

@@ -74,7 +74,6 @@ expected_prompt_blob="3b912f41672482c9c7da94ba930331182da799e8"
 
 shell_files=()
 zsh_files=()
-format_files=()
 while IFS= read -r -d '' path; do
   [[ -f "$path" ]] || continue
   case "$path" in
@@ -83,14 +82,12 @@ while IFS= read -r -d '' path; do
   case "$path" in
     *.zsh) zsh_files+=("$path") ;;
   esac
-  case "$path" in
-    *.sh | *.zsh | *.bash | config/bash/.bashrc) format_files+=("$path") ;;
-  esac
 done < <(git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.zsh' '*.bash' 'config/bash/.bashrc')
 shellcheck "${shell_files[@]}"
 for path in "${zsh_files[@]}"; do zsh -n "$path"; done
 zsh -n "$prompt_path"
-shfmt -d -i 2 -ci "${format_files[@]}"
+shfmt -ln=bash -d -i 2 -ci "${shell_files[@]}"
+shfmt -ln=zsh -d -i 2 -ci "${zsh_files[@]}"
 sh -n install/bootstrap.sh
 ZSH_CONFIG_DIR="$REPO_DIR/config/zsh" zsh -fc 'source "$ZSH_CONFIG_DIR/options.zsh"; typeset -f prompt_purification_setup >/dev/null'
 bash tests/install/common_test.sh
