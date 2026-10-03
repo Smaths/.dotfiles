@@ -30,7 +30,7 @@ Allowed by default:
 - `git` (source sync)
 - `curl` (bootstrap/downloads)
 
-Keep network access within these canonical tools. Any proposed addition must be justified in the documentation/PR description and kept minimal. Homebrew owns native standalone apps; mise owns the declared runtime tools; uv owns Python interpreters and environments; project dependencies belong in project manifests and lockfiles. The macOS Brewfile is the core manifest; the creative manifest is optional and manual.
+Keep network access within these canonical tools. Any proposed addition must be justified in the documentation/PR description and kept minimal. Homebrew owns native standalone apps; mise owns the declared runtime tools; uv owns Python interpreters and environments; project dependencies belong in project manifests and lockfiles. The macOS Brewfile is the core manifest; the sole creative manifest is included only with explicit `--creative`.
 
 ## Lint and Formatting
 

@@ -34,11 +34,11 @@ The design goal is predictable bootstrap behavior with minimal surprise.
   config schema, which surfaces as a working-tree change in this repo.
 - `install/platforms/macos/Brewfile` is the core development/workstation
   manifest consumed by macOS bootstrap via `brew bundle`.
-- `install/platforms/macos/Brewfile.creative` is a manual specialist
-  creative/audio manifest. Bootstrap does not consume it. Ableton Live is left
-  to its vendor installer; the manifest owns Unity Hub, while exact Unity editor
-  versions follow each project's `ProjectSettings/ProjectVersion.txt` through
-  Hub or the Unity CLI.
+- `install/platforms/macos/Brewfile.creative` is the sole optional specialist
+  creative/audio manifest. macOS bootstrap consumes it only with `--creative`.
+  Ableton Live is left to its vendor installer; the manifest owns Unity Hub,
+  while exact Unity editor versions follow each project's
+  `ProjectSettings/ProjectVersion.txt` through Hub or the Unity CLI.
 - `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
 - Windows bootstrap manages host applications through winget and provides WSL setup guidance. It never links native Windows shell files; Debian/Ubuntu WSL uses the Debian Bash/tmux bootstrap.

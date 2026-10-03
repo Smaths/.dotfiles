@@ -1,7 +1,8 @@
 # Specialist creative and audio applications.
 #
-# This manifest is intentionally not installed by bootstrap. Install it only on
-# a machine used for creative work:
+# This manifest is skipped by default. Include it during macOS bootstrap with:
+#   sh ~/.dotfiles/install/bootstrap.sh --creative
+# Or install it by itself:
 #   brew bundle install --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile.creative
 #
 # Ableton Live is intentionally excluded. Install and update it directly from

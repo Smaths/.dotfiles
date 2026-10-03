@@ -84,4 +84,4 @@ standalone native CLIs remain Homebrew-owned.
 - Do not write to `~/.gitconfig` beyond the single `include.path` entry for
   `config/git/delta.gitconfig`; that file is user-owned.
 - Do not replace or reset a Zsh plugin directory that is not a git clone.
-- Keep `install/platforms/macos/Brewfile` as the core manifest; `Brewfile.creative` remains optional/manual. Do not introduce more package profiles.
+- Keep `install/platforms/macos/Brewfile` as the core manifest. `Brewfile.creative` is the sole optional creative/audio manifest and is installed only with explicit `--creative`; do not introduce more package profiles.

@@ -47,7 +47,7 @@ sh ~/.dotfiles/install/bootstrap.sh
 
 ## Managed scope
 
-- macOS core package manifest: `install/platforms/macos/Brewfile`. The separate `Brewfile.creative` is optional/manual and never consumed by bootstrap; there are no additional package profiles.
+- macOS core package manifest: `install/platforms/macos/Brewfile`. Pass `--creative` to macOS bootstrap to additionally install `Brewfile.creative`; it is otherwise skipped.
 - Windows manifest: host applications only in `install/platforms/windows/winget-packages.txt`. The bootstrap does not link native Windows Zsh files. WSL Debian/Ubuntu uses the Debian Bash/tmux bootstrap.
 - Debian manifest: CLI packages in `install/platforms/debian/apt-packages.txt`, with `~/.bashrc` and optional tmux config.
 - macOS shell setup links Zsh, tmux, Ghostty, Git delta/lazygit configs, mise config and uv config. The only permitted `~/.gitconfig` change is one delta `include.path` entry.

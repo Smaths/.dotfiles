@@ -55,6 +55,11 @@ if grep -Fq 'cask "unity-hub"' "$brewfile_path" ||
   printf 'Unity Hub belongs only in %s\n' "$creative_brewfile_path" >&2
   exit 1
 fi
+if ! grep -Fq -- '--creative) INSTALL_CREATIVE=1' install/platforms/macos/bootstrap.zsh ||
+  ! grep -Fq "CREATIVE_BREWFILE=\"\$SCRIPT_DIR/Brewfile.creative\"" install/platforms/macos/bootstrap.zsh; then
+  printf 'macOS bootstrap must include the creative Brewfile only behind --creative\n' >&2
+  exit 1
+fi
 
 prompt_path="config/zsh/prompts/purification/prompt_purification_setup"
 expected_prompt_blob="3b912f41672482c9c7da94ba930331182da799e8"

@@ -4,9 +4,8 @@ All notable user-visible changes are summarized here. Older implementation detai
 
 ## [Unreleased]
 
-- Added a manual `install/platforms/macos/Brewfile.creative` for optional
-  specialist creative/audio applications; the macOS bootstrap continues to use
-  only the core `Brewfile`.
+- Added `--creative` to macOS bootstrap to opt into the optional specialist
+  creative/audio `Brewfile.creative`; the core `Brewfile` remains the default.
 - Moved Go to mise alongside Node.js, Pi, and pnpm. The mise config is linked at
   its standard XDG path; project-local declarations can select project versions.
 - Windows bootstrap now manages Windows host applications through winget and

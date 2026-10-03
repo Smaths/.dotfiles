@@ -24,7 +24,7 @@ Maintain a safe, idempotent dotfiles repo for a macOS-first workstation, Windows
   `install/lib/zsh-plugins.sh`
 - macOS core package manifest: `install/platforms/macos/Brewfile`
 - Optional macOS creative/audio manifest: `install/platforms/macos/Brewfile.creative`
-  (manual only; never consumed by bootstrap)
+  (included by macOS bootstrap only with `--creative`)
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
 - Zsh plugin manifest: `install/lib/zsh-plugins.sh`
@@ -42,7 +42,7 @@ Maintain a safe, idempotent dotfiles repo for a macOS-first workstation, Windows
   `winget`, `apt-get`, `git`, `curl`); document and justify any proposed addition before implementation.
 - Windows bootstrap manages host apps only. Do not add native Windows Zsh linking; WSL shell setup uses Debian/Ubuntu Bash/tmux.
 - Keep machine-specific/project-only shell modules in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`; do not add them to tracked shared modules.
-- The macOS `Brewfile` is the core workstation manifest. `Brewfile.creative` is optional/manual; do not add package profiles or imply bootstrap consumes it.
+- The macOS `Brewfile` is the core workstation manifest. `Brewfile.creative` is the sole optional creative/audio manifest and is installed only with explicit `--creative`; do not add more package profiles.
 - Keep package ownership explicit: Homebrew owns macOS native apps, mise its declared runtimes/tools, uv Python interpreters/environments, winget Windows host apps, and apt Debian packages. Project dependencies belong in project manifests and lockfiles.
 - mise shims are exposed through the managed Zsh login PATH; do not claim all GUI or non-shell processes inherit that PATH.
 - `~/.gitconfig` is user-owned. The only permitted write is the single

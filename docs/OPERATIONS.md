@@ -26,8 +26,10 @@ Useful flags:
 - `--dry-run`: print intended actions without mutating.
 - `--yes`: run without interactive confirmation on macOS, Windows, and Debian.
 - `--verbose`: show extra command detail.
-- `--upgrade-packages` (macOS only): upgrade outdated Brewfile entries during
-  bootstrap.
+- `--upgrade-packages` (macOS only): upgrade outdated selected Brewfile entries
+  during bootstrap.
+- `--creative` (macOS only): also install the optional creative/audio casks in
+  `Brewfile.creative`; the default installs the core Brewfile only.
 - `--skip-packages` (Windows only): skip `winget` installs.
 - Windows does not support native shell linking; the retired `--link-windows-shell` option is rejected. Use the Debian/Ubuntu bootstrap inside WSL.
 - `--skip-packages` (Debian only): skip `apt-get` installs.
@@ -49,9 +51,14 @@ The settings script offers three modes:
 - `2) Choose settings`: set defaults for each setting, then proceed.
 - `3) Skip`: exits macOS tuning without applying defaults.
 
-Creative and audio applications are not part of the automatic development
-workstation bootstrap. Install the optional cask set explicitly on a machine
-that needs it:
+Creative and audio applications are skipped by the default development
+workstation bootstrap. Include the optional cask set on a machine that needs it:
+
+```zsh
+sh ~/.dotfiles/install/bootstrap.sh --creative
+```
+
+To install only that manifest without running the rest of bootstrap:
 
 ```zsh
 brew bundle install --no-upgrade \

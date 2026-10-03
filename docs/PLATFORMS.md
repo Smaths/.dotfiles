@@ -15,11 +15,12 @@ Behavior:
 - Installs missing core workstation entries from
   `install/platforms/macos/Brewfile` without upgrading existing packages by
   default.
-- Does not install `install/platforms/macos/Brewfile.creative`; that specialist
-  creative/audio cask set is manual and optional. Ableton Live is deliberately
-  vendor-managed rather than declared in either manifest. Unity Hub is optional,
-  and exact editor versions are managed through Hub or the Unity CLI rather than
-  Homebrew's rolling `unity` cask.
+- Installs the specialist creative/audio cask set in
+  `install/platforms/macos/Brewfile.creative` only when `--creative` is passed;
+  it is skipped by default. Ableton Live is deliberately vendor-managed rather
+  than declared in either manifest. Unity Hub is optional, and exact editor
+  versions are managed through Hub or the Unity CLI rather than Homebrew's
+  rolling `unity` cask.
 - Runs Homebrew, Brew Bundle, and mise installation commands in the foreground
   with native output and signal handling.
 - Downloads the official Homebrew installer to a temporary file before running

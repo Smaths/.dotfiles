@@ -11,7 +11,7 @@ set -euo pipefail
 # What this script does:
 # 1) Validates runtime prerequisites and platform
 # 2) Installs Homebrew if missing
-# 3) Installs packages/apps from Brewfile
+# 3) Installs core packages/apps from Brewfile and optionally creative apps
 # 4) Links config/mise/config.toml to the XDG path mise reads by default
 # 5) Installs pinned Go, Node.js, Pi, and pnpm versions with mise
 # 6) Links uv configuration for isolated Python management
@@ -31,6 +31,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 SCRIPT_DIR="${0:A:h}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 BREWFILE="$SCRIPT_DIR/Brewfile"
+CREATIVE_BREWFILE="$SCRIPT_DIR/Brewfile.creative"
 MISE_CONFIG_TARGET="$DOTFILES_DIR/config/mise/config.toml"
 MISE_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/mise/config.toml"
 UV_CONFIG_TARGET="$DOTFILES_DIR/config/uv/uv.toml"
@@ -55,9 +56,11 @@ DRY_RUN=0
 YES=0
 INSTALL_GIT=0
 UPGRADE_PACKAGES=0
+INSTALL_CREATIVE=0
 VERBOSE=0
 BREW_BIN=""
 BREWFILE_PACKAGE_COUNT=0
+CREATIVE_BREWFILE_PACKAGE_COUNT=0
 GIT_INCLUDE_STATUS=""
 ZSH_PLUGIN_ROOT=""
 TOTAL_STEPS=12
@@ -70,7 +73,8 @@ Options:
   --dry-run            Print actions without changing anything
   --yes                Run without interactive confirmation
   --verbose            Show more command details
-  --upgrade-packages   Upgrade outdated Brewfile packages during bootstrap
+  --upgrade-packages   Upgrade outdated selected Brewfile packages during bootstrap
+  --creative           Include the optional creative/audio Brewfile
   -h, --help           Show this help
 EOF
 }
@@ -81,6 +85,7 @@ for arg in "$@"; do
     --yes) YES=1 ;;
     --verbose) VERBOSE=1 ;;
     --upgrade-packages) UPGRADE_PACKAGES=1 ;;
+    --creative) INSTALL_CREATIVE=1 ;;
     -h | --help)
       usage
       exit 0
@@ -92,6 +97,10 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+if ((INSTALL_CREATIVE)); then
+  TOTAL_STEPS=13
+fi
 
 if [[ ! -f "$COMMON_LIB" ]]; then
   printf 'ERROR: Missing shared bootstrap helper: %s\n' "$COMMON_LIB" >&2
@@ -134,10 +143,12 @@ resolve_brew_bin() {
 
 count_brewfile_packages() {
   # Count active Brewfile dependency declarations for progress output.
+  local brewfile="${1:-$BREWFILE}"
+
   awk '
     /^[[:space:]]*(brew|cask|tap|mas|vscode|go|cargo|uv|npm)[[:space:]]/ { count++ }
     END { print count + 0 }
-  ' "$BREWFILE"
+  ' "$brewfile"
 }
 
 register_git_include() {
@@ -173,9 +184,14 @@ print_preflight_plan() {
     echo "  Homebrew: install using the official installer"
   fi
   if ((UPGRADE_PACKAGES)); then
-    echo "  Brewfile packages: install missing entries and upgrade outdated entries"
+    echo "  Core Brewfile packages: install missing entries and upgrade outdated entries"
   else
-    echo "  Brewfile packages: install missing entries only"
+    echo "  Core Brewfile packages: install missing entries only"
+  fi
+  if ((INSTALL_CREATIVE)); then
+    echo "  Creative Brewfile packages: included (--creative)"
+  else
+    echo "  Creative Brewfile packages: skipped (pass --creative to include)"
   fi
   echo "  mise config link: $MISE_CONFIG_LINK_PATH"
   echo "  mise tools: install pinned Go, Node.js, Pi, and pnpm versions"
@@ -239,11 +255,14 @@ confirm_preflight() {
 }
 
 show_brewfile_misses() {
-  echo "  Brewfile is not satisfied. Details:"
+  local brewfile="${1:?show_brewfile_misses requires a Brewfile path}"
+  local label="${2:-Brewfile}"
+
+  echo "  $label is not satisfied. Details:"
   if ((UPGRADE_PACKAGES)); then
-    brew bundle check --verbose --file="$BREWFILE" || true
+    brew bundle check --verbose --file="$brewfile" || true
   else
-    env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --verbose --no-upgrade --file="$BREWFILE" || true
+    env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --verbose --no-upgrade --file="$brewfile" || true
   fi
 }
 
@@ -286,7 +305,12 @@ require_cmd curl "curl is expected to be present on macOS. If it's missing, your
 
 # Validate required project files before applying changes.
 if [[ ! -f "$BREWFILE" ]]; then
-  echo "ERROR: Brewfile not found at $BREWFILE"
+  echo "ERROR: Core Brewfile not found at $BREWFILE"
+  exit 1
+fi
+
+if ((INSTALL_CREATIVE)) && [[ ! -f "$CREATIVE_BREWFILE" ]]; then
+  echo "ERROR: Creative Brewfile not found at $CREATIVE_BREWFILE" >&2
   exit 1
 fi
 
@@ -369,8 +393,8 @@ if ! command -v git >/dev/null 2>&1; then
   fi
 fi
 
-BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages)"
-ui_step_start "Install Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
+BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages "$BREWFILE")"
+ui_step_start "Install core Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
 if ((DRY_RUN)) && [[ "$BREW_BIN" == "<homebrew path after install>" ]]; then
   if ((UPGRADE_PACKAGES)); then
     echo "[dry-run] brew bundle install --verbose --file=\"$BREWFILE\" --jobs=auto"
@@ -398,8 +422,8 @@ else
     fi
   else
     if ((! BREWFILE_READY)); then
-      show_brewfile_misses
-      echo "  installing Brewfile entries with live Homebrew output (up to 4 parallel jobs)"
+      show_brewfile_misses "$BREWFILE" "Core Brewfile"
+      echo "  installing core Brewfile entries with live Homebrew output (up to 4 parallel jobs)"
       if ((UPGRADE_PACKAGES)); then
         run_cmd brew bundle install --verbose --file="$BREWFILE" --jobs=auto
       else
@@ -416,6 +440,52 @@ else
       ui_step_ok "planned"
     else
       ui_step_ok "brew bundle complete"
+    fi
+  fi
+fi
+
+if ((INSTALL_CREATIVE)); then
+  CREATIVE_BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages "$CREATIVE_BREWFILE")"
+  ui_step_start "Install creative Brewfile packages (${CREATIVE_BREWFILE_PACKAGE_COUNT})"
+  if ((DRY_RUN)) && [[ "$BREW_BIN" == "<homebrew path after install>" ]]; then
+    if ((UPGRADE_PACKAGES)); then
+      echo "[dry-run] brew bundle install --verbose --file=\"$CREATIVE_BREWFILE\" --jobs=auto"
+    else
+      echo "[dry-run] brew bundle install --verbose --file=\"$CREATIVE_BREWFILE\" --no-upgrade --jobs=auto"
+    fi
+    ui_step_ok "planned after Homebrew install"
+  else
+    CREATIVE_BREWFILE_READY=0
+    if ((UPGRADE_PACKAGES)); then
+      if brew bundle check --file="$CREATIVE_BREWFILE" >/dev/null 2>&1; then
+        CREATIVE_BREWFILE_READY=1
+      fi
+    else
+      if env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file="$CREATIVE_BREWFILE" >/dev/null 2>&1; then
+        CREATIVE_BREWFILE_READY=1
+      fi
+    fi
+
+    if ((CREATIVE_BREWFILE_READY)); then
+      if ((UPGRADE_PACKAGES)); then
+        ui_step_skip "already installed/up to date"
+      else
+        ui_step_skip "already installed"
+      fi
+    else
+      show_brewfile_misses "$CREATIVE_BREWFILE" "Creative Brewfile"
+      echo "  installing creative Brewfile entries with live Homebrew output (up to 4 parallel jobs)"
+      if ((UPGRADE_PACKAGES)); then
+        run_cmd brew bundle install --verbose --file="$CREATIVE_BREWFILE" --jobs=auto
+      else
+        run_cmd brew bundle install --verbose --file="$CREATIVE_BREWFILE" --no-upgrade --jobs=auto
+      fi
+
+      if ((DRY_RUN)); then
+        ui_step_ok "planned"
+      else
+        ui_step_ok "brew bundle complete"
+      fi
     fi
   fi
 fi
