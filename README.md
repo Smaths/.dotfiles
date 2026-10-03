@@ -42,6 +42,7 @@ sh ~/.dotfiles/install/bootstrap.sh
 - Inspect a plan with `--dry-run`. macOS and Debian interactive runs show a preflight plan and ask before mutation; non-interactive mutation requires `--yes`. Windows shows missing winget IDs and asks before installing; `--yes` confirms noninteractive installs.
 - Reruns converge. Existing shell config paths are backed up with collision-safe timestamps before replacement; correct symlinks remain unchanged.
 - Package installs add missing entries without upgrading by default. macOS upgrades require `--upgrade-packages`; Windows installs only missing exact package IDs.
+- Zsh plugins use exact commit pins and verified origins. Updating existing clones requires `--upgrade-plugins`, separately from package upgrades (see [pin review](docs/OPERATIONS.md#plugin-pin-review)).
 - macOS system settings are a separate optional operation. Debian's login shell stays unchanged unless `--force-shell` is passed.
 - No uninstall/cleanup command is provided. Remove only verified repo-owned links or references; inspect and select package removals individually. Never remove a regular config file or run broad package cleanup without previewing its full effect. See [backup and restore guidance](docs/OPERATIONS.md#backup).
 

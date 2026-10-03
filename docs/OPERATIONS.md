@@ -28,6 +28,8 @@ Useful flags:
 - `--verbose`: show extra command detail.
 - `--upgrade-packages` (macOS only): upgrade outdated selected Brewfile entries
   during bootstrap.
+- `--upgrade-plugins` (macOS only): fast-forward existing Zsh plugin clones to
+  the exact manifest pins, independently of package upgrades.
 - `--creative` (macOS only): also install the optional creative/audio casks in
   `Brewfile.creative`; the default installs the core Brewfile only.
 - `--skip-packages` (Windows only): skip `winget` installs.
@@ -111,11 +113,46 @@ interpreters for projects and Python-package tools; Apple/Xcode Python and its
 user package directory are not modified or added to `PATH`. Standalone native
 applications such as the official OpenAI CLI are installed through Homebrew.
 
-Zsh plugins follow the same policy as Brewfile entries. Bootstrap clones any
-missing plugin from `install/lib/zsh-plugins.sh` on every run, but only
-fast-forwards existing clones when `--upgrade-packages` is passed. A clone with
-local commits fails the fast-forward loudly rather than being merged or reset,
-and a plugin directory that is not a git clone is reported and left alone.
+Zsh plugins are pinned by full commit SHA in `install/lib/zsh-plugins.sh`.
+Missing plugins are fetched at that exact commit and installed with detached
+HEAD; bootstrap never checks out a floating upstream branch. Existing clones
+are checked for the expected origin URL and a clean worktree (including
+untracked files). A mismatched pin is reported, not silently updated.
+`--upgrade-packages` does not advance existing plugins. To apply a reviewed pin
+change, use:
+
+```zsh
+sh install/bootstrap.sh --dry-run --upgrade-plugins
+sh install/bootstrap.sh --upgrade-plugins
+```
+
+Updates verify the fetched commit and require the installed HEAD to be an
+ancestor of the pin. Shallow clones fetch the target's history to prove this.
+Divergent/ahead commits, dirty worktrees, and unexpected or multiple origin URLs
+fail without resetting or discarding files. Non-clone directories and symlinks
+are reported and left untouched. Dry runs do not fetch or modify clones; the
+ancestry check is deferred until the real run. An already-current pin needs no
+network access.
+
+### Plugin pin review
+
+The initial pins preserve the clean installed baseline and verified canonical
+origins, rather than introducing newer upstream code:
+
+| Plugin | Commit |
+| --- | --- |
+| fzf-tab | `24105b15714bfec37989ed5c5b6e60f572253019` |
+| zsh-autosuggestions | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
+| fast-syntax-highlighting | `3d574ccf48804b10dca52625df13da5edae7f553` |
+
+This baseline/provenance check is not a full security audit of upstream code.
+For future updates, fetch the candidate into a separate review clone, inspect
+`git diff OLD_SHA NEW_SHA` (especially sourced files, subprocesses, and network
+or build hooks), and test it before recording the full SHA in the manifest.
+Commit the manifest change with review notes, run `bash tests/check.sh`, then
+explicitly apply it with `--upgrade-plugins`. Never use branch names or tags as
+pins. Backward or divergent pin changes need manual review and relocation of
+the old clone before reinstalling; bootstrap never forces them.
 
 To intentionally upgrade outdated Homebrew packages and casks during bootstrap:
 
@@ -213,6 +250,7 @@ zsh -i -c 'typeset -f prompt_purification_setup >/dev/null && echo ok'
 # Plugins: each clone present, and each one actually loaded into the shell.
 ls ${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins
 zsh -i -c '[[ -n $widgets[fzf-tab-complete] ]] && echo fzf-tab ok'
+# Run this directly in a terminal, without piping/capturing stdin or stdout:
 zsh -i -c '[[ -n $widgets[fzf-history-widget] ]] && echo fzf-keybindings ok'
 zsh -i -c 'typeset -f _zsh_autosuggest_start >/dev/null && echo autosuggestions ok'
 zsh -i -c 'whence -w -- -fast-highlight-process >/dev/null && echo highlighting ok'
@@ -222,6 +260,13 @@ test -L ~/.config/git/delta.gitconfig && readlink ~/.config/git/delta.gitconfig
 git config --get core.pager
 test -L ~/Library/Application\ Support/lazygit/config.yml
 ```
+
+Completion uses plain `compinit`, including its ownership/permission audit even
+when `.zcompdump` exists. If it reports insecure paths, inspect `compaudit` and
+repair ownership/permissions rather than bypassing the audit. fzf's ZLE
+integration (including legacy fallbacks) loads only with interactive ZLE,
+terminal stdin/stdout, and a non-`dumb` terminal. Captured `zsh -i -c` commands
+still get `FZF_*` defaults and helper functions, but not fzf key bindings.
 
 Windows equivalents:
 

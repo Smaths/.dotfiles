@@ -7,7 +7,9 @@
 # -----------------------------------------------------------------------------
 # fzf key bindings and completion: ctrl-r history, ctrl-t files, alt-c cd.
 # fzf 0.48+ prints them with `fzf --zsh`; older builds only ship them as files.
-if command -v fzf >/dev/null 2>&1; then
+# Interactive (-i) does not imply a terminal (editors/automation use -ic).
+# FZF_* defaults and helper functions remain available without ZLE.
+if [[ -o interactive && -o zle && -t 0 && -t 1 && "$TERM" != dumb ]] && command -v fzf >/dev/null 2>&1; then
   _fzf_init="$(fzf --zsh 2>/dev/null)"
   if [[ -n "$_fzf_init" ]]; then
     eval "$_fzf_init"

@@ -4,6 +4,12 @@ All notable user-visible changes are summarized here. Older implementation detai
 
 ## [Unreleased]
 
+- Restored Zsh completion ownership/permission audits on every startup and
+  guarded fzf ZLE integration so captured interactive shells stay quiet.
+- Pinned Zsh plugins to the installed baseline commits, with origin and clean
+  worktree verification. Existing plugins advance only with `--upgrade-plugins`
+  and only by fast-forward to manifest pins, not with `--upgrade-packages`.
+
 - Added `--creative` to macOS bootstrap to opt into the optional specialist
   creative/audio `Brewfile.creative`; the core `Brewfile` remains the default.
 - Moved Go to mise alongside Node.js, Pi, and pnpm. The mise config is linked at

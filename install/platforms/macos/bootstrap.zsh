@@ -56,6 +56,7 @@ DRY_RUN=0
 YES=0
 INSTALL_GIT=0
 UPGRADE_PACKAGES=0
+UPGRADE_PLUGINS=0
 INSTALL_CREATIVE=0
 VERBOSE=0
 BREW_BIN=""
@@ -74,6 +75,7 @@ Options:
   --yes                Run without interactive confirmation
   --verbose            Show more command details
   --upgrade-packages   Upgrade outdated selected Brewfile packages during bootstrap
+  --upgrade-plugins    Fast-forward Zsh plugins to the manifest's pinned commits
   --creative           Include the optional creative/audio Brewfile
   -h, --help           Show this help
 EOF
@@ -85,6 +87,7 @@ for arg in "$@"; do
     --yes) YES=1 ;;
     --verbose) VERBOSE=1 ;;
     --upgrade-packages) UPGRADE_PACKAGES=1 ;;
+    --upgrade-plugins) UPGRADE_PLUGINS=1 ;;
     --creative) INSTALL_CREATIVE=1 ;;
     -h | --help)
       usage
@@ -199,10 +202,10 @@ print_preflight_plan() {
   echo "  Git: install with Homebrew only if missing"
   echo "  Shell links: ~/.zshrc and ~/.zprofile"
   echo "  Zsh prompt: vendored Prompt Purification"
-  if ((UPGRADE_PACKAGES)); then
-    echo "  Zsh plugins: clone missing and fast-forward existing clones in $ZSH_PLUGIN_ROOT"
+  if ((UPGRADE_PLUGINS)); then
+    echo "  Zsh plugins: install missing pins and fast-forward existing clones to pins in $ZSH_PLUGIN_ROOT"
   else
-    echo "  Zsh plugins: clone missing entries only into $ZSH_PLUGIN_ROOT"
+    echo "  Zsh plugins: install missing pins and verify existing clones in $ZSH_PLUGIN_ROOT"
   fi
   if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
     echo "  Ghostty link: $GHOSTTY_CONFIG_LINK_PATH"
@@ -531,19 +534,19 @@ else
   ui_step_ok "linked/verified"
 fi
 
-# Clone the plugins config/zsh/plugins.zsh loads. Existing clones are only
-# fast-forwarded with --upgrade-packages, mirroring the Brewfile policy.
+# Package upgrades never advance plugin code. Only --upgrade-plugins permits
+# fast-forwarding existing clones to the reviewed manifest pins.
 ui_step_start "Install Zsh plugins ($(zsh_plugin_count))"
 require_cmd git "git is required to clone the Zsh plugins."
-sync_zsh_plugins "$ZSH_PLUGIN_ROOT" "$UPGRADE_PACKAGES"
+sync_zsh_plugins "$ZSH_PLUGIN_ROOT" "$UPGRADE_PLUGINS"
 if ((DRY_RUN)); then
   ui_step_ok "planned"
-elif ((ZSH_PLUGINS_UNMANAGED > 0)); then
-  ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UNMANAGED left untouched"
+elif ((ZSH_PLUGINS_UNMANAGED > 0 || ZSH_PLUGINS_PENDING > 0)); then
+  ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UNMANAGED unmanaged, $ZSH_PLUGINS_PENDING pending pins"
 elif ((ZSH_PLUGINS_CLONED > 0 || ZSH_PLUGINS_UPDATED > 0)); then
   ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UPDATED updated"
 else
-  ui_step_skip "already cloned"
+  ui_step_skip "verified at pinned commits"
 fi
 
 # Link Ghostty config to XDG default path when present.

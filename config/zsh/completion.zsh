@@ -7,7 +7,8 @@ if command -v brew >/dev/null 2>&1; then
 fi
 
 autoload -Uz compinit
-compinit -C
+# Keep the ownership/permission audit enabled even when .zcompdump exists.
+compinit
 
 setopt AUTO_LIST
 setopt AUTO_MENU

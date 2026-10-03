@@ -80,14 +80,17 @@ Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
 - `config/zsh/env.zsh`: exported environment variables, including `FZF_*`
   defaults.
 - `config/zsh/completion.zsh`: completion system configuration, including every
-  `:completion:*` zstyle. The menu style is conditional: fzf-tab can only
+  `:completion:*` zstyle. Plain `compinit` audits completion paths on every
+  startup, including with a cached dump. The menu style is conditional: fzf-tab can only
   capture the unambiguous prefix with zsh's own menu off, so `menu no` applies
   only when that plugin is present and `menu select=1` remains the fallback.
 - `config/zsh/plugins.zsh`: tool shell integrations (fzf key bindings, zoxide)
   and plugin sourcing, plus the `:fzf-tab:*` zstyles that belong with the plugin
   they configure. Load order is load-bearing and documented in the file: fzf-tab
   after `compinit` and before anything that wraps ZLE widgets,
-  fast-syntax-highlighting last. Every plugin is optional at runtime.
+  fast-syntax-highlighting last. Every plugin is optional at runtime. fzf's ZLE
+  integration requires terminal stdin/stdout and interactive ZLE; exported
+  defaults and helper functions remain available in captured shells.
 - `config/zsh/functions/*.zsh`: interactive helper functions (for example `fcd`, `ffcd`, `fview`, `fstack`).
 - `config/zsh/aliases.zsh`: tracked shared aliases and short shell convenience commands. Machine/project-only overrides and modules belong in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`.
 
@@ -117,10 +120,11 @@ temporary file and executes it with terminal input intact. This keeps the
 macOS bootstrap interactive without coupling installer stdin to `curl`.
 
 `install/lib/zsh-plugins.sh` owns the Zsh plugin manifest and its installer. It
-clones missing plugins, fast-forwards existing clones only when the caller asks
-for an upgrade, and reports a directory that is not a git clone instead of
-rewriting it. It is shared with `tests/install/zsh_plugins_test.sh`, which
-exercises it in both Bash and Zsh against a stub `git`.
+installs missing plugins at full commit SHA pins with detached HEAD, verifies
+origin URLs and clean worktrees, and fast-forwards existing clones to pins only
+with `--upgrade-plugins`. Non-clone directories and symlinks are reported rather
+than rewritten. `tests/install/zsh_plugins_test.sh` exercises it in both Bash
+and Zsh against real local Git repositories, without network access.
 
 ## Ownership and Scope
 
@@ -136,7 +140,8 @@ exercises it in both Bash and Zsh against a stub `git`.
 - Not managed by this repo:
   - user secrets, keychains, tokens
   - `~/.gitconfig` beyond the single `include.path` entry described above
-  - upstream plugin history; the clones are shallow and disposable
+  - upstream plugin history; new clones are shallow, with ancestry fetched when
+    needed to verify a pinned fast-forward update
   - arbitrary files in `$HOME` not explicitly linked
   - network tools outside `brew`, `mise`, `uv`, `winget`, `apt-get`, `git`, and `curl`
 
@@ -154,9 +159,10 @@ exercises it in both Bash and Zsh against a stub `git`.
 - Required package manifest and symlink targets must exist before mutation.
 - Zsh-linking bootstraps require the vendored Prompt Purification source before
   advertising or linking the managed Zsh configuration.
-- Zsh plugin clones are refreshed only under `--upgrade-packages`, and only by
-  fast-forward, so a locally modified clone fails loudly instead of being
-  silently merged or discarded.
+- Existing Zsh plugin clones advance only under `--upgrade-plugins`, and only
+  by fast-forward to manifest pins; general package upgrades do not update them.
+  Unexpected origins, dirty clones, and non-fast-forward updates fail loudly
+  instead of being silently merged or discarded.
 - A plugin directory that is not a git clone is reported and left untouched.
 - A missing plugin clone degrades the shell rather than breaking it.
 - `install/platforms/macos/settings.zsh` is interactive, standalone, and never

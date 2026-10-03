@@ -39,7 +39,8 @@ Behavior:
   before linking `~/.zshrc`.
 - Clones the Zsh plugins listed in `install/lib/zsh-plugins.sh` into
   `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins`. Missing plugins are cloned on
-  every run; existing clones are fast-forwarded only under
+  every run at exact commit pins; existing clones are origin/cleanliness checked
+  and fast-forwarded to manifest pins only under `--upgrade-plugins`, never
   `--upgrade-packages`. This is the one place bootstrap fetches source outside
   Homebrew, mise, and uv.
 - Links `config/git/delta.gitconfig` and adds a single `include.path` entry to

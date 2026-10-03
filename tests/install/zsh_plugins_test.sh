@@ -4,111 +4,132 @@ set -euo pipefail
 TEST_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 REPO_DIR="$(CDPATH='' cd -- "$TEST_DIR/../.." && pwd)"
 TEST_TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-zsh-plugins-test.XXXXXX")"
-
-cleanup() {
-  rm -rf -- "$TEST_TMP_ROOT"
-}
-trap cleanup EXIT INT TERM
+trap 'rm -rf -- "$TEST_TMP_ROOT"' EXIT INT TERM
 
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
   exit 1
 }
-
 assert_eq() {
-  local expected="$1"
-  local actual="$2"
-  local message="$3"
-  if [[ "$expected" != "$actual" ]]; then
-    printf 'FAIL: %s\n  expected: %s\n  actual:   %s\n' "$message" "$expected" "$actual" >&2
-    exit 1
-  fi
+  [[ "$1" == "$2" ]] || fail "$3 (expected $1, got $2)"
 }
 
-FAKE_BIN="$TEST_TMP_ROOT/bin"
-GIT_LOG="$TEST_TMP_ROOT/git.log"
-mkdir -p "$FAKE_BIN"
-
-# Stand-in for git: records every invocation and fakes a clone by creating the
-# destination with a .git directory, so no network access is required.
-cat >"$FAKE_BIN/git" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-printf '%s\n' "$*" >>"$FAKE_GIT_LOG"
-
-if [[ "${1:-}" == "clone" ]]; then
-  dest="${!#}"
-  mkdir -p "$dest/.git"
-fi
-exit 0
-EOF
-chmod +x "$FAKE_BIN/git"
-
-PATH="$FAKE_BIN:$PATH"
-export FAKE_GIT_LOG="$GIT_LOG"
-
+# Real Git repositories, no network or user Git configuration.
+export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
+export GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.invalid
+export GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.invalid
 DRY_RUN=0
 VERBOSE=0
-# shellcheck source=install/lib/common.sh
 source "$REPO_DIR/install/lib/common.sh"
-# shellcheck source=install/lib/zsh-plugins.sh
 source "$REPO_DIR/install/lib/zsh-plugins.sh"
-
-PLUGIN_COUNT="$(zsh_plugin_count)"
-[[ "$PLUGIN_COUNT" -ge 1 ]] || fail 'plugin manifest is empty'
-
-# The installer must resolve the same directory config/zsh/.zshrc does.
+assert_eq 3 "$(zsh_plugin_count)" 'manifest should contain three plugins'
+while IFS='|' read -r name url commit; do
+  [[ "$url" == https://github.com/*.git ]] || fail 'manifest must use canonical HTTPS URLs'
+  [[ ${#commit} -eq 40 && "$commit" != *[!0-9a-f]* ]] || fail 'manifest must pin full SHAs'
+done <<EOF
+$ZSH_PLUGIN_SPECS
+EOF
 assert_eq "$TEST_TMP_ROOT/xdg/zsh/plugins" \
-  "$(XDG_DATA_HOME="$TEST_TMP_ROOT/xdg" zsh_plugin_root)" \
-  'zsh_plugin_root should follow XDG_DATA_HOME'
+  "$(XDG_DATA_HOME="$TEST_TMP_ROOT/xdg" zsh_plugin_root)" 'XDG plugin root'
 assert_eq "$TEST_TMP_ROOT/home/.local/share/zsh/plugins" \
-  "$(HOME="$TEST_TMP_ROOT/home" XDG_DATA_HOME='' zsh_plugin_root)" \
-  'zsh_plugin_root should fall back to ~/.local/share'
+  "$(HOME="$TEST_TMP_ROOT/home" XDG_DATA_HOME='' zsh_plugin_root)" 'default plugin root'
 
-# First run clones every plugin.
+UPSTREAM="$TEST_TMP_ROOT/upstream"
+URL="file://$UPSTREAM"
+git init --quiet "$UPSTREAM"
+printf 'first\n' >"$UPSTREAM/plugin.zsh"
+git -C "$UPSTREAM" add .
+git -C "$UPSTREAM" commit --quiet -m first
+FIRST="$(git -C "$UPSTREAM" rev-parse HEAD)"
+printf 'second\n' >>"$UPSTREAM/plugin.zsh"
+git -C "$UPSTREAM" commit --quiet -am second
+SECOND="$(git -C "$UPSTREAM" rev-parse HEAD)"
+printf 'unreviewed HEAD\n' >>"$UPSTREAM/plugin.zsh"
+git -C "$UPSTREAM" commit --quiet -am third
+THIRD="$(git -C "$UPSTREAM" rev-parse HEAD)"
+
 ROOT="$TEST_TMP_ROOT/plugins"
-: >"$GIT_LOG"
+DEST="$ROOT/example"
+ZSH_PLUGIN_SPECS="example|$URL|$FIRST"
 sync_zsh_plugins "$ROOT" 0
-assert_eq "$PLUGIN_COUNT" "$ZSH_PLUGINS_CLONED" 'first run should clone every plugin'
-assert_eq "0" "$ZSH_PLUGINS_CURRENT" 'first run should report nothing as already present'
-assert_eq "$PLUGIN_COUNT" "$(grep -c '^clone --depth 1 ' "$GIT_LOG")" 'first run should shallow-clone each plugin'
-
-# Rerunning converges without touching the clones.
-: >"$GIT_LOG"
+assert_eq 1 "$ZSH_PLUGINS_CLONED" 'first run installs pin'
+assert_eq "$FIRST" "$(git -C "$DEST" rev-parse HEAD)" 'must not install floating HEAD'
+if git -C "$DEST" symbolic-ref -q HEAD; then fail 'new clone must be detached'; fi
 sync_zsh_plugins "$ROOT" 0
-assert_eq "0" "$ZSH_PLUGINS_CLONED" 'rerun should not clone again'
-assert_eq "$PLUGIN_COUNT" "$ZSH_PLUGINS_CURRENT" 'rerun should report existing clones'
-assert_eq "0" "$(wc -l <"$GIT_LOG" | tr -d '[:space:]')" 'rerun should not run git at all'
-
-# Upgrades are opt-in and fast-forward only.
-: >"$GIT_LOG"
+assert_eq 1 "$ZSH_PLUGINS_CURRENT" 'rerun verifies pin'
 sync_zsh_plugins "$ROOT" 1
-assert_eq "$PLUGIN_COUNT" "$ZSH_PLUGINS_UPDATED" 'upgrade run should update every clone'
-assert_eq "$PLUGIN_COUNT" "$(grep -c 'pull --ff-only' "$GIT_LOG")" 'upgrade run should fast-forward each clone'
+assert_eq 0 "$ZSH_PLUGINS_UPDATED" 'explicit update at pin is a no-op'
 
-# A directory the repo did not clone is reported, never rewritten.
-UNMANAGED_ROOT="$TEST_TMP_ROOT/unmanaged"
-UNMANAGED_NAME="$(printf '%s\n' "$ZSH_PLUGIN_SPECS" | sed -n '1s/|.*//p')"
-mkdir -p "$UNMANAGED_ROOT/$UNMANAGED_NAME"
-printf 'hand-managed\n' >"$UNMANAGED_ROOT/$UNMANAGED_NAME/marker"
-: >"$GIT_LOG"
-sync_zsh_plugins "$UNMANAGED_ROOT" 1 2>/dev/null
-assert_eq "1" "$ZSH_PLUGINS_UNMANAGED" 'a non-clone directory should be reported as unmanaged'
-[[ -f "$UNMANAGED_ROOT/$UNMANAGED_NAME/marker" ]] || fail 'a non-clone directory must be left untouched'
-[[ "$(grep -c "$UNMANAGED_NAME" "$GIT_LOG")" -eq 0 ]] || fail 'git must not run against an unmanaged directory'
-
-# Dry runs describe the work without creating anything.
-DRY_ROOT="$TEST_TMP_ROOT/dry"
-: >"$GIT_LOG"
-DRY_RUN=1 sync_zsh_plugins "$DRY_ROOT" 0 >/dev/null
+ZSH_PLUGIN_SPECS="example|$URL|$SECOND"
+sync_zsh_plugins "$ROOT" 0
+assert_eq 1 "$ZSH_PLUGINS_PENDING" 'new pin needs separate opt-in'
+assert_eq "$FIRST" "$(git -C "$DEST" rev-parse HEAD)" 'default run preserves HEAD'
+DRY_RUN=1 sync_zsh_plugins "$ROOT" 1 >/dev/null
 DRY_RUN=0
-[[ ! -d "$DRY_ROOT" ]] || fail 'dry run must not create the plugin root'
-assert_eq "0" "$(wc -l <"$GIT_LOG" | tr -d '[:space:]')" 'dry run must not run git'
+assert_eq "$FIRST" "$(git -C "$DEST" rev-parse HEAD)" 'dry upgrade preserves HEAD'
+if git -C "$DEST" cat-file -e "$SECOND" 2>/dev/null; then fail 'dry upgrade must not fetch'; fi
+sync_zsh_plugins "$ROOT" 1
+assert_eq 1 "$ZSH_PLUGINS_UPDATED" 'explicit update advances shallow clone'
+assert_eq "$SECOND" "$(git -C "$DEST" rev-parse HEAD)" 'upgrade stops at pin, not HEAD'
 
-if [[ -n "${ZSH_VERSION:-}" ]]; then
-  shell_name="zsh $ZSH_VERSION"
-else
-  shell_name="bash $BASH_VERSION"
-fi
-printf 'ok - Zsh plugin installer helper (%s)\n' "$shell_name"
+# Refuse mismatched or multiple remote URLs even when already at the pin.
+git -C "$DEST" remote set-url origin "$TEST_TMP_ROOT/wrong"
+if sync_zsh_plugins "$ROOT" 1 2>/dev/null; then fail 'wrong origin must fail'; fi
+git -C "$DEST" remote set-url origin "$URL"
+git -C "$DEST" config --add remote.origin.url "$TEST_TMP_ROOT/extra"
+if sync_zsh_plugins "$ROOT" 1 2>/dev/null; then fail 'multiple origins must fail'; fi
+git -C "$DEST" config --unset-all remote.origin.url
+git -C "$DEST" remote set-url origin "$URL"
+
+# Refuse unstaged, staged, and untracked local changes without discarding them.
+printf 'local\n' >>"$DEST/plugin.zsh"
+if sync_zsh_plugins "$ROOT" 1 2>/dev/null; then fail 'dirty clone must fail'; fi
+git -C "$DEST" add plugin.zsh
+if sync_zsh_plugins "$ROOT" 1 2>/dev/null; then fail 'staged changes must fail'; fi
+git -C "$DEST" commit --quiet -m local
+LOCAL="$(git -C "$DEST" rev-parse HEAD)"
+printf 'keep\n' >"$DEST/untracked"
+if sync_zsh_plugins "$ROOT" 1 2>/dev/null; then fail 'untracked files must fail'; fi
+rm "$DEST/untracked"
+ZSH_PLUGIN_SPECS="example|$URL|$THIRD"
+if sync_zsh_plugins "$ROOT" 1 2>/dev/null; then fail 'divergence must fail'; fi
+assert_eq "$LOCAL" "$(git -C "$DEST" rev-parse HEAD)" 'divergence must preserve local commit'
+
+# Non-shallow updates also stop at pins, and downgrades are refused.
+ROOT2="$TEST_TMP_ROOT/full"
+mkdir -p "$ROOT2"
+git clone --quiet "$UPSTREAM" "$ROOT2/example"
+git -C "$ROOT2/example" remote set-url origin "$URL"
+git -C "$ROOT2/example" checkout --quiet --detach "$FIRST"
+ZSH_PLUGIN_SPECS="example|$URL|$SECOND"
+sync_zsh_plugins "$ROOT2" 1
+assert_eq "$SECOND" "$(git -C "$ROOT2/example" rev-parse HEAD)" 'full clone fast-forward'
+ZSH_PLUGIN_SPECS="example|$URL|$FIRST"
+if sync_zsh_plugins "$ROOT2" 1 2>/dev/null; then fail 'downgrade must fail'; fi
+
+UNMANAGED_ROOT="$TEST_TMP_ROOT/unmanaged"
+mkdir -p "$UNMANAGED_ROOT/example"
+printf 'hand-managed\n' >"$UNMANAGED_ROOT/example/marker"
+sync_zsh_plugins "$UNMANAGED_ROOT" 1 2>/dev/null
+assert_eq 1 "$ZSH_PLUGINS_UNMANAGED" 'non-clone must be reported'
+[[ -f "$UNMANAGED_ROOT/example/marker" ]] || fail 'non-clone must be preserved'
+mkdir -p "$TEST_TMP_ROOT/symlink"
+ln -s "$DEST" "$TEST_TMP_ROOT/symlink/example"
+sync_zsh_plugins "$TEST_TMP_ROOT/symlink" 1 2>/dev/null
+assert_eq 1 "$ZSH_PLUGINS_UNMANAGED" 'symlink must not be followed'
+
+DRY_RUN=1 sync_zsh_plugins "$TEST_TMP_ROOT/dry" 0 >/dev/null
+DRY_RUN=0
+[[ ! -e "$TEST_TMP_ROOT/dry" ]] || fail 'dry install must not create directories'
+ZSH_PLUGIN_SPECS="example|$URL|main"
+if sync_zsh_plugins "$TEST_TMP_ROOT/invalid" 0 2>/dev/null; then fail 'branch pin must fail'; fi
+ZSH_PLUGIN_SPECS="example|$URL|0000000000000000000000000000000000000000"
+if sync_zsh_plugins "$TEST_TMP_ROOT/failed" 0 2>/dev/null; then fail 'missing pin must fail'; fi
+[[ ! -e "$TEST_TMP_ROOT/failed/example" ]] || fail 'failed install must not publish a clone'
+assert_eq 0 "$(find "$TEST_TMP_ROOT/failed" -mindepth 1 | wc -l | tr -d '[:space:]')" 'failed staging is cleaned'
+
+# Package upgrades must not be wired to plugin upgrades.
+# shellcheck disable=SC2016
+grep -Fq 'sync_zsh_plugins "$ZSH_PLUGIN_ROOT" "$UPGRADE_PLUGINS"' \
+  "$REPO_DIR/install/platforms/macos/bootstrap.zsh" || fail 'plugin updates must have their own flag'
+printf 'ok - Zsh plugin installer helper (%s)\n' "${ZSH_VERSION:-$BASH_VERSION}"
