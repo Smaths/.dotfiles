@@ -24,6 +24,7 @@ typeset -ga DOTFILES_PATH_PREFIXES
 [[ -d /usr/local/bin ]] && DOTFILES_PATH_PREFIXES+=(/usr/local/bin /usr/local/sbin)
 [[ -d "$HOME/.config/mcp/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.config/mcp/bin")
 [[ -d "$HOME/.opencode/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.opencode/bin")
+[[ -d "$HOME/.pi/agent/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.pi/agent/bin")
 [[ -d "$HOME/.local/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.local/bin")
 [[ -d "$HOME/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/bin")
 
