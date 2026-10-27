@@ -24,3 +24,6 @@ All notable user-visible changes are summarized here. Older implementation detai
   platform support across project documentation.
 - Pinned CI's Zsh-aware formatter and checksum verification so shell checks use
   the same formatting rules locally and on Ubuntu.
+- Saved the configurable Obsidian Search Alfred workflow under
+  `config/alfred/workflows/obsidian-search/` for manual import; machine-specific
+  vault settings remain outside the repo.
