@@ -54,7 +54,7 @@ config but have no supported bootstrap. See [platform details](docs/PLATFORMS.md
 
 1. Update manifest/config source of truth (`install/platforms/*/`, `config/*`).
 2. Update automation step scripts (`install/*.zsh`, `install/*.ps1`, `install/*.sh`) if behavior changed.
-3. Update relevant docs (`README.md`, `docs/*.md`, `CHANGELOG.md`).
+3. Update relevant docs (`README.md`, `docs/*.md`).
 4. Run required checks:
    - `bash tests/check.sh` (static validation and shared helper tests; also run by CI)
    - `brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile`

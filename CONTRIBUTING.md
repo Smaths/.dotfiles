@@ -44,4 +44,3 @@ Behavior-changing PRs should update:
 - `docs/ARCHITECTURE.md` (if mapping/symlink strategy changes)
 - `docs/OPERATIONS.md` (if install/update/recovery flows change)
 - `docs/ALFRED.md` (if Alfred import or workflow behavior changes)
-- `CHANGELOG.md` (`[Unreleased]`)
