@@ -1,15 +1,17 @@
 # Changelog
 
-All notable user-visible changes are summarized here. Older implementation details and historical package churn are available in Git history.
+User-visible changes. For older details, see Git history.
 
 ## [Unreleased]
 
+- Added the Snarfum Industries Alfred theme at
+  `config/alfred/snarfum-industries.alfredappearance`. Open it to import; it is
+  not linked by bootstrap.
 - Restored Zsh completion ownership/permission audits on every startup and
   guarded fzf ZLE integration so captured interactive shells stay quiet.
 - Pinned Zsh plugins to the installed baseline commits, with origin and clean
   worktree verification. Existing plugins advance only with `--upgrade-plugins`
   and only by fast-forward to manifest pins, not with `--upgrade-packages`.
-
 - Added `--creative` to macOS bootstrap to opt into the optional specialist
   creative/audio `Brewfile.creative`; the core `Brewfile` remains the default.
 - Moved Go to mise alongside Node.js, Pi, and pnpm. The mise config is linked at
