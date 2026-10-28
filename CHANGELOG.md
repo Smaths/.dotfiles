@@ -4,6 +4,7 @@ All notable user-visible changes are summarized here. Older implementation detai
 
 ## [Unreleased]
 
+- Use Debian's `fdfind` for fzf defaults and picker helpers when `fd` is absent.
 - Restored Zsh completion ownership/permission audits on every startup and
   guarded fzf ZLE integration so captured interactive shells stay quiet.
 - Pinned Zsh plugins to the installed baseline commits, with origin and clean
