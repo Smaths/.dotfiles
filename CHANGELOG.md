@@ -4,6 +4,7 @@ User-visible changes. For older details, see Git history.
 
 ## [Unreleased]
 
+- Updated mise defaults to Node.js 26.10.0, Pi 1.4, and pnpm 12.11.2.
 - Added the Snarfum Industries Alfred theme at
   `config/alfred/snarfum-industries.alfredappearance`. Open it to import; it is
   not linked by bootstrap.

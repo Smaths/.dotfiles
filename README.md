@@ -73,10 +73,10 @@ Debian/Ubuntu handles Bash and tmux in WSL or on a server.
   mise, and uv config. Debian links `~/.bashrc` and optionally tmux config.
   Windows does not link native Zsh files. The only `~/.gitconfig` change is a
   single delta `include.path` entry.
-- **Tool ownership:** mise defaults to Go 1.27, Node.js 24, Pi, and pnpm 11;
-  project declarations can select other tools. Its shims are on the managed
-  Zsh login PATH, not automatically available to GUI or other non-shell
-  processes. uv manages Python interpreters and environments; Homebrew owns
+- **Tool ownership:** mise supplies the Go, Node.js, Pi, and pnpm versions in
+  `config/mise/config.toml`; project declarations can override them. Its shims
+  are on the managed Zsh login PATH, not automatically available to GUI or other
+  non-shell processes. uv manages Python interpreters and environments; Homebrew owns
   native standalone apps. Project libraries belong in project manifests and
   lockfiles, not shared user-level environments.
 - **Manual and local config:** Keep machine-specific Zsh settings in ignored
