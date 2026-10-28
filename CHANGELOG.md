@@ -7,6 +7,7 @@ User-visible changes. For older details, see Git history.
 - Added the Snarfum Industries Alfred theme at
   `config/alfred/snarfum-industries.alfredappearance`. Open it to import; it is
   not linked by bootstrap.
+- Use Debian's `fdfind` for fzf defaults and picker helpers when `fd` is absent.
 - Restored Zsh completion ownership/permission audits on every startup and
   guarded fzf ZLE integration so captured interactive shells stay quiet.
 - Pinned Zsh plugins to the installed baseline commits, with origin and clean

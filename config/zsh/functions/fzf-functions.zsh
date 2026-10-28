@@ -1,5 +1,6 @@
 __fzf_require_cmd() {
   local cmd="${1:-}"
+  [[ "$cmd" == fd ]] && cmd="${FZF_FD_COMMAND:-fd}"
   if ! command -v "$cmd" >/dev/null 2>&1; then
     print -u2 "Missing required command: $cmd"
     return 127
@@ -20,7 +21,7 @@ __fzf_fd_find() {
 
   exclude_source="$(__fzf_fd_excludes)"
   exclude_args=(${=exclude_source})
-  fd -H -a -t "$type" "${exclude_args[@]}" . "$root"
+  "${FZF_FD_COMMAND:-fd}" -H -a -t "$type" "${exclude_args[@]}" . "$root"
 }
 
 fcd() {

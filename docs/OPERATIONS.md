@@ -243,7 +243,8 @@ sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 ```
 
 Check `mise current` against `config/mise/config.toml` and confirm `core.pager`
-is `delta`. On Windows, a WSL distro should appear in `wsl -l -q`; run the
+is `delta`. `FZF_DEFAULT_COMMAND` should use `fd`, or Debian's `fdfind` when
+`fd` is absent. On Windows, a WSL distro should appear in `wsl -l -q`; run the
 Debian/Ubuntu bootstrap inside it. On Debian, an already-satisfied apt manifest
 should skip package installation and the login shell should stay unchanged
 without `--force-shell`. A missing plugin clone degrades interactive Zsh rather
