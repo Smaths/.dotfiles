@@ -9,9 +9,16 @@ if [[ "$OSTYPE" == darwin* ]]; then
   export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
 fi
 
-# fzf
+# fzf: Debian packages fd-find as fdfind; macOS and other platforms use fd.
+if (( $+commands[fd] )); then
+  export FZF_FD_COMMAND=fd
+elif (( $+commands[fdfind] )); then
+  export FZF_FD_COMMAND=fdfind
+else
+  export FZF_FD_COMMAND=fd
+fi
 export FZF_FD_EXCLUDE_ARGS='--exclude .git --exclude node_modules --exclude .cache --exclude dist --exclude build --exclude .next --exclude .turbo --exclude coverage --exclude target'
-export FZF_DEFAULT_COMMAND="fd -H -t f $FZF_FD_EXCLUDE_ARGS"
+export FZF_DEFAULT_COMMAND="$FZF_FD_COMMAND -H -t f $FZF_FD_EXCLUDE_ARGS"
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_DEFAULT_OPTS="
   --height=70%
