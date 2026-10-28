@@ -1,8 +1,8 @@
 # Prompt Purification (Vendored)
 
-This directory contains a vendored copy of Prompt Purification so the Zsh
-prompt is reproducible without a separate download during bootstrap. The only
-source change removes one trailing space to satisfy repository validation.
+Vendored Prompt Purification keeps the Zsh prompt reproducible without a
+bootstrap download. The only source change removes a trailing space for repo
+validation.
 
 - Upstream: <https://github.com/Phantas0s/purification>
 - Vendored commit: `0faad169067d621c832a60e742179ac4124a45f5`

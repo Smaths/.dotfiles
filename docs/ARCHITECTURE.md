@@ -2,10 +2,10 @@
 
 ## Overview
 
-This repo defines a small, explicit mapping from tracked files to paths in `$HOME`.
-The design goal is predictable bootstrap behavior with minimal surprise.
+Bootstrap links selected tracked files into `$HOME` and installs packages from
+explicit manifests. The map below identifies those paths and exceptions.
 
-## File-to-Home Mapping
+## File-to-home mapping
 
 - `config/zsh/.zshrc` -> `~/.zshrc` (symlink)
 - `config/zsh/.zprofile` -> `~/.zprofile` (symlink)
@@ -32,28 +32,30 @@ The design goal is predictable bootstrap behavior with minimal surprise.
   macOS). lazygit does not read git's `core.pager`, so delta is configured for
   it separately. lazygit rewrites this file in place when migrating its own
   config schema, which surfaces as a working-tree change in this repo.
+- `config/alfred/` contains a theme and workflow for manual import, not links.
+  Alfred keeps the selected vault in its ignored live `prefs.plist`. See
+  [Alfred setup](ALFRED.md).
 - `install/platforms/macos/Brewfile` is the core development/workstation
   manifest consumed by macOS bootstrap via `brew bundle`.
-- `install/platforms/macos/Brewfile.creative` is the sole optional specialist
-  creative/audio manifest. macOS bootstrap consumes it only with `--creative`.
-  Ableton Live is left to its vendor installer; the manifest owns Unity Hub,
-  while exact Unity editor versions follow each project's
-  `ProjectSettings/ProjectVersion.txt` through Hub or the Unity CLI.
+- `install/platforms/macos/Brewfile.creative` is optional and runs only with
+  `--creative`. It installs Unity Hub, not a rolling editor; Ableton stays
+  vendor-managed. See [creative installs](OPERATIONS.md#install-on-a-new-machine).
 - `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
-- Windows bootstrap manages host applications through winget and provides WSL setup guidance. It never links native Windows shell files; Debian/Ubuntu WSL uses the Debian Bash/tmux bootstrap.
+- Windows bootstrap manages host applications through winget and explains WSL
+  setup. It does not link native Windows shell files; Debian/Ubuntu in WSL uses
+  the Debian Bash/tmux bootstrap.
 
 `config/zsh/.zprofile` runs `brew shellenv` and then sources
 `config/zsh/path.zsh`, once, for login shells. That order is load-bearing:
 `brew shellenv` prepends the Homebrew prefix to `PATH`, so running it after
 `path.zsh` would place Homebrew's runtimes ahead of the mise shims and defeat
-per-project version resolution. Interactive shells inherit the resulting `PATH`; this does not imply that GUI
-or arbitrary non-shell processes inherit it. Remaining tracked shared modules
-under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
-`config/zsh/options.zsh` adds the tracked
-`config/zsh/prompts/purification/` directory to `fpath` and initializes the
-vendored prompt. Bootstrap validates that prompt source before linking the Zsh
-entrypoints, so a partial checkout fails before changing shell files.
+per-project version resolution. Interactive shells inherit the resulting
+`PATH`; GUI and unrelated processes may not. `config/zsh/.zshrc` sources the
+remaining shared `config/zsh/*.zsh` modules. `config/zsh/options.zsh` adds the
+vendored Purification prompt to `fpath` and initializes it. Bootstrap validates
+that prompt before linking the Zsh entrypoints, so a partial checkout fails
+before changing shell files.
 
 Zsh plugins are not symlinked. `install/lib/zsh-plugins.sh` clones them into
 `${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins`, and `config/zsh/.zshrc`
@@ -65,7 +67,7 @@ the clones outside the repo keeps upstream history out of it.
 only portable shell defaults and small aliases instead of sourcing zsh modules.
 Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
 
-## Zsh Module Boundaries
+## Zsh module boundaries
 
 - `config/zsh/options.zsh`: shell options, history behavior, and directory-stack options.
 - `config/zsh/prompts/purification/`: vendored Prompt Purification source and
@@ -81,9 +83,9 @@ Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
   defaults.
 - `config/zsh/completion.zsh`: completion system configuration, including every
   `:completion:*` zstyle. Plain `compinit` audits completion paths on every
-  startup, including with a cached dump. The menu style is conditional: fzf-tab can only
-  capture the unambiguous prefix with zsh's own menu off, so `menu no` applies
-  only when that plugin is present and `menu select=1` remains the fallback.
+  startup, even with a cached dump. fzf-tab requires Zsh's menu off to capture
+  the unambiguous prefix, so `menu no` applies only when it is present;
+  `menu select=1` is the fallback.
 - `config/zsh/plugins.zsh`: tool shell integrations (fzf key bindings, zoxide)
   and plugin sourcing, plus the `:fzf-tab:*` zstyles that belong with the plugin
   they configure. Load order is load-bearing and documented in the file: fzf-tab
@@ -92,9 +94,11 @@ Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
   integration requires terminal stdin/stdout and interactive ZLE; exported
   defaults and helper functions remain available in captured shells.
 - `config/zsh/functions/*.zsh`: interactive helper functions (for example `fcd`, `ffcd`, `fview`, `fstack`).
-- `config/zsh/aliases.zsh`: tracked shared aliases and short shell convenience commands. Machine/project-only overrides and modules belong in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`.
+- `config/zsh/aliases.zsh`: tracked shared aliases and short shell commands.
+  Put machine- and project-only overrides in ignored `config/zsh/local.zsh` or
+  `config/zsh/local.d/*.zsh`.
 
-## Symlink Strategy
+## Symlink strategy
 
 `install/lib/common.sh` provides `link_with_backup()` to both the macOS and
 Debian bootstraps:
@@ -126,45 +130,17 @@ with `--upgrade-plugins`. Non-clone directories and symlinks are reported rather
 than rewritten. `tests/install/zsh_plugins_test.sh` exercises it in both Bash
 and Zsh against real local Git repositories, without network access.
 
-## Ownership and Scope
-
-- Managed by this repo:
-  - symlink targets listed above
-  - core package sets under `install/platforms/*/` and the optional, manually
-    installed macOS creative/audio cask set
-  - Go, Node.js, Pi, and pnpm versions declared in `config/mise/config.toml`
-  - uv interpreter-selection behavior in `config/uv/uv.toml`
-  - the Zsh Prompt Purification source and its reviewed upstream provenance
-  - the Zsh plugin set in `install/lib/zsh-plugins.sh` and its clone directory
-  - delta and lazygit diff-rendering configuration
-- Not managed by this repo:
-  - user secrets, keychains, tokens
-  - `~/.gitconfig` beyond the single `include.path` entry described above
-  - upstream plugin history; new clones are shallow, with ancestry fetched when
-    needed to verify a pinned fast-forward update
-  - arbitrary files in `$HOME` not explicitly linked
-  - network tools outside `brew`, `mise`, `uv`, `winget`, `apt-get`, `git`, and `curl`
-
-## Idempotency Goals
-
-- Running bootstrap repeatedly should converge to one valid state.
-- Existing valid symlinks should remain unchanged.
-- Re-run noise should be minimal; destructive operations require explicit opt-in.
-
 ## Invariants
 
-- Bootstrap wrappers are thin dispatchers (`install/bootstrap.sh` for macOS/Debian, `install/bootstrap.ps1` for Windows).
-- Platform bootstrap scripts stay explicit under `install/platforms/{macos,windows,debian}/`.
-- Shared bootstrap behavior and UI helpers live under `install/lib/`.
+- `install/bootstrap.sh` and `install/bootstrap.ps1` dispatch to platform scripts;
+  shared Unix bootstrap helpers live under `install/lib/`.
 - Required package manifest and symlink targets must exist before mutation.
 - Zsh-linking bootstraps require the vendored Prompt Purification source before
   advertising or linking the managed Zsh configuration.
-- Existing Zsh plugin clones advance only under `--upgrade-plugins`, and only
-  by fast-forward to manifest pins; general package upgrades do not update them.
-  Unexpected origins, dirty clones, and non-fast-forward updates fail loudly
-  instead of being silently merged or discarded.
-- A plugin directory that is not a git clone is reported and left untouched.
-- A missing plugin clone degrades the shell rather than breaking it.
+- Existing Zsh plugin clones advance only under `--upgrade-plugins` and only
+  by fast-forward to manifest pins. Unexpected origins, dirty clones, and
+  non-clone directories are reported without overwriting them. Missing clones
+  degrade the shell rather than breaking it.
 - `install/platforms/macos/settings.zsh` is interactive, standalone, and never
   invoked by bootstrap.
 - Debian package installation skips `apt-get update` and `apt-get install` when the apt manifest is already satisfied.

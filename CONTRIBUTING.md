@@ -2,56 +2,45 @@
 
 ## Scope
 
-This repo prioritizes safe, repeatable workstation setup. Contributions should
-preserve idempotency and avoid unexpected side effects. Windows changes manage
-host applications only; shell setup belongs in Debian/Ubuntu WSL or the Debian
-server bootstrap.
+Keep installs repeatable and preserve user files. Windows changes manage host
+apps only; shell setup belongs in Debian/Ubuntu WSL or the Debian bootstrap.
 
 ## Standards
 
 - Prefer `zsh` (existing scripts) or POSIX `sh` when portability is required.
-- Use strict mode in scripts:
-  - `set -euo pipefail`
-- Keep scripts idempotent:
-  - reruns should converge and avoid duplicate state.
-- No destructive operations by default.
-  - destructive behavior must require explicit `--force` or equivalent opt-in.
-- Keep defaults conservative and reversible.
+- Use strict mode where the script's shell supports it (`set -euo pipefail`
+  in Bash and Zsh).
+- Make reruns converge without duplicate state.
+- Gate destructive behavior behind an explicit `--force` or equivalent opt-in.
 
-## Network and External Calls
+## Network and external calls
 
-Allowed by default:
+Keep network calls within `brew`, `mise`, `uv`, `winget`, `apt-get`, `git`, and
+`curl`. Justify any additional tool in the PR or docs before using it.
 
-- `brew` (macOS package management)
-- `mise` (managed runtimes/tools)
-- `uv` (Python interpreters/environments/tools)
-- `winget` (Windows host applications)
-- `apt-get` (Debian package management)
-- `git` (source sync)
-- `curl` (bootstrap/downloads)
+Homebrew owns native apps; mise owns declared tools; uv owns Python. Project
+dependencies belong in project manifests and lockfiles. Keep the macOS Brewfile
+as the core manifest; `Brewfile.creative` runs only with `--creative`.
 
-Keep network access within these canonical tools. Any proposed addition must be justified in the documentation/PR description and kept minimal. Homebrew owns native standalone apps; mise owns the declared runtime tools; uv owns Python interpreters and environments; project dependencies belong in project manifests and lockfiles. The macOS Brewfile is the core manifest; the sole creative manifest is included only with explicit `--creative`.
-
-## Lint and Formatting
+## Lint and formatting
 
 - Shell scripts should pass `shellcheck` where practical.
 - Format shell files with `shfmt` (2-space indentation).
 - Keep comments concise and operationally useful.
 
-Suggested local checks:
+Run:
 
 ```zsh
 bash tests/check.sh
 ```
 
-This is the same script CI runs. Add new checks there rather than duplicating
-the command list in documentation.
+CI runs the same script; add new checks there.
 
-## Documentation Requirements
+## Documentation requirements
 
 Behavior-changing PRs should update:
 
 - `README.md` (if user-facing behavior changes)
 - `docs/ARCHITECTURE.md` (if mapping/symlink strategy changes)
 - `docs/OPERATIONS.md` (if install/update/recovery flows change)
-- `CHANGELOG.md` (`[Unreleased]`)
+- `docs/ALFRED.md` (if Alfred import or workflow behavior changes)
