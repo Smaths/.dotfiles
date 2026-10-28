@@ -55,6 +55,7 @@ sh ~/.dotfiles/install/bootstrap.sh
 - mise defaults are Go 1.27, Node.js 24, Pi, and pnpm 11; project-local version declarations/configs select project tools. mise shims are added by the managed Zsh login PATH, not automatically inherited by every GUI or non-shell process.
 - Python interpreters and Python environments are uv-managed; native standalone applications are owned by Homebrew. Project libraries belong to project manifests/lockfiles, not shared user-level environments.
 - Machine-specific Zsh overrides belong in ignored `config/zsh/local.zsh` and `config/zsh/local.d/*.zsh`, not tracked shared modules.
+- `config/alfred/workflows/obsidian-search/` contains a manually importable Alfred workflow for searching Obsidian note filenames. It is not installed by bootstrap; see [Alfred workflow setup](docs/ALFRED.md).
 
 Detailed commands, updates, rollback, and checks live in [Operations](docs/OPERATIONS.md). Ownership and design are in [Architecture](docs/ARCHITECTURE.md). See also [Contributing](CONTRIBUTING.md), [LLM guidance](docs/LLM.md), and [Security](SECURITY.md).
 

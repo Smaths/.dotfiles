@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.snarfum.alfred.vault-notes</string>
+	<key>connections</key>
+	<dict>
+		<key>075D8554-F80A-4232-BF50-03022E24507B</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>F334A775-3E92-4E69-B70B-A9FF50C2BC21</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string></string>
+	<key>description</key>
+	<string>Search Markdown note filenames in a configurable Obsidian vault and open them in Obsidian.</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>Obsidian Search</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<false/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>o</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Searching note filenames…</string>
+				<key>script</key>
+				<string>/usr/bin/python3 search.py "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Markdown filenames in the configured vault</string>
+				<key>title</key>
+				<string>Search Obsidian notes</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>075D8554-F80A-4232-BF50-03022E24507B</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>openwith</key>
+				<string>/Applications/Obsidian.app</string>
+				<key>sourcefile</key>
+				<string></string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.openfile</string>
+			<key>uid</key>
+			<string>F334A775-3E92-4E69-B70B-A9FF50C2BC21</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string>Type `o` followed by part of a note filename, then press Return to open it in Obsidian. Choose **Vault folder** in Configure Workflow. Results show their vault-relative paths to distinguish duplicate names. This uses the macOS Spotlight index for filenames and the Markdown content type; it does not read note contents or search aliases, headings, or full text. If a note is missing, check iCloud availability and Alfred File Search Troubleshooting.</string>
+	<key>uidata</key>
+	<dict>
+		<key>075D8554-F80A-4232-BF50-03022E24507B</key>
+		<dict>
+			<key>xpos</key>
+			<real>140.0</real>
+			<key>ypos</key>
+			<real>150.0</real>
+		</dict>
+		<key>F334A775-3E92-4E69-B70B-A9FF50C2BC21</key>
+		<dict>
+			<key>xpos</key>
+			<real>415.0</real>
+			<key>ypos</key>
+			<real>205.0</real>
+		</dict>
+	</dict>
+	<key>userconfigurationconfig</key>
+	<array>
+		<dict>
+			<key>type</key>
+			<string>filepicker</string>
+			<key>variable</key>
+			<string>vault_path</string>
+			<key>label</key>
+			<string>Vault folder</string>
+			<key>description</key>
+			<string>Choose the Obsidian vault folder to search. Only Markdown note filenames in this folder are shown.</string>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>~/Library/Mobile Documents/iCloud~md~obsidian/Documents/snarfum-obsidian-vault</string>
+				<key>filtermode</key>
+				<integer>1</integer>
+				<key>required</key>
+				<true/>
+				<key>placeholder</key>
+				<string>Choose an Obsidian vault folder</string>
+			</dict>
+		</dict>
+	</array>
+	<key>webaddress</key>
+	<string></string>
+</dict>
+</plist>

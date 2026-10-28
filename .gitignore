@@ -26,6 +26,10 @@ config/bash/local.bash
 .zsh_history
 .zsh-plugins/
 
+# Alfred workflow settings and generated Python files stay local
+config/alfred/workflows/**/prefs.plist
+config/alfred/workflows/**/__pycache__/
+
 # Local agent/runtime artifacts
 /.claude/settings.local.json
 /.codex/
