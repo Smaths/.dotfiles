@@ -1,6 +1,6 @@
-# Platform Notes
+# Platform notes
 
-## macOS (Primary)
+## macOS (primary)
 
 Supported target: macOS 14+.
 
@@ -15,34 +15,22 @@ Behavior:
 - Installs missing core workstation entries from
   `install/platforms/macos/Brewfile` without upgrading existing packages by
   default.
-- Installs the specialist creative/audio cask set in
-  `install/platforms/macos/Brewfile.creative` only when `--creative` is passed;
-  it is skipped by default. Ableton Live is deliberately vendor-managed rather
-  than declared in either manifest. Unity Hub is optional, and exact editor
-  versions are managed through Hub or the Unity CLI rather than Homebrew's
-  rolling `unity` cask.
-- Runs Homebrew, Brew Bundle, and mise installation commands in the foreground
-  with native output and signal handling.
-- Downloads the official Homebrew installer to a temporary file before running
-  it so the installer retains terminal input for confirmation and `sudo`
-  prompts, then removes the temporary file.
-- Uses Homebrew-installed `mise` to install the pinned Go and Node.js runtimes,
-  Pi terminal agent, and pnpm 11 default from `config/mise/config.toml`.
-  Project version files and pnpm `packageManager` metadata remain the source of
-  truth for project overrides.
-- Homebrew owns native applications and standalone CLIs; mise owns the declared
-  Go, Node.js, Pi, and pnpm tools; uv owns Python interpreters and environments.
-  Bootstrap links `config/uv/uv.toml` and does not modify Apple/Xcode Python.
-  Project dependencies belong to each project's manifests and lockfiles.
+- Adds `install/platforms/macos/Brewfile.creative` only with `--creative`.
+  Ableton Live stays vendor-managed; Unity Hub installs through that optional
+  manifest, while project-specific editor versions come from Hub or Unity CLI.
+- Runs Homebrew, Brew Bundle, and mise in the foreground. The Homebrew installer
+  runs from a temporary file so confirmation and `sudo` prompts work.
+- Installs Go, Node.js, Pi, and pnpm via Homebrew-installed mise. Project
+  version files and `packageManager` metadata can override defaults.
+- Links `config/uv/uv.toml` for uv-managed Python; Apple/Xcode Python stays
+  untouched. Homebrew owns native apps, mise owns declared tools, and project
+  dependencies stay in project manifests.
 - Loads Prompt Purification from the vendored Zsh source in this repository;
   bootstrap performs no prompt-specific download and validates the source
   before linking `~/.zshrc`.
-- Clones the Zsh plugins listed in `install/lib/zsh-plugins.sh` into
-  `${XDG_DATA_HOME:-~/.local/share}/zsh/plugins`. Missing plugins are cloned on
-  every run at exact commit pins; existing clones are origin/cleanliness checked
-  and fast-forwarded to manifest pins only under `--upgrade-plugins`, never
-  `--upgrade-packages`. This is the one place bootstrap fetches source outside
-  Homebrew, mise, and uv.
+- Installs missing Zsh plugins at exact commit pins. Existing clones are
+  checked for origin and cleanliness, then advanced only with
+  `--upgrade-plugins`, not `--upgrade-packages`. See [plugin updates](OPERATIONS.md#plugin-pin-review).
 - Links `config/git/delta.gitconfig` and adds a single `include.path` entry to
   the otherwise unmanaged `~/.gitconfig`, and links `config/lazygit/config.yml`
   into lazygit's config directory.
@@ -55,8 +43,9 @@ Behavior:
   during bootstrap.
 - Keeps interactive system defaults separate from bootstrap; run them explicitly
   with `zsh ~/.dotfiles/install/platforms/macos/settings.zsh`.
+- Leaves Alfred workflow and theme imports to the user. See [Alfred setup](ALFRED.md).
 
-## Windows (Secondary, Host Applications + WSL)
+## Windows (secondary, host applications and WSL)
 
 Windows bootstrap manages Windows-host applications only. Shell setup is performed in Debian or Ubuntu under WSL, using the Debian Bash/tmux bootstrap.
 
@@ -68,12 +57,18 @@ Prerequisites:
 Behavior:
 
 - `install/bootstrap.ps1` dispatches to `install/platforms/windows/bootstrap.ps1`, which validates the Windows runtime.
-- Validates manifest IDs, checks installed state by exact ID, prints the missing host-app plan, then asks for confirmation. Use `--yes` to confirm noninteractive installation; `--dry-run` makes no changes.
+- Validates manifest IDs and checks installed apps by exact ID. It prints the
+  missing host-app plan and asks for confirmation. Use `--yes` for a
+  noninteractive install; `--dry-run` makes no changes.
 - Does not create, replace, or remove native Windows Zsh links. `--link-windows-shell` is rejected.
-- Provides WSL guidance. Clone the repo inside the Linux filesystem (not `/mnt/c`) and run `sh ~/.dotfiles/install/bootstrap.sh` there. Debian/Ubuntu WSL uses the Debian Bash/tmux setup, not Windows-host Zsh.
-- Windows bootstrap does not manage language runtimes, project modules, or WSL packages; those belong to the corresponding Linux setup/project. Winget does not track bootstrap ownership, so uninstall apps only after individually reviewing the IDs.
+- Explains WSL setup. Clone the repo inside the Linux filesystem, not `/mnt/c`,
+  and run `sh ~/.dotfiles/install/bootstrap.sh` there. Debian/Ubuntu in WSL
+  uses the Debian Bash/tmux setup, not Windows-host Zsh.
+- Windows bootstrap does not manage language runtimes, project modules, or
+  WSL packages. Manage those in the Linux setup or project. Winget does not
+  track bootstrap ownership, so review each package ID before uninstalling.
 
-## Debian Server (Secondary)
+## Debian server (secondary)
 
 Debian server bootstrap is available for bash-first, CLI-only server setup.
 
@@ -94,30 +89,18 @@ Behavior:
 - Keeps the current login shell unchanged unless `--force-shell` is passed.
 - Does not install GUI packages or apply desktop settings.
 
-## Other Linux (Config Reuse Only)
+## Other Linux (config reuse only)
 
-Other Linux distributions are not first-class bootstrap targets in this repo today.
+`install/bootstrap.sh` exits on unsupported distributions. You can reuse
+`config/zsh/` or `config/bash/` manually, but there is no generic Linux package
+or desktop bootstrap.
 
-- `install/bootstrap.sh` exits on unsupported Linux distributions.
-- `install/platforms/debian/bootstrap.sh` is intended for Debian and Debian-like systems only.
-- You can still reuse parts of `config/zsh/` or `config/bash/` manually.
-- Generic package and desktop automation are not implemented for Linux here.
+## Cross-platform caveats
 
-## Cross-Platform Caveats
-
-- Network operations are limited to `brew`, `mise`, `uv`, `winget`, `apt-get`,
-  `git`, and `curl`; package ownership is platform-specific as described above.
-- Uninstall is manual and preview-first: remove only verified repository-owned
-  links/config references, preserve regular user files, inspect backups before
-  restoring, and review package removals individually. Never use broad cleanup
-  as an assumed inverse of bootstrap.
-- Shared Zsh aliases stay macOS/general-development focused; machine- and
-  project-specific commands belong in ignored local modules.
-- Debian bash config intentionally keeps aliases server-safe and minimal.
-- Homebrew paths differ by architecture (`/opt/homebrew` vs `/usr/local`).
-- GUI app casks in `install/platforms/macos/Brewfile` are macOS-specific.
-
-## Future Expansion
-
-If support expands beyond Debian, keep each platform in a separate explicit
-entrypoint rather than weakening current macOS guarantees.
+- Uninstall is manual: verify repo-owned links, preserve regular user files,
+  inspect backups, and review package removals individually. See
+  [backup and restore](OPERATIONS.md#backup).
+- Shared Zsh aliases target macOS/general development; Debian Bash keeps a
+  minimal server-safe set. Put machine-specific commands in ignored local modules.
+- Homebrew paths vary by architecture (`/opt/homebrew` or `/usr/local`); macOS
+  casks do not apply to other platforms.
