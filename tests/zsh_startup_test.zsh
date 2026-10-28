@@ -29,6 +29,21 @@ source "$REPO_DIR/config/zsh/functions/fzf-functions.zsh"
 print DONE
 EOF
 
+# Debian exposes fd-find as fdfind; ensure Zsh config selects it when fd is absent.
+mkdir -p "$TEST_TMP_ROOT/fdfind-only"
+cat >"$TEST_TMP_ROOT/fdfind-only/fdfind" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$TEST_TMP_ROOT/fdfind-result"
+EOF
+chmod +x "$TEST_TMP_ROOT/fdfind-only/fdfind"
+PATH="$TEST_TMP_ROOT/fdfind-only" "$(command -v zsh)" -f -c '
+  source "$REPO_DIR/config/zsh/env.zsh"
+  source "$REPO_DIR/config/zsh/functions/fzf-functions.zsh"
+  [[ "$FZF_FD_COMMAND" == fdfind && "$FZF_DEFAULT_COMMAND" == fdfind\ * ]] || exit 1
+  __fzf_require_cmd fd || exit 1
+  [[ "$(__fzf_fd_find d "$TEST_TMP_ROOT")" == "$TEST_TMP_ROOT/fdfind-result" ]]
+' || fail 'fzf must use fdfind for picker helpers when fd is unavailable'
+
 # Captured non-TTY -ic startup must remain quiet and retain non-ZLE config.
 zsh -fic 'source "$TEST_TMP_ROOT/integration.zsh"' </dev/null >"$TEST_TMP_ROOT/out" 2>"$TEST_TMP_ROOT/err"
 [[ "$(<"$TEST_TMP_ROOT/out")" == DONE && ! -s "$TEST_TMP_ROOT/err" ]] || fail 'non-TTY startup emitted unexpected output'

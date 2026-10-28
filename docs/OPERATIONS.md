@@ -295,7 +295,8 @@ Expected:
 - WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes WSL guidance. Run Debian/Ubuntu shell setup inside the WSL distro.
 - The Windows bootstrap does not create native Windows shell links.
 - `winget list --id ... -e` resolves each configured package.
-- `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`.
+- `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`, or `fdfind -H -t f ...`
+  where Debian provides only `fdfind`.
 - All three plugin clones exist and report ok from the interactive shell. A
   missing clone degrades the shell instead of breaking it, so check the clone
   list before concluding the config is wrong.
