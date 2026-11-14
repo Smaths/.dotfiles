@@ -52,7 +52,7 @@ sh ~/.dotfiles/install/bootstrap.sh
 - Windows manifest: host applications only in `install/platforms/windows/winget-packages.txt`. The bootstrap does not link native Windows Zsh files. WSL Debian/Ubuntu uses the Debian Bash/tmux bootstrap.
 - Debian manifest: CLI packages in `install/platforms/debian/apt-packages.txt`, with `~/.bashrc` and optional tmux config.
 - macOS shell setup links Zsh, tmux, Ghostty, Git delta/lazygit configs, mise config and uv config. The only permitted `~/.gitconfig` change is one delta `include.path` entry.
-- mise defaults are Go 1.27, Node.js 24, Pi, and pnpm 11; project-local version declarations/configs select project tools. mise shims are added by the managed Zsh login PATH, not automatically inherited by every GUI or non-shell process.
+- mise defaults are Go 1.27, Node.js 24, Pi, and pnpm 11; project-local version declarations/configs select project tools. mise shims are added by managed Zsh login and interactive startup and by interactive Bash. GUI and unrelated non-shell processes do not automatically inherit that PATH.
 - Python interpreters and Python environments are uv-managed; native standalone applications are owned by Homebrew. Project libraries belong to project manifests/lockfiles, not shared user-level environments.
 - Machine-specific Zsh overrides belong in ignored `config/zsh/local.zsh` and `config/zsh/local.d/*.zsh`, not tracked shared modules.
 

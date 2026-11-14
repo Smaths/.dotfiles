@@ -15,18 +15,8 @@ _dot_has() {
   command -v "$1" >/dev/null 2>&1
 }
 
-_dot_path_prepend() {
-  [ -d "$1" ] || return 0
-  case ":$PATH:" in
-    *":$1:"*) ;;
-    *) PATH="$1:$PATH" ;;
-  esac
-}
-
-_dot_path_prepend "$HOME/.local/bin"
-_dot_path_prepend "$HOME/bin"
-_dot_path_prepend "$HOME/.config/mcp/bin"
-export PATH
+# shellcheck source=config/shell/path.sh
+source "$DOTFILES_DIR/config/shell/path.sh"
 
 # Prompt: green user/host, blue working directory, plain command text.
 PS1='\[\e[32m\]\u@\h\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\$ '
@@ -135,4 +125,4 @@ if [ -r "$BASH_CONFIG_DIR/local.bash" ]; then
 fi
 
 unset _DOT_FD_COMMAND _DOT_FZF_PREVIEW
-unset -f _dot_has _dot_path_prepend
+unset -f _dot_has

@@ -104,8 +104,9 @@ config sits at the path mise reads by default, no environment variable is needed
 Go 1.27, Node.js 24, and pnpm 11 are the defaults, and mise provides the pinned
 `pi` terminal agent. Project mise configs, `.nvmrc`, `.node-version`, and
 `packageManager` files remain the source of truth for selecting other versions
-through mise. The shims are added by the managed Zsh login PATH; GUI apps and
-arbitrary non-shell processes do not necessarily inherit that PATH.
+through mise. The shims are added by managed Zsh login and interactive startup, and by
+interactive Bash. GUI apps and arbitrary non-shell processes do not necessarily
+inherit that PATH.
 
 Bootstrap also symlinks `config/uv/uv.toml` to
 `${XDG_CONFIG_HOME:-~/.config}/uv/uv.toml`. uv uses only uv-managed Python
@@ -171,7 +172,7 @@ side effects of a Homebrew upgrade. Update the defaults, review the diff, then
 rerun bootstrap. Keep project runtime and package-manager pins until their
 projects are tested on newer versions.
 
-Pi is installed as a standalone executable, so `pi update` cannot replace the
+Pi is managed by mise as a standalone executable, so `pi update` cannot replace the
 executable and may report its internal Bun path (`/$bunfs/root/pi`). Update the
 Pi pin in `config/mise/config.toml` and run `mise install` instead. Use
 `pi update --extensions` only to update configured Pi extensions.
@@ -181,6 +182,23 @@ ${EDITOR:-vi} ~/.dotfiles/config/mise/config.toml
 mise install
 sh install/bootstrap.sh
 ```
+
+On Debian hosts that use system Node.js and pnpm, keep a host-specific
+`~/.config/mise/config.toml` containing only the intended tools (for example,
+`[tools]` with `pi = "1.4.0"`). Do not replace it with the workstation manifest
+unless the other runtime migrations are intended. Update Pi with mise, rather
+than installing another copy with npm or Pi's own installer. Preserve
+`~/.pi/agent` settings, authentication, sessions, and extensions when retiring
+an executable installation.
+
+`config/shell/path.sh` supplies the same user-bin and mise-shim PATH setup for
+interactive Bash and can be sourced by a POSIX login profile. It is safe to
+source repeatedly. On this Debian host, `~/.profile` sources that helper;
+`~/.profile` remains user-owned and bootstrap does not replace it. Zsh uses
+its own `path.zsh` from both `.zprofile` and `.zshrc`, so interactive non-login
+terminals do not depend on an inherited login PATH. Noninteractive non-login
+shells retain their caller's environment; automation should provide a PATH or
+an absolute executable path.
 
 Check the versions selected in a project directory before installing
 dependencies:
@@ -214,6 +232,40 @@ Without `--skip-packages`, Debian bootstrap checks `install/platforms/debian/apt
 first and skips `apt-get update`/`apt-get install` when every manifest package
 is already installed. If packages are missing, it updates apt metadata and
 installs only the missing package names.
+
+### Ghostty SSH compatibility
+
+`config/ghostty/config` enables `ssh-env` and `ssh-terminfo` through Ghostty's
+shell integration, available since Ghostty 1.2. Interactive `ssh` commands
+from Ghostty can install its terminal definition on a remote host. If that
+fails, they use `xterm-256color` for compatibility. The other integration
+features keep their defaults. See the
+[Ghostty option reference](https://ghostty.org/docs/config/reference#shell-integration-features).
+
+After syncing this repository on the Mac, reload Ghostty's configuration and
+open a new terminal so the shell integration picks up the change. Connect
+normally with `ssh homelab`, then verify typing and run `infocmp "$TERM"`
+inside that session. The client needs `infocmp`; the server needs `tic` for
+installation. Existing SSH sessions do not change.
+
+Some Debian terminfo packages provide `ghostty` without the `xterm-ghostty`
+name used by the client. If `infocmp ghostty` works but
+`infocmp xterm-ghostty` fails, compile a user-level alias on that server:
+
+```sh
+mkdir -p "$HOME/.terminfo"
+printf 'xterm-ghostty|Ghostty terminal emulator compatibility alias,\n\tuse=ghostty,\n' |
+  tic -x -o "$HOME/.terminfo" -
+infocmp xterm-ghostty >/dev/null
+```
+
+This uses the installed Ghostty capabilities without sudo. Reconnect afterward
+so the remote shell initializes with the now-recognized terminal type.
+
+The integration applies to interactive shell commands. Programs that launch
+SSH themselves, including Git, scp and rsync, do not use the shell wrapper.
+This setting does not change the remote SSH daemon or its access rules. See
+[Ghostty's SSH guide](https://ghostty.org/docs/features/ssh).
 
 ## Doctor (Health Checks)
 

@@ -10,5 +10,9 @@ window-height = 100
 # Look
 background-opacity = 0.97
 
+# SSH
+# Install Ghostty's terminfo on remote hosts; use xterm-256color if unavailable.
+shell-integration-features = ssh-env,ssh-terminfo
+
 # Font
 font-family = JetBrainsMono Nerd Font

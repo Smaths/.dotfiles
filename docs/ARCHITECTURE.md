@@ -17,8 +17,8 @@ The design goal is predictable bootstrap behavior with minimal surprise.
   plus the Pi terminal agent; project mise configs, `.nvmrc`, `.node-version`,
   and `packageManager` metadata can override the active versions. Linking it to
   the path mise reads by default avoids environment-variable selection drift.
-  The managed Zsh login PATH adds the mise shims; GUI and arbitrary non-shell
-  processes do not necessarily inherit that PATH.
+  Managed Zsh login and interactive startup and interactive Bash add the mise
+  shims; GUI and arbitrary non-shell processes do not necessarily inherit them.
 - `config/uv/uv.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml`
   (symlink on macOS). It confines uv operations to uv-managed Python
   interpreters instead of Apple/Xcode or Homebrew Python.
@@ -47,7 +47,8 @@ The design goal is predictable bootstrap behavior with minimal surprise.
 `config/zsh/path.zsh`, once, for login shells. That order is load-bearing:
 `brew shellenv` prepends the Homebrew prefix to `PATH`, so running it after
 `path.zsh` would place Homebrew's runtimes ahead of the mise shims and defeat
-per-project version resolution. Interactive shells inherit the resulting `PATH`; this does not imply that GUI
+per-project version resolution. Interactive Zsh also loads the idempotent `path.zsh` loader, so non-login
+terminals work without an inherited login PATH. This does not imply that GUI
 or arbitrary non-shell processes inherit it. Remaining tracked shared modules
 under `config/zsh/*.zsh` are sourced by `config/zsh/.zshrc`.
 `config/zsh/options.zsh` adds the tracked
@@ -61,8 +62,10 @@ resolves that same path into `ZSH_PLUGIN_DIR`. Cloning rather than installing
 Homebrew formulae keeps one set of load paths valid on macOS and Linux; keeping
 the clones outside the repo keeps upstream history out of it.
 
-`config/bash/.bashrc` is intentionally standalone for Debian servers. It mirrors
-only portable shell defaults and small aliases instead of sourcing zsh modules.
+`config/bash/.bashrc` uses the POSIX `config/shell/path.sh` helper for user-bin
+and mise-shim PATH setup. User-owned login profiles can source the same helper.
+Bash mirrors only portable shell defaults and small aliases instead of sourcing
+zsh modules.
 Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
 
 ## Zsh Module Boundaries
@@ -71,8 +74,8 @@ Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
 - `config/zsh/prompts/purification/`: vendored Prompt Purification source and
   upstream provenance. The repository-owned copy avoids per-machine prompt
   downloads and drift.
-- `config/zsh/path.zsh`: login-shell `PATH` and path-like variable setup, sourced
-  by `config/zsh/.zprofile`. Managed prefixes are declared once in effective
+- `config/zsh/path.zsh`: login and interactive `PATH` and path-like variable
+  setup, sourced by `config/zsh/.zprofile` and `config/zsh/.zshrc`. Managed prefixes are declared once in effective
   precedence order, highest first. Mise shims lead that list and remain the only
   mise activation mechanism; the shims directory is resolved the same way mise
   resolves it (`MISE_DATA_DIR`, then `XDG_DATA_HOME`, then `~/.local/share`).

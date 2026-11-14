@@ -4,6 +4,12 @@ All notable user-visible changes are summarized here. Older implementation detai
 
 ## [Unreleased]
 
+- Restored the Zsh login PATH loader and added PATH initialization for interactive
+  non-login Zsh and Bash, with clean-environment startup regression checks.
+- Updated the mise Pi pin to 1.4.0 and documented separate Debian tool ownership.
+
+- Enabled Ghostty's SSH terminfo setup and terminal fallback so interactive
+  SSH sessions work on hosts without the `xterm-ghostty` definition.
 - Restored Zsh completion ownership/permission audits on every startup and
   guarded fzf ZLE integration so captured interactive shells stay quiet.
 - Pinned Zsh plugins to the installed baseline commits, with origin and clean

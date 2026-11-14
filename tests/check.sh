@@ -97,4 +97,5 @@ zsh tests/install/homebrew_test.sh
 bash tests/install/zsh_plugins_test.sh
 zsh tests/install/zsh_plugins_test.sh
 zsh -f tests/zsh_startup_test.zsh
+bash tests/shell_path_test.sh
 git diff --check

@@ -10,9 +10,9 @@ if [[ "$OSTYPE" == darwin* ]]; then
 fi
 
 # fzf: Debian packages fd-find as fdfind; macOS and other platforms use fd.
-if (( $+commands[fd] )); then
+if (($+commands[fd])); then
   export FZF_FD_COMMAND=fd
-elif (( $+commands[fdfind] )); then
+elif (($+commands[fdfind])); then
   export FZF_FD_COMMAND=fdfind
 else
   export FZF_FD_COMMAND=fd

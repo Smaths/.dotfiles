@@ -13,6 +13,9 @@ if [[ "$ZSH_PROFILE_STARTUP" == "1" ]]; then
   zmodload zsh/zprof
 fi
 
+# Interactive non-login shells also need the managed PATH. The loader is idempotent.
+source "$ZSH_CONFIG_DIR/path.zsh"
+
 # Core shell behavior first.
 source "$ZSH_CONFIG_DIR/options.zsh"
 source "$ZSH_CONFIG_DIR/env.zsh"
