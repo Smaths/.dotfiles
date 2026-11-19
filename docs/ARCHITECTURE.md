@@ -13,7 +13,7 @@ explicit manifests. The map below identifies those paths and exceptions.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `config/mise/config.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`
-  (symlink on macOS). It declares the default Go, Node.js, and pnpm toolchain
+  (symlink on macOS). It tracks the latest Go, Node.js, and pnpm
   plus the Pi terminal agent; project mise configs, `.nvmrc`, `.node-version`,
   and `packageManager` metadata can override the active versions. Linking it to
   the path mise reads by default avoids environment-variable selection drift.

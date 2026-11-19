@@ -22,7 +22,8 @@ Behavior:
   project-specific editor versions come from Hub or Unity CLI.
 - Runs Homebrew, Brew Bundle, and mise in the foreground. The Homebrew installer
   runs from a temporary file so confirmation and `sudo` prompts work.
-- Installs Go, Node.js, Pi, and pnpm via Homebrew-installed mise. Project
+- Installs the latest Go, Node.js, Pi, and pnpm via Homebrew-installed mise;
+  `mise upgrade` moves them forward. Project
   version files and `packageManager` metadata can override defaults.
 - Links `config/uv/uv.toml` for uv-managed Python; Apple/Xcode Python stays
   untouched. Homebrew owns native apps, mise owns declared tools, and project

@@ -109,7 +109,7 @@ git pull --ff-only
 sh install/bootstrap.sh
 ```
 
-On macOS, bootstrap skips Brew Bundle when the core manifest is satisfied.
+On macOS, bootstrap skips Brew Bundle when the selected packages are installed.
 Otherwise it runs `brew bundle install --verbose --no-upgrade --jobs=auto` to
 add missing entries without upgrading existing ones. Up to four formula installs
 can run in parallel, so output may interleave. Brew Bundle and mise run in the
@@ -117,8 +117,8 @@ foreground with their normal output and signal handling.
 
 The vendored Prompt Purification needs no separate install; bootstrap validates
 it before linking `~/.zshrc`. Bootstrap links `config/mise/config.toml` at mise's
-standard XDG path, then runs `mise install` for the pinned Go, Node.js, Pi, and
-pnpm tools. Project mise files, `.nvmrc`, `.node-version`, and `packageManager`
+standard XDG path, then runs `mise install` for the latest Go, Node.js, Pi, and
+pnpm. Project mise files, `.nvmrc`, `.node-version`, and `packageManager`
 metadata can select other versions. The managed Zsh login PATH exposes mise
 shims; GUI apps and unrelated processes may not inherit that PATH.
 
@@ -172,21 +172,24 @@ For unattended maintenance, pass `--yes` explicitly:
 sh install/bootstrap.sh --yes
 ```
 
-Go, Node.js, Pi, and pnpm upgrades are intentional config changes rather than
-side effects of a Homebrew upgrade. Update the defaults, review the diff, then
-rerun bootstrap. Keep project runtime and package-manager pins until their
-projects are tested on newer versions.
-
-Pi is installed as a standalone executable, so `pi update` cannot replace the
-executable and may report its internal Bun path (`/$bunfs/root/pi`). Update the
-Pi pin in `config/mise/config.toml` and run `mise install` instead. Use
-`pi update --extensions` only to update configured Pi extensions.
+`config/mise/config.toml` tracks `latest` for Go, Node.js, Pi, and pnpm. mise
+resolves `latest` to the newest installed version, so a Homebrew upgrade or a
+new upstream release changes nothing until you upgrade on purpose:
 
 ```zsh
-${EDITOR:-vi} ~/.dotfiles/config/mise/config.toml
-mise install
-sh install/bootstrap.sh
+mise outdated
+mise upgrade
 ```
+
+`latest` follows each tool's newest release line, including odd-numbered
+Node.js releases that never become LTS. Projects that need a specific version
+keep declaring it in their own mise config, `.nvmrc`, `.node-version`,
+`packageManager`, or `go.mod`, and those declarations take precedence.
+
+Pi is installed as a standalone executable, so `pi update` cannot replace the
+executable and may report its internal Bun path (`/$bunfs/root/pi`). Use
+`mise upgrade pi` instead, and `pi update --extensions` only to update
+configured Pi extensions.
 
 Check the versions selected in a project directory before installing
 dependencies:

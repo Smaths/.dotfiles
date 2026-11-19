@@ -1,11 +1,15 @@
 [tools]
-go = "1.27.1"
-node = "26.10.0"
-pi = "1.4"
-pnpm = "12.11.2"
+# Track the newest release of each tool. mise resolves "latest" to the newest
+# installed version, so nothing changes until `mise upgrade` (or `mise install`
+# on a fresh machine) fetches a newer one. Projects pin their own versions.
+go = "latest"
+node = "latest"
+pi = "latest"
+pnpm = "latest"
 
 [settings]
 # Honor project-native Node.js and pnpm version declarations. Go uses the
-# global pin unless a project explicitly provides its own mise configuration.
+# global version unless a project provides its own mise configuration or a
+# go.mod toolchain directive.
 idiomatic_version_file_enable_tools = ["node", "pnpm"]
 paranoid = true
