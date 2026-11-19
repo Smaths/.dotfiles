@@ -11,7 +11,8 @@ set -euo pipefail
 # What this script does:
 # 1) Validates runtime prerequisites and platform
 # 2) Installs Homebrew if missing
-# 3) Installs core packages/apps from Brewfile and optionally creative apps
+# 3) Installs the package groups of the selected profile (default: full) from
+#    packages/, adjusted by --with/--without, unless --skip-packages
 # 4) Links config/mise/config.toml to the XDG path mise reads by default
 # 5) Installs pinned Go, Node.js, Pi, and pnpm versions with mise
 # 6) Links uv configuration for isolated Python management
@@ -30,8 +31,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 SCRIPT_DIR="${0:A:h}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-BREWFILE="$SCRIPT_DIR/Brewfile"
-CREATIVE_BREWFILE="$SCRIPT_DIR/Brewfile.creative"
+PACKAGES_DIR="$SCRIPT_DIR/packages"
 MISE_CONFIG_TARGET="$DOTFILES_DIR/config/mise/config.toml"
 MISE_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/mise/config.toml"
 UV_CONFIG_TARGET="$DOTFILES_DIR/config/uv/uv.toml"
@@ -52,16 +52,22 @@ COMMON_LIB="$DOTFILES_DIR/install/lib/common.sh"
 HOMEBREW_LIB="$DOTFILES_DIR/install/lib/homebrew.sh"
 UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
 ZSH_PLUGINS_LIB="$DOTFILES_DIR/install/lib/zsh-plugins.sh"
+PACKAGES_LIB="$DOTFILES_DIR/install/lib/packages.sh"
 DRY_RUN=0
 YES=0
 INSTALL_GIT=0
 UPGRADE_PACKAGES=0
 UPGRADE_PLUGINS=0
-INSTALL_CREATIVE=0
+SKIP_PACKAGES=0
+PROFILE=""
+WITH_GROUPS=""
+WITHOUT_GROUPS=""
 VERBOSE=0
 BREW_BIN=""
 BREWFILE_PACKAGE_COUNT=0
-CREATIVE_BREWFILE_PACKAGE_COUNT=0
+SELECTED_GROUPS=()
+SELECTED_BREWFILE=""
+SELECTED_BREWFILE_DIR=""
 GIT_INCLUDE_STATUS=""
 ZSH_PLUGIN_ROOT=""
 TOTAL_STEPS=12
@@ -71,39 +77,84 @@ usage() {
 Usage: bootstrap.zsh [options]
 
 Options:
+  --profile NAME       Package profile from packages/profiles: slim or full (default: full)
+  --with GROUPS        Add comma-separated package groups, e.g. --with ai,creative
+  --without GROUPS     Remove comma-separated package groups (core is required)
+  --skip-packages      Install no packages; git and mise must already be installed
   --dry-run            Print actions without changing anything
   --yes                Run without interactive confirmation
   --verbose            Show more command details
-  --upgrade-packages   Upgrade outdated selected Brewfile packages during bootstrap
+  --upgrade-packages   Upgrade outdated selected packages during bootstrap
   --upgrade-plugins    Fast-forward Zsh plugins to the manifest's pinned commits
-  --creative           Include the optional creative/audio Brewfile
   -h, --help           Show this help
+
+Package groups live in packages/<group>.Brewfile.
 EOF
 }
 
-for arg in "$@"; do
-  case "$arg" in
+append_groups() {
+  # Repeated --with/--without flags accumulate into one comma-separated list.
+  if [[ -n "$1" ]]; then
+    printf '%s,%s' "$1" "$2"
+  else
+    printf '%s' "$2"
+  fi
+}
+
+set_option_value() {
+  local option="$1" value="$2"
+  if [[ -z "$value" || "$value" == --* ]]; then
+    echo "ERROR: $option requires a value" >&2
+    usage >&2
+    exit 1
+  fi
+  case "$option" in
+    --profile) PROFILE="$value" ;;
+    --with) WITH_GROUPS="$(append_groups "$WITH_GROUPS" "$value")" ;;
+    --without) WITHOUT_GROUPS="$(append_groups "$WITHOUT_GROUPS" "$value")" ;;
+  esac
+}
+
+while (($# > 0)); do
+  case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --yes) YES=1 ;;
     --verbose) VERBOSE=1 ;;
     --upgrade-packages) UPGRADE_PACKAGES=1 ;;
     --upgrade-plugins) UPGRADE_PLUGINS=1 ;;
-    --creative) INSTALL_CREATIVE=1 ;;
+    --skip-packages) SKIP_PACKAGES=1 ;;
+    --profile=* | --with=* | --without=*)
+      set_option_value "${1%%=*}" "${1#*=}"
+      ;;
+    --profile | --with | --without)
+      if (($# < 2)); then
+        set_option_value "$1" ""
+      fi
+      set_option_value "$1" "$2"
+      shift
+      ;;
+    --creative)
+      echo "ERROR: --creative was replaced by --with creative" >&2
+      exit 1
+      ;;
     -h | --help)
       usage
       exit 0
       ;;
     *)
-      echo "ERROR: Unknown option: $arg" >&2
-      usage
+      echo "ERROR: Unknown option: $1" >&2
+      usage >&2
       exit 1
       ;;
   esac
+  shift
 done
 
-if ((INSTALL_CREATIVE)); then
-  TOTAL_STEPS=13
+if ((SKIP_PACKAGES)) && [[ -n "$PROFILE$WITH_GROUPS$WITHOUT_GROUPS" ]] || ((SKIP_PACKAGES && UPGRADE_PACKAGES)); then
+  echo "ERROR: --skip-packages cannot be combined with --profile, --with, --without, or --upgrade-packages" >&2
+  exit 1
 fi
+PROFILE="${PROFILE:-full}"
 
 if [[ ! -f "$COMMON_LIB" ]]; then
   printf 'ERROR: Missing shared bootstrap helper: %s\n' "$COMMON_LIB" >&2
@@ -146,7 +197,7 @@ resolve_brew_bin() {
 
 count_brewfile_packages() {
   # Count active Brewfile dependency declarations for progress output.
-  local brewfile="${1:-$BREWFILE}"
+  local brewfile="${1:?count_brewfile_packages requires a Brewfile path}"
 
   awk '
     /^[[:space:]]*(brew|cask|tap|mas|vscode|go|cargo|uv|npm)[[:space:]]/ { count++ }
@@ -177,6 +228,10 @@ register_git_include() {
   GIT_INCLUDE_STATUS="added"
 }
 
+selected_groups_label() {
+  printf '%s' "${(j:, :)SELECTED_GROUPS}"
+}
+
 print_preflight_plan() {
   echo
   echo "Bootstrap plan (macOS)"
@@ -186,20 +241,25 @@ print_preflight_plan() {
   else
     echo "  Homebrew: install using the official installer"
   fi
-  if ((UPGRADE_PACKAGES)); then
-    echo "  Core Brewfile packages: install missing entries and upgrade outdated entries"
+  if ((SKIP_PACKAGES)); then
+    echo "  Packages: skipped (--skip-packages); git and mise must already be installed"
   else
-    echo "  Core Brewfile packages: install missing entries only"
-  fi
-  if ((INSTALL_CREATIVE)); then
-    echo "  Creative Brewfile packages: included (--creative)"
-  else
-    echo "  Creative Brewfile packages: skipped (pass --creative to include)"
+    echo "  Package profile: $PROFILE"
+    echo "  Package groups: $(selected_groups_label)"
+    if ((UPGRADE_PACKAGES)); then
+      echo "  Packages: install missing entries and upgrade outdated entries"
+    else
+      echo "  Packages: install missing entries only"
+    fi
   fi
   echo "  mise config link: $MISE_CONFIG_LINK_PATH"
   echo "  mise tools: install pinned Go, Node.js, Pi, and pnpm versions"
   echo "  uv config link: $UV_CONFIG_LINK_PATH"
-  echo "  Git: install with Homebrew only if missing"
+  if ((SKIP_PACKAGES)); then
+    echo "  Git: required; not installed by --skip-packages"
+  else
+    echo "  Git: install with Homebrew only if missing"
+  fi
   echo "  Shell links: ~/.zshrc and ~/.zprofile"
   echo "  Zsh prompt: vendored Prompt Purification"
   if ((UPGRADE_PLUGINS)); then
@@ -291,6 +351,44 @@ fi
 source "$ZSH_PLUGINS_LIB"
 ZSH_PLUGIN_ROOT="$(zsh_plugin_root)"
 
+if [[ ! -f "$PACKAGES_LIB" ]]; then
+  echo "ERROR: Missing package group helper: $PACKAGES_LIB" >&2
+  exit 1
+fi
+# shellcheck source=install/lib/packages.sh
+source "$PACKAGES_LIB"
+
+# Resolve package groups before any output or mutation so typos fail fast.
+if ((! SKIP_PACKAGES)); then
+  if [[ ! -d "$PACKAGES_DIR" ]]; then
+    echo "ERROR: Package group directory not found at $PACKAGES_DIR" >&2
+    exit 1
+  fi
+  _resolved_groups="$(package_groups_resolve "$PACKAGES_DIR" .Brewfile "$PROFILE" "$WITH_GROUPS" "$WITHOUT_GROUPS")" || exit 1
+  SELECTED_GROUPS=("${(@f)_resolved_groups}")
+  unset _resolved_groups
+fi
+
+build_selected_brewfile() {
+  # Combine the selected groups into one temporary Brewfile so Homebrew checks
+  # and installs the whole selection in a single, parallel pass.
+  local group
+  SELECTED_BREWFILE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-brewfile.XXXXXX")"
+  SELECTED_BREWFILE="$SELECTED_BREWFILE_DIR/Brewfile"
+  for group in "${SELECTED_GROUPS[@]}"; do
+    printf '# --- %s (%s) ---\n' "$group" "$PACKAGES_DIR/$group.Brewfile"
+    cat "$PACKAGES_DIR/$group.Brewfile"
+    printf '\n'
+  done >"$SELECTED_BREWFILE"
+}
+
+cleanup_selected_brewfile() {
+  if [[ -n "$SELECTED_BREWFILE_DIR" && -d "$SELECTED_BREWFILE_DIR" ]]; then
+    rm -rf -- "$SELECTED_BREWFILE_DIR"
+  fi
+}
+trap cleanup_selected_brewfile EXIT
+
 ui_init "snarfum dotfiles bootstrap" "$TOTAL_STEPS"
 ui_print_header
 ui_start
@@ -307,16 +405,6 @@ require_cmd uname "Install core system tools and retry."
 require_cmd curl "curl is expected to be present on macOS. If it's missing, your PATH/environment is broken or the OS install is atypical. Fix PATH or reinstall base system tools and retry."
 
 # Validate required project files before applying changes.
-if [[ ! -f "$BREWFILE" ]]; then
-  echo "ERROR: Core Brewfile not found at $BREWFILE"
-  exit 1
-fi
-
-if ((INSTALL_CREATIVE)) && [[ ! -f "$CREATIVE_BREWFILE" ]]; then
-  echo "ERROR: Creative Brewfile not found at $CREATIVE_BREWFILE" >&2
-  exit 1
-fi
-
 if [[ ! -f "$ZSHRC_TARGET" ]]; then
   echo "ERROR: Missing symlink target: $ZSHRC_TARGET" >&2
   exit 1
@@ -396,92 +484,71 @@ if ! command -v git >/dev/null 2>&1; then
   fi
 fi
 
-BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages "$BREWFILE")"
-ui_step_start "Install core Brewfile packages (${BREWFILE_PACKAGE_COUNT})"
-if ((DRY_RUN)) && [[ "$BREW_BIN" == "<homebrew path after install>" ]]; then
-  if ((UPGRADE_PACKAGES)); then
-    echo "[dry-run] brew bundle install --verbose --file=\"$BREWFILE\" --jobs=auto"
-  else
-    echo "[dry-run] brew bundle install --verbose --file=\"$BREWFILE\" --no-upgrade --jobs=auto"
-  fi
-  ui_step_ok "planned after Homebrew install"
-else
-  BREWFILE_READY=0
-  if ((UPGRADE_PACKAGES)); then
-    if brew bundle check --file="$BREWFILE" >/dev/null 2>&1; then
-      BREWFILE_READY=1
-    fi
-  else
-    if env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file="$BREWFILE" >/dev/null 2>&1; then
-      BREWFILE_READY=1
-    fi
-  fi
-
-  if ((BREWFILE_READY && ! INSTALL_GIT)); then
-    if ((UPGRADE_PACKAGES)); then
-      ui_step_skip "already installed/up to date"
-    else
-      ui_step_skip "already installed"
-    fi
-  else
-    if ((! BREWFILE_READY)); then
-      show_brewfile_misses "$BREWFILE" "Core Brewfile"
-      echo "  installing core Brewfile entries with live Homebrew output (up to 4 parallel jobs)"
-      if ((UPGRADE_PACKAGES)); then
-        run_cmd brew bundle install --verbose --file="$BREWFILE" --jobs=auto
+# --skip-packages leaves package selection to the user, so the tools the later
+# steps run must already exist. Fail here, before any config is linked.
+if ((SKIP_PACKAGES)); then
+  for _required_cmd in git mise; do
+    if ! command -v "$_required_cmd" >/dev/null 2>&1; then
+      if ((DRY_RUN)); then
+        echo "[dry-run] WARNING: $_required_cmd is missing; a real --skip-packages run would stop here"
       else
-        run_cmd brew bundle install --verbose --file="$BREWFILE" --no-upgrade --jobs=auto
+        require_cmd "$_required_cmd" "--skip-packages does not install packages; run 'brew install $_required_cmd' and retry."
       fi
     fi
-
-    # Install git only when missing to keep reruns minimal.
-    if ((INSTALL_GIT)); then
-      run_cmd brew install git
-    fi
-
-    if ((DRY_RUN)); then
-      ui_step_ok "planned"
-    else
-      ui_step_ok "brew bundle complete"
-    fi
-  fi
+  done
+  unset _required_cmd
 fi
 
-if ((INSTALL_CREATIVE)); then
-  CREATIVE_BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages "$CREATIVE_BREWFILE")"
-  ui_step_start "Install creative Brewfile packages (${CREATIVE_BREWFILE_PACKAGE_COUNT})"
+if ((SKIP_PACKAGES)); then
+  ui_step_start "Install packages"
+  ui_step_skip "skipped (--skip-packages)"
+else
+  build_selected_brewfile
+  BREWFILE_PACKAGE_COUNT="$(count_brewfile_packages "$SELECTED_BREWFILE")"
+  ui_step_start "Install packages: $PROFILE profile (${BREWFILE_PACKAGE_COUNT})"
+  if ((VERBOSE)); then
+    echo "  groups: $(selected_groups_label)"
+    echo "  combined Brewfile: $SELECTED_BREWFILE"
+  fi
   if ((DRY_RUN)) && [[ "$BREW_BIN" == "<homebrew path after install>" ]]; then
     if ((UPGRADE_PACKAGES)); then
-      echo "[dry-run] brew bundle install --verbose --file=\"$CREATIVE_BREWFILE\" --jobs=auto"
+      echo "[dry-run] brew bundle install --verbose --file=\"$SELECTED_BREWFILE\" --jobs=auto"
     else
-      echo "[dry-run] brew bundle install --verbose --file=\"$CREATIVE_BREWFILE\" --no-upgrade --jobs=auto"
+      echo "[dry-run] brew bundle install --verbose --file=\"$SELECTED_BREWFILE\" --no-upgrade --jobs=auto"
     fi
     ui_step_ok "planned after Homebrew install"
   else
-    CREATIVE_BREWFILE_READY=0
+    BREWFILE_READY=0
     if ((UPGRADE_PACKAGES)); then
-      if brew bundle check --file="$CREATIVE_BREWFILE" >/dev/null 2>&1; then
-        CREATIVE_BREWFILE_READY=1
+      if brew bundle check --file="$SELECTED_BREWFILE" >/dev/null 2>&1; then
+        BREWFILE_READY=1
       fi
     else
-      if env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file="$CREATIVE_BREWFILE" >/dev/null 2>&1; then
-        CREATIVE_BREWFILE_READY=1
+      if env HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file="$SELECTED_BREWFILE" >/dev/null 2>&1; then
+        BREWFILE_READY=1
       fi
     fi
 
-    if ((CREATIVE_BREWFILE_READY)); then
+    if ((BREWFILE_READY && ! INSTALL_GIT)); then
       if ((UPGRADE_PACKAGES)); then
         ui_step_skip "already installed/up to date"
       else
         ui_step_skip "already installed"
       fi
     else
-      show_brewfile_misses "$CREATIVE_BREWFILE" "Creative Brewfile"
-      echo "  installing creative Brewfile entries with live Homebrew output (up to 4 parallel jobs)"
-      if ((UPGRADE_PACKAGES)); then
-        run_cmd brew bundle install --verbose --file="$CREATIVE_BREWFILE" --jobs=auto
-      else
-        run_cmd brew bundle install --verbose --file="$CREATIVE_BREWFILE" --no-upgrade --jobs=auto
+      if ((! BREWFILE_READY)); then
+        show_brewfile_misses "$SELECTED_BREWFILE" "Selected packages"
+        echo "  installing selected packages with live Homebrew output (up to 4 parallel jobs)"
+        if ((UPGRADE_PACKAGES)); then
+          run_cmd brew bundle install --verbose --file="$SELECTED_BREWFILE" --jobs=auto
+        else
+          run_cmd brew bundle install --verbose --file="$SELECTED_BREWFILE" --no-upgrade --jobs=auto
+        fi
+      fi
+
+      # Install git only when missing to keep reruns minimal.
+      if ((INSTALL_GIT)); then
+        run_cmd brew install git
       fi
 
       if ((DRY_RUN)); then
@@ -506,7 +573,7 @@ fi
 
 ui_step_start "Install mise tools"
 if ((! DRY_RUN)) && ! command -v mise >/dev/null 2>&1; then
-  echo "ERROR: mise was not installed by Brew Bundle." >&2
+  echo "ERROR: mise is not installed; install it with Homebrew and retry." >&2
   exit 1
 fi
 run_cmd mise install --yes

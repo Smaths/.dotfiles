@@ -15,11 +15,11 @@ config but have no supported bootstrap. See [platform details](docs/PLATFORMS.md
 - Debian install/bootstrap: `install/platforms/debian/bootstrap.sh`
 - Optional macOS settings: `install/platforms/macos/settings.zsh`
 - Shared Unix bootstrap helpers: `install/lib/common.sh`,
-  `install/lib/homebrew.sh`, `install/lib/ui.sh`,
+  `install/lib/homebrew.sh`, `install/lib/packages.sh`, `install/lib/ui.sh`,
   `install/lib/zsh-plugins.sh`
-- macOS core package manifest: `install/platforms/macos/Brewfile`
-- Optional macOS creative/audio manifest: `install/platforms/macos/Brewfile.creative`
-  (included by macOS bootstrap only with `--creative`)
+- macOS package groups: `install/platforms/macos/packages/<group>.Brewfile`
+- macOS package profiles: `install/platforms/macos/packages/profiles`
+  (`slim`, `full`; selected with `--profile`, adjusted with `--with`/`--without`)
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
 - Diff rendering config: `config/git/delta.gitconfig`, `config/lazygit/config.yml`
@@ -37,9 +37,18 @@ config but have no supported bootstrap. See [platform details](docs/PLATFORMS.md
   `winget`, `apt-get`, `git`, `curl`); document and justify any proposed addition before implementation.
 - Windows bootstrap manages host apps only. Do not add native Windows Zsh linking; WSL shell setup uses Debian/Ubuntu Bash/tmux.
 - Keep machine-specific/project-only shell modules in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`; do not add them to tracked shared modules.
-- The macOS `Brewfile` is the core workstation manifest. Keep its ordering
-  unless a change requires otherwise. Install the sole optional creative/audio
-  manifest, `Brewfile.creative`, only with `--creative`. Do not add more profiles.
+- macOS packages live in groups (`packages/<group>.Brewfile`); profiles in
+  `packages/profiles` only name groups. Rules:
+  - Each package lives in exactly one group (`tests/check.sh` enforces it).
+  - Profiles never list packages, and never duplicate a group's contents in a
+    new manifest.
+  - `core` is required: every profile lists it first and it cannot be removed.
+    Keep only what bootstrap and the linked configs need, plus the baseline
+    shell tooling.
+  - Add a group only when it needs to be toggled on its own; otherwise extend
+    an existing group. Add a profile only for a distinct kind of machine.
+  - Debian should reuse the same group names, profiles format, and
+    `install/lib/packages.sh` when it gains groups.
 - Keep package ownership explicit. Homebrew owns macOS native apps; mise owns
   its declared runtimes and tools; uv owns Python interpreters and environments;
   winget owns Windows host apps; apt owns Debian packages. Project dependencies
@@ -57,7 +66,8 @@ config but have no supported bootstrap. See [platform details](docs/PLATFORMS.md
 3. Update relevant docs (`README.md`, `docs/*.md`).
 4. Run required checks:
    - `bash tests/check.sh` (static validation and shared helper tests; also run by CI)
-   - `brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile`
+   - On macOS: `sh ~/.dotfiles/install/bootstrap.sh --dry-run --profile <profile>`
+     (reports any missing packages for that profile)
    - `winget search --id <ID> -e` for each `install/platforms/windows/winget-packages.txt` entry
    - On Debian: `sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages`
 

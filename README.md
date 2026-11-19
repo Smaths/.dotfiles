@@ -15,12 +15,21 @@ See [platform details](docs/PLATFORMS.md).
 
 ## Quick start
 
-macOS:
+macOS (full personal machine):
 
 ```sh
 git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
 sh ~/.dotfiles/install/bootstrap.sh
 ```
+
+macOS baseline, such as a work machine:
+
+```sh
+sh ~/.dotfiles/install/bootstrap.sh --profile slim
+```
+
+See [package profiles and groups](docs/OPERATIONS.md#package-profiles-and-groups)
+for `--with`/`--without`.
 
 Windows PowerShell (review the scripts before running):
 
@@ -65,8 +74,9 @@ Debian/Ubuntu handles Bash and tmux in WSL or on a server.
 <details>
 <summary>What gets installed or linked</summary>
 
-- **Packages:** macOS uses `install/platforms/macos/Brewfile`; `--creative` adds
-  `Brewfile.creative` only when requested. Windows host apps come from
+- **Packages:** macOS installs package groups from
+  `install/platforms/macos/packages/`: the `full` profile by default, `slim`
+  for a baseline machine, and `creative` only with `--with creative`. Windows host apps come from
   `install/platforms/windows/winget-packages.txt`; Debian CLI packages come from
   `install/platforms/debian/apt-packages.txt`.
 - **Shell and app config:** macOS links Zsh, tmux, Ghostty, Git delta/lazygit,

@@ -8,19 +8,71 @@ Available bootstrap flags:
 - `--dry-run`: print intended actions without mutating.
 - `--yes`: run without interactive confirmation on macOS, Windows, and Debian.
 - `--verbose`: show extra command detail.
-- `--upgrade-packages` (macOS only): upgrade outdated selected Brewfile entries
-  during bootstrap.
+- `--profile slim|full` (macOS only): choose the package profile; default
+  `full`. See [package profiles and groups](#package-profiles-and-groups).
+- `--with GROUPS` / `--without GROUPS` (macOS only): add or remove
+  comma-separated package groups on top of the profile. `--with creative`
+  replaces the retired `--creative` flag.
+- `--upgrade-packages` (macOS only): upgrade outdated entries in the selected
+  groups during bootstrap.
 - `--upgrade-plugins` (macOS only): fast-forward existing Zsh plugin clones to
   the exact manifest pins, independently of package upgrades.
-- `--creative` (macOS only): also install the optional creative/audio casks in
-  `Brewfile.creative`; the default installs the core Brewfile only.
-- `--skip-packages` (Windows only): skip `winget` installs.
+- `--skip-packages`: skip package installs (`brew bundle` on macOS, `winget`
+  on Windows, `apt-get` on Debian). On macOS, `git` and `mise` must already be
+  installed, and the flag cannot be combined with the package selection flags
+  or `--upgrade-packages`.
 - Windows does not support native shell linking; the retired `--link-windows-shell` option is rejected. Use the Debian/Ubuntu bootstrap inside WSL.
-- `--skip-packages` (Debian only): skip `apt-get` installs.
 - `--force-shell` (Debian only): change the current user's login shell to bash.
 
 Interactive runs ask before changes. Unattended installs require `--yes`;
 use `--dry-run` to preview instead.
+
+### Package profiles and groups
+
+macOS packages live in `install/platforms/macos/packages/`, one Brewfile per
+group. `packages/profiles` names the groups each profile installs:
+
+| Group | Contents | `slim` | `full` |
+| --- | --- | :-: | :-: |
+| `core` (required) | Zsh, shell CLI tools, Git tools, mise, uv, Ghostty, Nerd Font | yes | yes |
+| `dev` | Docker Desktop, GitHub Desktop, VS Code, Zed | yes | yes |
+| `utilities` | pandoc, Keka, Hex | yes | yes |
+| `ai` | ChatGPT, Claude, Claude Code, Codex, OpenAI CLI, OpenCode | | yes |
+| `dev-extras` | Cloud CLIs, SDKs, MySQL 8.4, Herd, secondary editors and clients | | yes |
+| `media` | ffmpeg, ImageMagick, Ghostscript, wimlib, ImageOptim, VLC | | yes |
+| `network` | nmap, mosh, lftp, rsync, tcping | | yes |
+| `desktop` | Alfred, BetterTouchTool, Shottr, iStat Menus, Obsidian, Chrome, and more | | yes |
+| `personal` | 1Password, KeePassXC, ProtonVPN, LuLu, Synology Drive, Transmission | | yes |
+| `creative` | Creative and audio apps, Unity Hub | | |
+
+Compose a selection from a profile plus group changes:
+
+```zsh
+sh ~/.dotfiles/install/bootstrap.sh --profile slim --dry-run
+sh ~/.dotfiles/install/bootstrap.sh --profile slim --with ai
+sh ~/.dotfiles/install/bootstrap.sh --without personal,network
+sh ~/.dotfiles/install/bootstrap.sh --with creative
+```
+
+To install one group without running the rest of bootstrap:
+
+```zsh
+brew bundle install --no-upgrade \
+  --file ~/.dotfiles/install/platforms/macos/packages/creative.Brewfile
+```
+
+Shell aliases and integrations for tools outside the selection are skipped at
+startup. To use your own package list instead, install it yourself and run
+bootstrap with `--skip-packages`; `git` and `mise` must already be installed.
+
+Ableton Live remains vendor-managed. The `creative` group installs Unity Hub,
+not Homebrew's rolling `unity` editor; use each project's
+`ProjectSettings/ProjectVersion.txt` to select an editor in Hub or Unity CLI.
+`brew bundle cleanup` against one group file treats every other group's
+packages as unlisted. Preview cleanup against all the groups you use before
+considering `--force`.
+
+### macOS settings
 
 macOS settings run separately from bootstrap:
 
@@ -33,25 +85,6 @@ The settings script offers three modes:
 - `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
 - `2) Choose settings`: set defaults for each setting, then proceed.
 - `3) Skip`: exits macOS tuning without applying defaults.
-
-To install the optional creative/audio casks alongside the core set:
-
-```zsh
-sh ~/.dotfiles/install/bootstrap.sh --creative
-```
-
-To install only that manifest without running the rest of bootstrap:
-
-```zsh
-brew bundle install --no-upgrade \
-  --file ~/.dotfiles/install/platforms/macos/Brewfile.creative
-```
-
-Ableton Live remains vendor-managed. The creative manifest installs Unity Hub,
-not Homebrew's rolling `unity` editor; use each project's
-`ProjectSettings/ProjectVersion.txt` to select an editor in Hub or Unity CLI.
-`brew bundle cleanup` against either manifest treats the other's packages as
-unlisted. Compare both manifests and preview cleanup before considering `--force`.
 
 Alfred workflow and theme files require manual import. See
 [Alfred setup](ALFRED.md) for the package command, vault setting, and import
@@ -186,7 +219,7 @@ On an installed machine, check the relevant paths and tools:
 ```zsh
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
-brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile
+sh ~/.dotfiles/install/bootstrap.sh --dry-run --profile slim  # or your profile
 test -L ~/.config/mise/config.toml && readlink ~/.config/mise/config.toml
 mise current
 go version
@@ -195,7 +228,7 @@ pnpm --version
 pi --version
 test -L ~/.config/uv/uv.toml && readlink ~/.config/uv/uv.toml
 uv python list --only-installed
-openai --version
+openai --version  # ai group
 # Apple/Xcode Python remains available, but its user scripts are not global.
 /usr/bin/python3 --version
 zsh -lc '[[ ":$PATH:" != *":$HOME/Library/Python/3.9/bin:"* ]]'
