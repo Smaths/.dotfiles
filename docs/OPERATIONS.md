@@ -13,6 +13,8 @@ Available bootstrap flags:
 - `--with GROUPS` / `--without GROUPS` (macOS only): add or remove
   comma-separated package groups on top of the profile. `--with creative`
   replaces the retired `--creative` flag.
+- `--macos-settings` (macOS only): apply the managed macOS defaults unattended
+  after linking config.
 - `--upgrade-packages` (macOS only): upgrade outdated entries in the selected
   groups during bootstrap.
 - `--upgrade-plugins` (macOS only): fast-forward existing Zsh plugin clones to
@@ -74,17 +76,26 @@ considering `--force`.
 
 ### macOS settings
 
-macOS settings run separately from bootstrap:
+Pass `--macos-settings` to bootstrap to apply the managed defaults unattended,
+or run the script yourself:
 
 ```zsh
 zsh ~/.dotfiles/install/platforms/macos/settings.zsh
+zsh ~/.dotfiles/install/platforms/macos/settings.zsh --yes --dry-run
 ```
 
-The settings script offers three modes:
+Interactive runs offer three modes:
 
 - `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
 - `2) Choose settings`: set defaults for each setting, then proceed.
 - `3) Skip`: exits macOS tuning without applying defaults.
+
+`--yes` applies the defaults without prompts; `--dry-run` prints the
+`defaults` commands instead. Settings are user-level `defaults write` calls, so
+an employer's configuration profile may override some of them. Turning off
+natural scrolling may need a log out. Set Caps Lock -> Control once in System
+Settings > Keyboard > Keyboard Shortcuts > Modifier Keys; it is not scripted
+because macOS stores it per keyboard and `hidutil` remaps reset at reboot.
 
 Alfred workflow and theme files require manual import. See
 [Alfred setup](ALFRED.md) for the package command, vault setting, and import

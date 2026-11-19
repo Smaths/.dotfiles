@@ -22,10 +22,10 @@ git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
 sh ~/.dotfiles/install/bootstrap.sh
 ```
 
-macOS baseline, such as a work machine:
+macOS baseline, such as a work machine, with the managed macOS settings:
 
 ```sh
-sh ~/.dotfiles/install/bootstrap.sh --profile slim
+sh ~/.dotfiles/install/bootstrap.sh --profile slim --macos-settings
 ```
 
 See [package profiles and groups](docs/OPERATIONS.md#package-profiles-and-groups)
@@ -59,7 +59,8 @@ missing winget IDs. Unattended installs require `--yes`.
   upgrades need `--upgrade-packages`; Windows installs only missing exact IDs.
   Zsh plugins are pinned to commits with verified origins and advance only with
   `--upgrade-plugins`, not package upgrades. See [pin review](docs/OPERATIONS.md#plugin-pin-review).
-- **System settings:** macOS settings are optional and separate from bootstrap.
+- **System settings:** macOS settings are optional: run `settings.zsh` or pass
+  `--macos-settings` to bootstrap.
   Debian's login shell changes only with `--force-shell`.
 - **Removal:** There is no uninstall command. Only remove links or references
   after confirming this repo owns them. Review package removals individually,

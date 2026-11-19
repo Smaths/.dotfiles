@@ -44,8 +44,10 @@ Behavior:
   formula but leaves the Homebrew service state unchanged.
 - Pass `--upgrade-packages` to intentionally upgrade outdated entries in the
   selected groups during bootstrap.
-- Keeps interactive system defaults separate from bootstrap; run them explicitly
-  with `zsh ~/.dotfiles/install/platforms/macos/settings.zsh`.
+- Applies macOS defaults (Finder, Dock, trackpad) only when asked: pass
+  `--macos-settings` to bootstrap, or run
+  `zsh ~/.dotfiles/install/platforms/macos/settings.zsh` interactively. Caps
+  Lock -> Control is a manual System Settings step.
 - Leaves Alfred workflow and theme imports to the user. See [Alfred setup](ALFRED.md).
 
 ## Windows (secondary, host applications and WSL)

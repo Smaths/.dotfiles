@@ -21,6 +21,7 @@ set -euo pipefail
 # 9) Clones the Zsh plugins that config/zsh/plugins.zsh loads
 # 10) Links the Ghostty, tmux, delta, and lazygit configs, and registers the
 #     delta include in the user-owned ~/.gitconfig
+# 11) With --macos-settings, applies the managed macOS defaults unattended
 #
 # Safety behavior:
 # - Existing ~/.zshrc and ~/.zprofile are backed up with timestamp suffixes
@@ -32,6 +33,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 SCRIPT_DIR="${0:A:h}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 PACKAGES_DIR="$SCRIPT_DIR/packages"
+SETTINGS_SCRIPT="$SCRIPT_DIR/settings.zsh"
 MISE_CONFIG_TARGET="$DOTFILES_DIR/config/mise/config.toml"
 MISE_CONFIG_LINK_PATH="$XDG_CONFIG_HOME/mise/config.toml"
 UV_CONFIG_TARGET="$DOTFILES_DIR/config/uv/uv.toml"
@@ -59,6 +61,7 @@ INSTALL_GIT=0
 UPGRADE_PACKAGES=0
 UPGRADE_PLUGINS=0
 SKIP_PACKAGES=0
+APPLY_SETTINGS=0
 PROFILE=""
 WITH_GROUPS=""
 WITHOUT_GROUPS=""
@@ -81,6 +84,7 @@ Options:
   --with GROUPS        Add comma-separated package groups, e.g. --with ai,creative
   --without GROUPS     Remove comma-separated package groups (core is required)
   --skip-packages      Install no packages; git and mise must already be installed
+  --macos-settings     Apply the managed macOS defaults (Finder, Dock, trackpad)
   --dry-run            Print actions without changing anything
   --yes                Run without interactive confirmation
   --verbose            Show more command details
@@ -123,6 +127,7 @@ while (($# > 0)); do
     --upgrade-packages) UPGRADE_PACKAGES=1 ;;
     --upgrade-plugins) UPGRADE_PLUGINS=1 ;;
     --skip-packages) SKIP_PACKAGES=1 ;;
+    --macos-settings) APPLY_SETTINGS=1 ;;
     --profile=* | --with=* | --without=*)
       set_option_value "${1%%=*}" "${1#*=}"
       ;;
@@ -155,6 +160,10 @@ if ((SKIP_PACKAGES)) && [[ -n "$PROFILE$WITH_GROUPS$WITHOUT_GROUPS" ]] || ((SKIP
   exit 1
 fi
 PROFILE="${PROFILE:-full}"
+
+if ((APPLY_SETTINGS)); then
+  TOTAL_STEPS=13
+fi
 
 if [[ ! -f "$COMMON_LIB" ]]; then
   printf 'ERROR: Missing shared bootstrap helper: %s\n' "$COMMON_LIB" >&2
@@ -280,6 +289,11 @@ print_preflight_plan() {
   echo "  delta link: $GIT_DELTA_CONFIG_LINK_PATH"
   echo "  Git include: add include.path to ~/.gitconfig if absent (no other edits)"
   echo "  lazygit link: $LAZYGIT_CONFIG_LINK_PATH"
+  if ((APPLY_SETTINGS)); then
+    echo "  macOS settings: apply managed defaults; restarts Finder and Dock"
+  else
+    echo "  macOS settings: skipped (pass --macos-settings to apply)"
+  fi
 }
 
 confirm_preflight() {
@@ -405,6 +419,11 @@ require_cmd uname "Install core system tools and retry."
 require_cmd curl "curl is expected to be present on macOS. If it's missing, your PATH/environment is broken or the OS install is atypical. Fix PATH or reinstall base system tools and retry."
 
 # Validate required project files before applying changes.
+if ((APPLY_SETTINGS)) && [[ ! -f "$SETTINGS_SCRIPT" ]]; then
+  echo "ERROR: macOS settings script not found at $SETTINGS_SCRIPT" >&2
+  exit 1
+fi
+
 if [[ ! -f "$ZSHRC_TARGET" ]]; then
   echo "ERROR: Missing symlink target: $ZSHRC_TARGET" >&2
   exit 1
@@ -663,6 +682,17 @@ if ((DRY_RUN)); then
   ui_step_ok "planned"
 else
   ui_step_ok "linked/verified"
+fi
+
+if ((APPLY_SETTINGS)); then
+  ui_step_start "Apply macOS settings"
+  if ((DRY_RUN)); then
+    zsh "$SETTINGS_SCRIPT" --yes --dry-run
+    ui_step_ok "planned"
+  else
+    zsh "$SETTINGS_SCRIPT" --yes
+    ui_step_ok "applied"
+  fi
 fi
 
 ui_summary
