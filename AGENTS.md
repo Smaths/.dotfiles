@@ -2,16 +2,11 @@
 
 ## Goal
 
-Maintain a safe, idempotent dotfiles repo for a macOS-first workstation, Windows host applications, and Debian/Ubuntu WSL or Debian server shell setup.
+Maintain a safe, repeatable setup for macOS 14+, Windows host apps, and
+Debian/Ubuntu shells in WSL or on a server. Other Linux distributions can reuse
+config but have no supported bootstrap. See [platform details](docs/PLATFORMS.md).
 
-## Supported Platforms
-
-- Primary: macOS 14+
-- Secondary: Windows host-app bootstrap via PowerShell; shell setup belongs in Debian/Ubuntu WSL
-- Secondary: Debian server and WSL bootstrap via bash
-- Secondary: Other Linux config reuse only
-
-## Canonical Entrypoints
+## Canonical entrypoints
 
 - Unix install/bootstrap wrapper: `install/bootstrap.sh`
 - Windows install/bootstrap wrapper: `install/bootstrap.ps1`
@@ -20,20 +15,20 @@ Maintain a safe, idempotent dotfiles repo for a macOS-first workstation, Windows
 - Debian install/bootstrap: `install/platforms/debian/bootstrap.sh`
 - Optional macOS settings: `install/platforms/macos/settings.zsh`
 - Shared Unix bootstrap helpers: `install/lib/common.sh`,
-  `install/lib/homebrew.sh`, `install/lib/ui.sh`,
+  `install/lib/homebrew.sh`, `install/lib/packages.sh`, `install/lib/ui.sh`,
   `install/lib/zsh-plugins.sh`
-- macOS core package manifest: `install/platforms/macos/Brewfile`
-- Optional macOS creative/audio manifest: `install/platforms/macos/Brewfile.creative`
-  (included by macOS bootstrap only with `--creative`)
+- macOS package groups: `install/platforms/macos/packages/<group>.Brewfile`
+- macOS package profiles: `install/platforms/macos/packages/profiles`
+  (`slim`, `full`; selected with `--profile`, adjusted with `--with`/`--without`)
 - Windows package manifest: `install/platforms/windows/winget-packages.txt`
 - Debian package manifest: `install/platforms/debian/apt-packages.txt`
-- Zsh plugin manifest: `install/lib/zsh-plugins.sh`
 - Diff rendering config: `config/git/delta.gitconfig`, `config/lazygit/config.yml`
 - Zsh startup chain: `config/zsh/.zprofile` -> `config/zsh/path.zsh`, then
   `config/zsh/.zshrc` -> interactive `config/zsh/*.zsh` modules
 - Debian bash entrypoint: `config/bash/.bashrc`
+- Alfred workflow and theme: `config/alfred/` (manual import)
 
-## Non-Negotiables
+## Non-negotiables
 
 - Idempotency first: reruns should converge and avoid duplicate state.
 - No destructive operations without explicit `--force` style opt-in.
@@ -42,22 +37,37 @@ Maintain a safe, idempotent dotfiles repo for a macOS-first workstation, Windows
   `winget`, `apt-get`, `git`, `curl`); document and justify any proposed addition before implementation.
 - Windows bootstrap manages host apps only. Do not add native Windows Zsh linking; WSL shell setup uses Debian/Ubuntu Bash/tmux.
 - Keep machine-specific/project-only shell modules in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`; do not add them to tracked shared modules.
-- The macOS `Brewfile` is the core workstation manifest. `Brewfile.creative` is the sole optional creative/audio manifest and is installed only with explicit `--creative`; do not add more package profiles.
-- Keep package ownership explicit: Homebrew owns macOS native apps, mise its declared runtimes/tools, uv Python interpreters/environments, winget Windows host apps, and apt Debian packages. Project dependencies belong in project manifests and lockfiles.
+- macOS packages live in groups (`packages/<group>.Brewfile`); profiles in
+  `packages/profiles` only name groups. Rules:
+  - Each package lives in exactly one group (`tests/check.sh` enforces it).
+  - Profiles never list packages, and never duplicate a group's contents in a
+    new manifest.
+  - `core` is required: every profile lists it first and it cannot be removed.
+    Keep only what bootstrap and the linked configs need, plus the baseline
+    shell tooling.
+  - Add a group only when it needs to be toggled on its own; otherwise extend
+    an existing group. Add a profile only for a distinct kind of machine.
+  - Debian should reuse the same group names, profiles format, and
+    `install/lib/packages.sh` when it gains groups.
+- Keep package ownership explicit. Homebrew owns macOS native apps; mise owns
+  its declared runtimes and tools; uv owns Python interpreters and environments;
+  winget owns Windows host apps; apt owns Debian packages. Project dependencies
+  belong in project manifests and lockfiles.
 - mise shims are exposed through the managed Zsh login PATH; do not claim all GUI or non-shell processes inherit that PATH.
 - `~/.gitconfig` is user-owned. The only permitted write is the single
   `include.path` entry for `config/git/delta.gitconfig`.
 - Zsh plugin clones are fast-forward only, and a directory that is not a git
   clone is reported rather than replaced.
 
-## Change Workflow
+## Change workflow
 
 1. Update manifest/config source of truth (`install/platforms/*/`, `config/*`).
 2. Update automation step scripts (`install/*.zsh`, `install/*.ps1`, `install/*.sh`) if behavior changed.
-3. Update docs (`README.md`, `docs/*.md`, `CHANGELOG.md`).
+3. Update relevant docs (`README.md`, `docs/*.md`).
 4. Run required checks:
    - `bash tests/check.sh` (static validation and shared helper tests; also run by CI)
-   - `brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile`
+   - On macOS: `sh ~/.dotfiles/install/bootstrap.sh --dry-run --profile <profile>`
+     (reports any missing packages for that profile)
    - `winget search --id <ID> -e` for each `install/platforms/windows/winget-packages.txt` entry
    - On Debian: `sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages`
 
@@ -66,6 +76,6 @@ Maintain a safe, idempotent dotfiles repo for a macOS-first workstation, Windows
 - Architecture: `docs/ARCHITECTURE.md`
 - Platforms/prereqs: `docs/PLATFORMS.md`
 - Operations: `docs/OPERATIONS.md`
-- LLM operating notes: `docs/LLM.md`
 - Contribution rules: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`
+- Alfred workflow and theme import: `docs/ALFRED.md`

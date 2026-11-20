@@ -1,82 +1,107 @@
 # Operations
 
-## Install (Fresh Machine)
+## Install on a new machine
 
-```zsh
-git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
-sh ~/.dotfiles/install/bootstrap.sh
-```
-
-Windows:
-
-```powershell
-git clone https://github.com/Smaths/.dotfiles.git $HOME/.dotfiles
-powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap.ps1
-```
-
-Debian server:
-
-```bash
-git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
-sh ~/.dotfiles/install/bootstrap.sh
-```
-
-Useful flags:
+Start with the platform commands in the [Quick start](../README.md#quick-start).
+Available bootstrap flags:
 
 - `--dry-run`: print intended actions without mutating.
 - `--yes`: run without interactive confirmation on macOS, Windows, and Debian.
 - `--verbose`: show extra command detail.
-- `--upgrade-packages` (macOS only): upgrade outdated selected Brewfile entries
-  during bootstrap.
+- `--profile slim|full` (macOS only): choose the package profile; default
+  `full`. See [package profiles and groups](#package-profiles-and-groups).
+- `--with GROUPS` / `--without GROUPS` (macOS only): add or remove
+  comma-separated package groups on top of the profile. `--with creative`
+  replaces the retired `--creative` flag.
+- `--macos-settings` (macOS only): apply the managed macOS defaults unattended
+  after linking config.
+- `--upgrade-packages` (macOS only): upgrade outdated entries in the selected
+  groups during bootstrap.
 - `--upgrade-plugins` (macOS only): fast-forward existing Zsh plugin clones to
   the exact manifest pins, independently of package upgrades.
-- `--creative` (macOS only): also install the optional creative/audio casks in
-  `Brewfile.creative`; the default installs the core Brewfile only.
-- `--skip-packages` (Windows only): skip `winget` installs.
+- `--skip-packages`: skip package installs (`brew bundle` on macOS, `winget`
+  on Windows, `apt-get` on Debian). On macOS, `git` and `mise` must already be
+  installed, and the flag cannot be combined with the package selection flags
+  or `--upgrade-packages`.
 - Windows does not support native shell linking; the retired `--link-windows-shell` option is rejected. Use the Debian/Ubuntu bootstrap inside WSL.
-- `--skip-packages` (Debian only): skip `apt-get` installs.
 - `--force-shell` (Debian only): change the current user's login shell to bash.
 
-Interactive runs print a preflight plan and ask for confirmation before
-mutation. Noninteractive mutation requires `--yes`; otherwise use `--dry-run`
-to inspect the plan.
+Interactive runs ask before changes. Unattended installs require `--yes`;
+use `--dry-run` to preview instead.
 
-macOS settings are separate from bootstrap. Run them explicitly when wanted:
+### Package profiles and groups
+
+macOS packages live in `install/platforms/macos/packages/`, one Brewfile per
+group. `packages/profiles` names the groups each profile installs:
+
+| Group | Contents | `slim` | `full` |
+| --- | --- | :-: | :-: |
+| `core` (required) | Zsh, shell CLI tools, Git tools, mise, uv, Ghostty, Nerd Font | yes | yes |
+| `dev` | Docker Desktop, GitHub Desktop, VS Code, Zed | yes | yes |
+| `utilities` | pandoc, Keka, Hex | yes | yes |
+| `ai` | ChatGPT, Claude, Claude Code, Codex, OpenAI CLI, OpenCode | | yes |
+| `dev-extras` | Cloud CLIs, SDKs, MySQL 8.4, Herd, secondary editors and clients | | yes |
+| `media` | ffmpeg, ImageMagick, Ghostscript, wimlib, ImageOptim, VLC | | yes |
+| `network` | nmap, mosh, lftp, rsync, tcping | | yes |
+| `desktop` | Alfred, BetterTouchTool, Shottr, iStat Menus, Obsidian, Chrome, and more | | yes |
+| `personal` | 1Password, KeePassXC, ProtonVPN, LuLu, Synology Drive, Transmission | | yes |
+| `creative` | Creative and audio apps, Unity Hub | | |
+
+Compose a selection from a profile plus group changes:
+
+```zsh
+sh ~/.dotfiles/install/bootstrap.sh --profile slim --dry-run
+sh ~/.dotfiles/install/bootstrap.sh --profile slim --with ai
+sh ~/.dotfiles/install/bootstrap.sh --without personal,network
+sh ~/.dotfiles/install/bootstrap.sh --with creative
+```
+
+To install one group without running the rest of bootstrap:
+
+```zsh
+brew bundle install --no-upgrade \
+  --file ~/.dotfiles/install/platforms/macos/packages/creative.Brewfile
+```
+
+Shell aliases and integrations for tools outside the selection are skipped at
+startup. To use your own package list instead, install it yourself and run
+bootstrap with `--skip-packages`; `git` and `mise` must already be installed.
+
+Ableton Live remains vendor-managed. The `creative` group installs Unity Hub,
+not Homebrew's rolling `unity` editor; use each project's
+`ProjectSettings/ProjectVersion.txt` to select an editor in Hub or Unity CLI.
+`brew bundle cleanup` against one group file treats every other group's
+packages as unlisted. Preview cleanup against all the groups you use before
+considering `--force`.
+
+### macOS settings
+
+Pass `--macos-settings` to bootstrap to apply the managed defaults unattended,
+or run the script yourself:
 
 ```zsh
 zsh ~/.dotfiles/install/platforms/macos/settings.zsh
+zsh ~/.dotfiles/install/platforms/macos/settings.zsh --yes --dry-run
 ```
 
-The settings script offers three modes:
+Interactive runs offer three modes:
 
 - `1) Use defaults (no per-setting prompts)`: applies repo defaults after confirmation.
 - `2) Choose settings`: set defaults for each setting, then proceed.
 - `3) Skip`: exits macOS tuning without applying defaults.
 
-Creative and audio applications are skipped by the default development
-workstation bootstrap. Include the optional cask set on a machine that needs it:
+`--yes` applies the defaults without prompts; `--dry-run` prints the
+`defaults` commands instead. Settings are user-level `defaults write` calls, so
+an employer's configuration profile may override some of them. Turning off
+natural scrolling may need a log out. Set Caps Lock -> Control once in System
+Settings > Keyboard > Keyboard Shortcuts > Modifier Keys; it is not scripted
+because macOS stores it per keyboard and `hidutil` remaps reset at reboot.
 
-```zsh
-sh ~/.dotfiles/install/bootstrap.sh --creative
-```
+Alfred workflow and theme files require manual import. See
+[Alfred setup](ALFRED.md) for the package command, vault setting, and import
+precautions.
 
-To install only that manifest without running the rest of bootstrap:
-
-```zsh
-brew bundle install --no-upgrade \
-  --file ~/.dotfiles/install/platforms/macos/Brewfile.creative
-```
-
-Ableton Live is intentionally absent from both manifests and should be installed
-and updated directly from Ableton. The creative manifest installs Unity Hub, but
-not Homebrew's rolling `unity` editor cask. Install each project's exact editor
-through Hub or the Unity CLI using its
-`ProjectSettings/ProjectVersion.txt`. The optional manifest is independent for
-installation only: cleanup against either manifest treats entries from the other
-as unlisted. Preview any `brew bundle cleanup` operation carefully and compare it
-against both manifests before considering `--force`.
-
-## Update (Existing Machine)
+## Update an existing machine
 
 ```zsh
 cd ~/.dotfiles
@@ -84,34 +109,22 @@ git pull --ff-only
 sh install/bootstrap.sh
 ```
 
-The macOS bootstrap checks the Brewfile first and skips `brew bundle install`
-when all entries are already present. When installation is needed, it uses
-`brew bundle install --verbose --no-upgrade --jobs=auto` so reruns install
-missing entries without turning every bootstrap into a full Homebrew upgrade
-pass. Verbose Bundle output streams the underlying Homebrew commands while up
-to four formula installations run in parallel, so the terminal continues to
-show activity after the initial fetch phase. Parallel output can interleave.
-When installation is needed, Brew Bundle and mise run in the foreground with
-their native output and signal handling; bootstrap does not background them or
-redirect their output to temporary logs.
-Prompt Purification requires no separate install step. It is vendored under
-`config/zsh/prompts/purification/`, and the linked `~/.zshrc` loads that tracked
-copy. Bootstrap validates the prompt file before relinking shell configuration.
-After Brew Bundle completes, the bootstrap symlinks `config/mise/config.toml` to
-`${XDG_CONFIG_HOME:-~/.config}/mise/config.toml` and then runs `mise install` to
-install or verify the pinned Go, Node.js, Pi, and pnpm versions. Because the
-config sits at the path mise reads by default, no environment variable is needed.
-Go 1.27, Node.js 24, and pnpm 11 are the defaults, and mise provides the pinned
-`pi` terminal agent. Project mise configs, `.nvmrc`, `.node-version`, and
-`packageManager` files remain the source of truth for selecting other versions
-through mise. The shims are added by the managed Zsh login PATH; GUI apps and
-arbitrary non-shell processes do not necessarily inherit that PATH.
+On macOS, bootstrap skips Brew Bundle when the selected packages are installed.
+Otherwise it runs `brew bundle install --verbose --no-upgrade --jobs=auto` to
+add missing entries without upgrading existing ones. Up to four formula installs
+can run in parallel, so output may interleave. Brew Bundle and mise run in the
+foreground with their normal output and signal handling.
 
-Bootstrap also symlinks `config/uv/uv.toml` to
-`${XDG_CONFIG_HOME:-~/.config}/uv/uv.toml`. uv uses only uv-managed Python
-interpreters for projects and Python-package tools; Apple/Xcode Python and its
-user package directory are not modified or added to `PATH`. Standalone native
-applications such as the official OpenAI CLI are installed through Homebrew.
+The vendored Prompt Purification needs no separate install; bootstrap validates
+it before linking `~/.zshrc`. Bootstrap links `config/mise/config.toml` at mise's
+standard XDG path, then runs `mise install` for the latest Go, Node.js, Pi, and
+pnpm. Project mise files, `.nvmrc`, `.node-version`, and `packageManager`
+metadata can select other versions. The managed Zsh login PATH exposes mise
+shims; GUI apps and unrelated processes may not inherit that PATH.
+
+Bootstrap also links `config/uv/uv.toml`. uv uses its own Python interpreters
+without altering Apple/Xcode Python or its user-package PATH. Homebrew owns
+native standalone apps such as the OpenAI CLI.
 
 Zsh plugins are pinned by full commit SHA in `install/lib/zsh-plugins.sh`.
 Missing plugins are fetched at that exact commit and installed with detached
@@ -136,16 +149,9 @@ network access.
 
 ### Plugin pin review
 
-The initial pins preserve the clean installed baseline and verified canonical
-origins, rather than introducing newer upstream code:
-
-| Plugin | Commit |
-| --- | --- |
-| fzf-tab | `24105b15714bfec37989ed5c5b6e60f572253019` |
-| zsh-autosuggestions | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
-| fast-syntax-highlighting | `3d574ccf48804b10dca52625df13da5edae7f553` |
-
-This baseline/provenance check is not a full security audit of upstream code.
+The pins in `install/lib/zsh-plugins.sh` preserve a clean installed baseline
+with verified origins rather than selecting newer upstream commits. That
+baseline check is not a full security audit of upstream code.
 For future updates, fetch the candidate into a separate review clone, inspect
 `git diff OLD_SHA NEW_SHA` (especially sourced files, subprocesses, and network
 or build hooks), and test it before recording the full SHA in the manifest.
@@ -166,21 +172,24 @@ For unattended maintenance, pass `--yes` explicitly:
 sh install/bootstrap.sh --yes
 ```
 
-Go, Node.js, Pi, and pnpm upgrades are intentional config changes rather than
-side effects of a Homebrew upgrade. Update the defaults, review the diff, then
-rerun bootstrap. Keep project runtime and package-manager pins until their
-projects are tested on newer versions.
-
-Pi is installed as a standalone executable, so `pi update` cannot replace the
-executable and may report its internal Bun path (`/$bunfs/root/pi`). Update the
-Pi pin in `config/mise/config.toml` and run `mise install` instead. Use
-`pi update --extensions` only to update configured Pi extensions.
+`config/mise/config.toml` tracks `latest` for Go, Node.js, Pi, and pnpm. mise
+resolves `latest` to the newest installed version, so a Homebrew upgrade or a
+new upstream release changes nothing until you upgrade on purpose:
 
 ```zsh
-${EDITOR:-vi} ~/.dotfiles/config/mise/config.toml
-mise install
-sh install/bootstrap.sh
+mise outdated
+mise upgrade
 ```
+
+`latest` follows each tool's newest release line, including odd-numbered
+Node.js releases that never become LTS. Projects that need a specific version
+keep declaring it in their own mise config, `.nvmrc`, `.node-version`,
+`packageManager`, or `go.mod`, and those declarations take precedence.
+
+Pi is installed as a standalone executable, so `pi update` cannot replace the
+executable and may report its internal Bun path (`/$bunfs/root/pi`). Use
+`mise upgrade pi` instead, and `pi update --extensions` only to update
+configured Pi extensions.
 
 Check the versions selected in a project directory before installing
 dependencies:
@@ -215,19 +224,16 @@ first and skips `apt-get update`/`apt-get install` when every manifest package
 is already installed. If packages are missing, it updates apt metadata and
 installs only the missing package names.
 
-## Doctor (Health Checks)
+## Health checks
 
-CI installs ShellCheck and Zsh from Ubuntu, then downloads the pinned upstream
-`shfmt` release with `curl` and verifies its SHA-256 checksum. The Ubuntu
-package is not used because it cannot parse the repository's Zsh syntax; the
-pinned release keeps local and CI formatting behavior consistent.
-
-Manual checks:
+Run `bash tests/check.sh` for static and helper checks. CI also verifies a
+pinned `shfmt` binary because Ubuntu's package cannot parse this repo's Zsh.
+On an installed machine, check the relevant paths and tools:
 
 ```zsh
 test -L ~/.zshrc && readlink ~/.zshrc
 test -L ~/.zprofile && readlink ~/.zprofile
-brew bundle check --no-upgrade --file ~/.dotfiles/install/platforms/macos/Brewfile
+sh ~/.dotfiles/install/bootstrap.sh --dry-run --profile slim  # or your profile
 test -L ~/.config/mise/config.toml && readlink ~/.config/mise/config.toml
 mise current
 go version
@@ -236,7 +242,7 @@ pnpm --version
 pi --version
 test -L ~/.config/uv/uv.toml && readlink ~/.config/uv/uv.toml
 uv python list --only-installed
-openai --version
+openai --version  # ai group
 # Apple/Xcode Python remains available, but its user scripts are not global.
 /usr/bin/python3 --version
 zsh -lc '[[ ":$PATH:" != *":$HOME/Library/Python/3.9/bin:"* ]]'
@@ -283,31 +289,13 @@ bash -n ~/.dotfiles/config/bash/.bashrc
 sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 ```
 
-Expected:
-
-- `mise current` resolves the Go, Node.js, Pi, and pnpm versions pinned in
-  `config/mise/config.toml`; a `bash -c` launched from that shell inherits the
-  same PATH and should report those versions. This does not guarantee PATH
-  inheritance by GUI apps or unrelated non-shell processes.
-- `uv python list --only-installed` reports uv-owned interpreters, `openai`
-  resolves from Homebrew, and the PATH does not contain a version-specific
-  Apple Python user-package directory.
-- WSL distro exists (`wsl -l -q` non-empty) and bootstrap output includes WSL guidance. Run Debian/Ubuntu shell setup inside the WSL distro.
-- The Windows bootstrap does not create native Windows shell links.
-- `winget list --id ... -e` resolves each configured package.
-- `FZF_DEFAULT_COMMAND` uses `fd -H -t f ...`, or `fdfind -H -t f ...`
-  where Debian provides only `fdfind`.
-- All three plugin clones exist and report ok from the interactive shell. A
-  missing clone degrades the shell instead of breaking it, so check the clone
-  list before concluding the config is wrong.
-- `git config --get core.pager` reports `delta`, which comes from the
-  `include.path` entry in `~/.gitconfig` rather than from any tracked copy of
-  that file.
-- Interactive Zsh defines `prompt_purification_setup` from the vendored prompt;
-  it does not require `~/.config/prompt_purification`.
-- Debian `~/.bashrc` links to `~/.dotfiles/config/bash/.bashrc`.
-- Debian package step reports skipped when all apt manifest packages are already installed.
-- Debian login shell is unchanged unless `--force-shell` was used.
+Check `mise current` against `config/mise/config.toml` and confirm `core.pager`
+is `delta`. `FZF_DEFAULT_COMMAND` should use `fd`, or Debian's `fdfind` when
+`fd` is absent. On Windows, a WSL distro should appear in `wsl -l -q`; run the
+Debian/Ubuntu bootstrap inside it. On Debian, an already-satisfied apt manifest
+should skip package installation and the login shell should stay unchanged
+without `--force-shell`. A missing plugin clone degrades interactive Zsh rather
+than preventing startup; check the clone list if a widget is absent.
 
 Smoke-test navigation helpers in an interactive shell:
 
@@ -320,20 +308,11 @@ fstack
 
 ## Backup
 
-Bootstrap automatically creates collision-safe timestamped backups before
-relinking regular files, directories, or incorrect symlinks. Correct symlinks
-are a no-op, so converged reruns do not create additional backups:
-
-- `~/.zshrc.bak.<timestamp>[.N]`
-- `~/.zprofile.bak.<timestamp>[.N]`
-- `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.bak.<timestamp>[.N]` (macOS bootstrap only, if replaced)
-- `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml.bak.<timestamp>[.N]`
-  (macOS bootstrap only, if replaced)
-- `${XDG_CONFIG_HOME:-$HOME/.config}/git/delta.gitconfig.bak.<timestamp>[.N]`
-  (macOS bootstrap only, if replaced)
-- `~/Library/Application Support/lazygit/config.yml.bak.<timestamp>[.N]`
-  (macOS bootstrap only, if replaced)
-- `~/.bashrc.bak.<timestamp>[.N]` (Debian bootstrap only, if replaced)
+Bootstrap moves a replaced file, directory, or incorrect symlink to a
+collision-safe backup beside its original path:
+`<original-path>.bak.<timestamp>[.N]`. For example, a replaced `~/.zshrc`
+becomes `~/.zshrc.bak.<timestamp>[.N]`. Correct links produce no new backup.
+Inspect the backups next to the path you intend to restore.
 
 `~/.gitconfig` is edited in place rather than backed up: bootstrap only appends
 one `include.path` entry with `git config --global --add`, and never rewrites
@@ -343,20 +322,13 @@ anything else in that file. Revert it with:
 git config --global --unset include.path "${XDG_CONFIG_HOME:-$HOME/.config}/git/delta.gitconfig"
 ```
 
-You can additionally snapshot the repo:
-
-```zsh
-cd ~/.dotfiles
-git tag backup-$(date +%Y%m%d-%H%M%S)
-```
-
 ## Restore
 
 1. Remove current managed symlink.
 2. Move chosen `*.bak.<timestamp>[.N]` back to original path.
 3. Start a new shell.
 
-Example—remove the current path only when it is the expected repo-owned link:
+Remove the current path only when it is the expected repo-owned link:
 
 ```zsh
 expected="$HOME/.dotfiles/config/zsh/.zshrc"

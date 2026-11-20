@@ -1,0 +1,65 @@
+{
+  "alfredtheme" : {
+    "result" : {
+      "textSpacing" : 4,
+      "subtext" : {
+        "size" : 12,
+        "colorSelected" : "#525252FF",
+        "font" : "AtkinsonHyperlegible-Regular",
+        "color" : "#A4A4A4FF"
+      },
+      "shortcut" : {
+        "size" : 14,
+        "colorSelected" : "#525252FF",
+        "font" : "JetBrainsMono-Regular",
+        "color" : "#A4A4A4FF"
+      },
+      "backgroundSelected" : "#F2F2F2FF",
+      "text" : {
+        "size" : 18,
+        "colorSelected" : "#0C0C0CFF",
+        "font" : "AtkinsonHyperlegible-Regular",
+        "color" : "#F2F2F2FF"
+      },
+      "iconPaddingHorizontal" : 8,
+      "roundness" : 4,
+      "paddingVertical" : 4,
+      "iconSize" : 40
+    },
+    "search" : {
+      "backgroundSelected" : "#F88A3DFF",
+      "paddingHorizontal" : 12,
+      "spacing" : 8,
+      "text" : {
+        "size" : 30,
+        "colorSelected" : "#0C0C0CFF",
+        "font" : "AtkinsonHyperlegible-Regular",
+        "color" : "#F2F2F2FF"
+      },
+      "background" : "#F2F2F214",
+      "roundness" : 4,
+      "paddingVertical" : 4
+    },
+    "window" : {
+      "color" : "#1F1F1FB3",
+      "paddingHorizontal" : 8,
+      "width" : 720,
+      "borderPadding" : 1,
+      "borderColor" : "#292929FF",
+      "blur" : 0,
+      "roundness" : 12,
+      "paddingVertical" : 8
+    },
+    "credit" : "Smaths",
+    "visualEffectMode" : 2,
+    "separator" : {
+      "color" : "#292929FF",
+      "thickness" : 1
+    },
+    "scrollbar" : {
+      "color" : "#7A7A7AFF",
+      "thickness" : 2
+    },
+    "name" : "Snarfum Industries"
+  }
+}

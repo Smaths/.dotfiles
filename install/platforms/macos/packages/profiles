@@ -1,0 +1,9 @@
+# Package profiles: a name, a colon, then the groups it installs, in order.
+# Groups are the <group>.Brewfile files in this directory. Every profile lists
+# core first because bootstrap needs it. Profiles never list packages.
+#
+# Select one with `bootstrap.sh --profile <name>` (default: full), then adjust
+# it with `--with <group>[,<group>]` and `--without <group>[,<group>]`.
+# Groups not named by any profile, such as creative, install only via --with.
+slim: core dev utilities
+full: core dev utilities ai dev-extras media network desktop personal
