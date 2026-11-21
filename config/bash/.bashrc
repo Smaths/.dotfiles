@@ -8,8 +8,9 @@ case $- in
   *) return ;;
 esac
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
-BASH_CONFIG_DIR="$DOTFILES_DIR/config/bash"
+# Follow the ~/.bashrc symlink to find modules in the same checkout.
+BASH_CONFIG_DIR="$(realpath -- "${BASH_SOURCE[0]}")" || return
+BASH_CONFIG_DIR="${BASH_CONFIG_DIR%/*}"
 
 _dot_has() {
   command -v "$1" >/dev/null 2>&1

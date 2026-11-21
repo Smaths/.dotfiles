@@ -14,7 +14,7 @@ alias rm='rm -iv'
 alias grep='grep -E -i --color=auto'
 
 # Navigation.
-alias dotfiles='cd "$HOME/.dotfiles"'
+alias dotfiles='cd -- "$BASH_CONFIG_DIR/../.."'
 alias config='cd "$HOME/.config"'
 alias work='cd "$HOME/workspace"'
 

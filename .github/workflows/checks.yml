@@ -39,10 +39,26 @@ jobs:
       - name: Run checks
         run: bash tests/check.sh
 
-      - name: Run Debian dry-run
+  debian:
+    name: Bootstrap (${{ matrix.image }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - 'debian:13-slim'
+          - 'debian:12-slim'
+          - 'ubuntu:26.04'
+          - 'ubuntu:24.04'
+          - 'ubuntu:22.04'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install and rerun in a clean container
         run: |
-          mkdir -p "$RUNNER_TEMP/dotfiles-home"
-          HOME="$RUNNER_TEMP/dotfiles-home" DOTFILES_DIR="$GITHUB_WORKSPACE" sh install/bootstrap.sh --dry-run --skip-packages
+          docker run --rm --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/checkout,readonly" \
+            "${{ matrix.image }}" bash /checkout/tests/install/debian_smoke_test.sh
 
   windows:
     name: Windows PowerShell validation
