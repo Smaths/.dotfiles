@@ -6,6 +6,27 @@ REPO_DIR="$(CDPATH='' cd -- "$TEST_DIR/.." && pwd)"
 
 cd "$REPO_DIR"
 
+# Rectangle's native import format; keep only portable, typed settings.
+jq -e '
+  .bundleId == "com.knollsoft.Rectangle" and
+  (.version | type == "string") and
+  (.defaults | type == "object") and
+  (.defaults | length > 0) and
+  (.defaults | all(.[];
+    type == "object" and length == 1 and
+    (to_entries[0] |
+      (.key == "bool" and (.value | type == "boolean")) or
+      (.key == "int" and (.value | type == "number" and floor == .))
+    )
+  )) and
+  (.shortcuts | type == "object") and
+  (.shortcuts | all(.[];
+    type == "object" and
+    (.keyCode | type == "number" and floor == . and . >= 0) and
+    (.modifierFlags | type == "number" and floor == . and . >= 0)
+  ))
+' config/rectangle/RectangleConfig.json >/dev/null
+
 uv_config_path="config/uv/uv.toml"
 [[ -f "$uv_config_path" ]] || {
   printf 'missing uv config: %s\n' "$uv_config_path" >&2

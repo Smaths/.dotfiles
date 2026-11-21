@@ -82,7 +82,8 @@ Debian/Ubuntu handles Bash and tmux in WSL or on a server.
 - **Manual and local config:** Keep machine-specific Zsh settings in ignored
   `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`, not tracked modules.
   Alfred workflow and theme copies in `config/alfred/` need manual import; see
-  [Alfred setup](docs/ALFRED.md).
+  [Alfred setup](docs/ALFRED.md). Rectangle preferences in `config/rectangle/`
+  also need manual import; see [window snapping setup](docs/RECTANGLE.md).
 
 </details>
 

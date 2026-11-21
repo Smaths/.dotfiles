@@ -76,5 +76,6 @@ cask "zed"
 # Workspace utilities
 cask "bettertouchtool"
 cask "kitlangton-hex" if Hardware::CPU.arm?
+cask "rectangle"
 cask "shottr"
 cask "transmission"

@@ -1,0 +1,31 @@
+{
+  "bundleId": "com.knollsoft.Rectangle",
+  "defaults": {
+    "allowAnyShortcut": {
+      "bool": true
+    },
+    "alternateDefaultShortcuts": {
+      "bool": true
+    },
+    "hideMenubarIcon": {
+      "bool": true
+    },
+    "launchOnLogin": {
+      "bool": true
+    },
+    "subsequentExecutionMode": {
+      "int": 1
+    }
+  },
+  "shortcuts": {
+    "reflowTodo": {
+      "keyCode": 45,
+      "modifierFlags": 786432
+    },
+    "toggleTodo": {
+      "keyCode": 11,
+      "modifierFlags": 786432
+    }
+  },
+  "version": "100"
+}

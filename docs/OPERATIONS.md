@@ -55,7 +55,9 @@ unlisted. Compare both manifests and preview cleanup before considering `--force
 
 Alfred workflow and theme files require manual import. See
 [Alfred setup](ALFRED.md) for the package command, vault setting, and import
-precautions.
+precautions. Rectangle preferences also require manual import; see
+[Rectangle setup](RECTANGLE.md) for shortcuts, permissions, native tiling, and
+Voyager modifiers.
 
 ## Update an existing machine
 
@@ -179,7 +181,8 @@ installs only the missing package names.
 
 ## Health checks
 
-Run `bash tests/check.sh` for static and helper checks. CI also verifies a
+Run `bash tests/check.sh` for static and helper checks, including Rectangle JSON
+schema validation with `jq` (installed by the macOS Brewfile). CI also verifies a
 pinned `shfmt` binary because Ubuntu's package cannot parse this repo's Zsh.
 On an installed machine, check the relevant paths and tools:
 
