@@ -13,7 +13,7 @@ explicit manifests. The map below identifies those paths and exceptions.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `config/mise/config.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`
-  (symlink on macOS). It declares the default Go, Node.js, and pnpm toolchain
+  (symlink on macOS). It tracks the latest Go, Node.js, and pnpm
   plus the Pi terminal agent; project mise configs, `.nvmrc`, `.node-version`,
   and `packageManager` metadata can override the active versions. Linking it to
   the path mise reads by default avoids environment-variable selection drift.
@@ -39,11 +39,15 @@ explicit manifests. The map below identifies those paths and exceptions.
   for manual import, not a live plist link. Homebrew owns the app; Accessibility
   permission, login-item registration, native tiling, and Voyager modifier swaps
   remain per-machine setup. See [Rectangle setup](RECTANGLE.md).
-- `install/platforms/macos/Brewfile` is the core development/workstation
-  manifest consumed by macOS bootstrap via `brew bundle`.
-- `install/platforms/macos/Brewfile.creative` is optional and runs only with
-  `--creative`. It installs Unity Hub, not a rolling editor; Ableton stays
-  vendor-managed. See [creative installs](OPERATIONS.md#install-on-a-new-machine).
+- `install/platforms/macos/packages/` holds one Brewfile per package group
+  and a `profiles` file naming the groups each profile installs. Bootstrap
+  resolves `--profile`, `--with`, and `--without` with `install/lib/packages.sh`,
+  concatenates the selected groups into one temporary Brewfile, and runs a
+  single `brew bundle` pass. Each package lives in exactly one group; `core` is
+  required. See [package profiles](OPERATIONS.md#package-profiles-and-groups).
+- `creative.Brewfile` is in no profile and installs only with
+  `--with creative`. It installs Unity Hub, not a rolling editor; Ableton stays
+  vendor-managed.
 - `install/platforms/windows/winget-packages.txt` is consumed by Windows bootstrap via `winget install`.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
 - Windows bootstrap manages host applications through winget and explains WSL

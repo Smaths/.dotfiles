@@ -48,37 +48,39 @@ HOME="$path_test_home" ZSH_PATH_FILE="$REPO_DIR/config/zsh/path.zsh" zsh -fc '
   (( ${path[(Ie)/usr/bin]} > 0 ))
 '
 
-brewfile_path="install/platforms/macos/Brewfile"
+packages_dir="install/platforms/macos/packages"
+brewfiles=("$packages_dir"/*.Brewfile)
+[[ -f "$packages_dir/profiles" && -f "$packages_dir/core.Brewfile" ]] || {
+  printf 'missing macOS package profiles or core group in %s\n' "$packages_dir" >&2
+  exit 1
+}
 for retired in zsh-autocomplete zsh-autosuggestions zsh-syntax-highlighting; do
-  if grep -Fq "brew \"$retired\"" "$brewfile_path"; then
+  if grep -Fq "brew \"$retired\"" "${brewfiles[@]}"; then
     printf '%s is now a git clone in install/lib/zsh-plugins.sh; remove it from %s\n' \
-      "$retired" "$brewfile_path" >&2
+      "$retired" "$packages_dir" >&2
     exit 1
   fi
 done
-if grep -Eq '^[[:space:]]*brew "(go(@[^"]*)?|node(@[^"]*)?|pnpm)"' "$brewfile_path"; then
+if grep -Eq '^[[:space:]]*brew "(go(@[^"]*)?|node(@[^"]*)?|pnpm)"' "${brewfiles[@]}"; then
   printf 'Go, Node.js, and pnpm are mise-managed; remove duplicate runtimes from %s\n' \
-    "$brewfile_path" >&2
+    "$packages_dir" >&2
   exit 1
 fi
-
-creative_brewfile_path="install/platforms/macos/Brewfile.creative"
-[[ -f "$creative_brewfile_path" ]] || {
-  printf 'missing optional creative manifest: %s\n' "$creative_brewfile_path" >&2
-  exit 1
-}
-if grep -Eq '^[[:space:]]*cask "unity"' "$brewfile_path" "$creative_brewfile_path"; then
+if grep -Eq '^[[:space:]]*cask "unity"' "${brewfiles[@]}"; then
   printf 'manage exact Unity editors through Hub/Unity CLI, not the rolling unity cask\n' >&2
   exit 1
 fi
-if grep -Fq 'cask "unity-hub"' "$brewfile_path" ||
-  ! grep -Fxq 'cask "unity-hub"' "$creative_brewfile_path"; then
-  printf 'Unity Hub belongs only in %s\n' "$creative_brewfile_path" >&2
+if [[ "$(grep -l 'cask "unity-hub"' "${brewfiles[@]}")" != "$packages_dir/creative.Brewfile" ]]; then
+  printf 'Unity Hub belongs only in %s/creative.Brewfile\n' "$packages_dir" >&2
   exit 1
 fi
-if ! grep -Fq -- '--creative) INSTALL_CREATIVE=1' install/platforms/macos/bootstrap.zsh ||
-  ! grep -Fq "CREATIVE_BREWFILE=\"\$SCRIPT_DIR/Brewfile.creative\"" install/platforms/macos/bootstrap.zsh; then
-  printf 'macOS bootstrap must include the creative Brewfile only behind --creative\n' >&2
+if [[ -e install/platforms/macos/Brewfile || -e install/platforms/macos/Brewfile.creative ]]; then
+  printf 'macOS packages live in %s/<group>.Brewfile; remove the old top-level Brewfiles\n' \
+    "$packages_dir" >&2
+  exit 1
+fi
+if ! grep -Fq 'ui_step_skip "skipped (--skip-packages)"' install/platforms/macos/bootstrap.zsh; then
+  printf 'macOS bootstrap must skip package installs behind --skip-packages\n' >&2
   exit 1
 fi
 
@@ -117,5 +119,7 @@ bash tests/install/homebrew_test.sh
 zsh tests/install/homebrew_test.sh
 bash tests/install/zsh_plugins_test.sh
 zsh tests/install/zsh_plugins_test.sh
+bash tests/install/packages_test.sh
+zsh tests/install/packages_test.sh
 zsh -f tests/zsh_startup_test.zsh
 git diff --check

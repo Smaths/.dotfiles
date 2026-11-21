@@ -1,12 +1,52 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-# Interactive macOS preferences setup.
-# Run explicitly after bootstrap when managed macOS defaults are wanted.
+# macOS preferences setup.
+# Run explicitly after bootstrap, or through `bootstrap.sh --macos-settings`,
+# when the managed macOS defaults are wanted. Every setting is a user-level
+# `defaults write`; nothing here needs admin rights.
+#
+# Caps Lock -> Control is deliberately not scripted: the only persistent macOS
+# store is per keyboard, and `hidutil` remaps reset at reboot. Set it once in
+# System Settings > Keyboard > Keyboard Shortcuts > Modifier Keys.
+
+usage() {
+  cat <<'EOF'
+Usage: settings.zsh [options]
+
+Options:
+  --yes       Apply the default settings without prompting
+  --dry-run   Print the changes without applying them
+  -h, --help  Show this help
+EOF
+}
+
+YES=0
+DRY_RUN=0
+for arg in "$@"; do
+  case "$arg" in
+    --yes) YES=1 ;;
+    --dry-run) DRY_RUN=1 ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: Unknown option: $arg" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "──▶ macOS setup skipped: not running on Darwin"
   exit 0
+fi
+
+if ((! YES)) && [[ ! -t 0 ]]; then
+  echo "ERROR: Interactive settings need a terminal. Pass --yes to apply the defaults (add --dry-run to preview them)." >&2
+  exit 1
 fi
 
 ask_yes_no_default() {
@@ -54,14 +94,23 @@ apply_default() {
   local value="$4"
 
   case "$type" in
-    bool) defaults write "$domain" "$key" -bool "$value" ;;
-    int) defaults write "$domain" "$key" -int "$value" ;;
-    string) defaults write "$domain" "$key" -string "$value" ;;
+    bool | int | string) ;;
     *)
       echo "Unsupported defaults type: $type" >&2
       return 1
       ;;
   esac
+  run_settings_cmd defaults write "$domain" "$key" "-$type" "$value"
+}
+
+run_settings_cmd() {
+  if ((DRY_RUN)); then
+    printf '[dry-run]'
+    printf ' %q' "$@"
+    printf '\n'
+  else
+    "$@"
+  fi
 }
 
 print_applied() {
@@ -101,11 +150,10 @@ print_settings_box() {
   printf '└%s┘\n' "$border"
 }
 
-echo "──▶ macOS interactive setup"
+echo "──▶ macOS settings"
 
 typeset -A DEFAULTS_PRESET=(
   [natural_scrolling]="y"
-  [caps_to_control]="y"
   [finder_list_view]="y"
   [finder_show_full_path]="y"
   [finder_search_current_folder]="y"
@@ -122,7 +170,6 @@ print_defaults_summary() {
   local yes_icon="✓"
   local no_icon="✗"
   local natural_scrolling_icon="$no_icon"
-  local caps_to_control_icon="$no_icon"
   local finder_list_view_icon="$no_icon"
   local finder_show_full_path_icon="$no_icon"
   local finder_search_current_folder_icon="$no_icon"
@@ -132,7 +179,6 @@ print_defaults_summary() {
   local restart_dock_now_icon="$no_icon"
 
   [[ "${DEFAULTS_PRESET[natural_scrolling]}" == "y" ]] && natural_scrolling_icon="$yes_icon"
-  [[ "${DEFAULTS_PRESET[caps_to_control]}" == "y" ]] && caps_to_control_icon="$yes_icon"
   [[ "${DEFAULTS_PRESET[finder_list_view]}" == "y" ]] && finder_list_view_icon="$yes_icon"
   [[ "${DEFAULTS_PRESET[finder_show_full_path]}" == "y" ]] && finder_show_full_path_icon="$yes_icon"
   [[ "${DEFAULTS_PRESET[finder_search_current_folder]}" == "y" ]] && finder_search_current_folder_icon="$yes_icon"
@@ -152,7 +198,6 @@ print_defaults_summary() {
 
   local -a preset_lines=(
     "$(format_defaults_label "Disable Natural Scrolling (Trackpad)") $natural_scrolling_icon"
-    "$(format_defaults_label "Set Caps Lock to Control") $caps_to_control_icon"
     "$(format_defaults_label "Finder list view") $finder_list_view_icon"
     "$(format_defaults_label "Finder full POSIX path in title") $finder_show_full_path_icon"
     "$(format_defaults_label "Finder search current folder") $finder_search_current_folder_icon"
@@ -203,7 +248,6 @@ EOF
       2)
         echo "Set the default answer for each setting (y/n). Press Enter to keep current."
         if ask_yes_no_default "──▶ Disable Natural Scrolling (Trackpad)" "${DEFAULTS_PRESET[natural_scrolling]}"; then DEFAULTS_PRESET[natural_scrolling]="y"; else DEFAULTS_PRESET[natural_scrolling]="n"; fi
-        if ask_yes_no_default "──▶ Set Caps Lock to Control" "${DEFAULTS_PRESET[caps_to_control]}"; then DEFAULTS_PRESET[caps_to_control]="y"; else DEFAULTS_PRESET[caps_to_control]="n"; fi
         if ask_yes_no_default "──▶ Finder list view" "${DEFAULTS_PRESET[finder_list_view]}"; then DEFAULTS_PRESET[finder_list_view]="y"; else DEFAULTS_PRESET[finder_list_view]="n"; fi
         if ask_yes_no_default "──▶ Finder full POSIX path in title" "${DEFAULTS_PRESET[finder_show_full_path]}"; then DEFAULTS_PRESET[finder_show_full_path]="y"; else DEFAULTS_PRESET[finder_show_full_path]="n"; fi
         if ask_yes_no_default "──▶ Finder search current folder" "${DEFAULTS_PRESET[finder_search_current_folder]}"; then DEFAULTS_PRESET[finder_search_current_folder]="y"; else DEFAULTS_PRESET[finder_search_current_folder]="n"; fi
@@ -229,17 +273,16 @@ EOF
   done
 }
 
-select_prompt_mode
+if ((YES)); then
+  print_defaults_summary
+else
+  select_prompt_mode
+fi
 
 if [[ "${DEFAULTS_PRESET[natural_scrolling]}" == "y" ]]; then
   apply_default NSGlobalDomain com.apple.swipescrolldirection bool false
   print_applied "Natural Scrolling disabled"
-fi
-
-if [[ "${DEFAULTS_PRESET[caps_to_control]}" == "y" ]]; then
-  hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}' >/dev/null
-  print_applied "Caps Lock remapped to Control for current session"
-  print_note "Caps Lock remap may not persist across reboot/login on all macOS versions."
+  print_note "Scrolling direction may need a log out to take effect."
 fi
 
 if [[ "${DEFAULTS_PRESET[finder_list_view]}" == "y" ]]; then
@@ -268,13 +311,17 @@ if [[ "${DEFAULTS_PRESET[dock_scale_effect]}" == "y" ]]; then
 fi
 
 if [[ "${DEFAULTS_PRESET[restart_finder_now]}" == "y" ]]; then
-  killall Finder >/dev/null 2>&1 || true
+  run_settings_cmd killall Finder 2>/dev/null || true
   print_applied "Finder restarted"
 fi
 
 if [[ "${DEFAULTS_PRESET[restart_dock_now]}" == "y" ]]; then
-  killall Dock >/dev/null 2>&1 || true
+  run_settings_cmd killall Dock 2>/dev/null || true
   print_applied "Dock restarted"
 fi
 
+print_note "Caps Lock -> Control: set once in System Settings > Keyboard > Keyboard Shortcuts > Modifier Keys."
+if ((DRY_RUN)); then
+  SETTINGS_LINES=("${SETTINGS_LINES[@]/#✓ /✓ (planned) }")
+fi
 print_settings_box

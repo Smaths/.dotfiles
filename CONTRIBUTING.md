@@ -19,8 +19,9 @@ Keep network calls within `brew`, `mise`, `uv`, `winget`, `apt-get`, `git`, and
 `curl`. Justify any additional tool in the PR or docs before using it.
 
 Homebrew owns native apps; mise owns declared tools; uv owns Python. Project
-dependencies belong in project manifests and lockfiles. Keep the macOS Brewfile
-as the core manifest; `Brewfile.creative` runs only with `--creative`.
+dependencies belong in project manifests and lockfiles. Add each macOS package
+to exactly one group in `install/platforms/macos/packages/`; profiles only name
+groups. See the package rules in [AGENTS.md](AGENTS.md).
 
 ## Lint and formatting
 

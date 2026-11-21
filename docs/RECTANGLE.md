@@ -1,12 +1,16 @@
 # Rectangle
 
-Homebrew installs Rectangle through the core macOS Brewfile. Its preferences
-are imported manually, like Alfred's assets; bootstrap does not overwrite the
-live preferences or symlink files into `~/Library/Preferences`.
+Homebrew installs Rectangle through the macOS `desktop` package group
+(`install/platforms/macos/packages/desktop.Brewfile`), included in the `full`
+profile. Its preferences are imported manually, like Alfred's assets; bootstrap
+does not overwrite the live preferences or symlink files into
+`~/Library/Preferences`.
 
 ## Restore on a new Mac
 
-1. Run bootstrap, or install only Rectangle with `brew install --cask rectangle`.
+1. Run bootstrap with the `full` profile (the default), add `--with desktop`
+   when using `--profile slim`, or install only Rectangle with
+   `brew install --cask rectangle`.
 2. Open Rectangle and grant **Accessibility** access in System Settings when
    prompted.
 3. Open Rectangle's settings and use **Import** in the settings menu to select

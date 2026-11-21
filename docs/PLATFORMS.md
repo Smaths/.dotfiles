@@ -12,15 +12,18 @@ Prerequisites:
 Behavior:
 
 - `install/bootstrap.sh` dispatches to `install/platforms/macos/bootstrap.zsh`, which installs Homebrew if missing.
-- Installs missing core workstation entries from
-  `install/platforms/macos/Brewfile` without upgrading existing packages by
-  default.
-- Adds `install/platforms/macos/Brewfile.creative` only with `--creative`.
-  Ableton Live stays vendor-managed; Unity Hub installs through that optional
-  manifest, while project-specific editor versions come from Hub or Unity CLI.
+- Installs missing entries from the package groups of the selected profile
+  (`--profile slim|full`, default `full`) in `install/platforms/macos/packages/`,
+  without upgrading existing packages by default. `--with` and `--without`
+  adjust the groups; `--skip-packages` installs none, and then `git` and `mise`
+  must already be installed.
+- Installs the `creative` group only with `--with creative`. Ableton Live stays
+  vendor-managed; Unity Hub installs through that group, while
+  project-specific editor versions come from Hub or Unity CLI.
 - Runs Homebrew, Brew Bundle, and mise in the foreground. The Homebrew installer
   runs from a temporary file so confirmation and `sudo` prompts work.
-- Installs Go, Node.js, Pi, and pnpm via Homebrew-installed mise. Project
+- Installs the latest Go, Node.js, Pi, and pnpm via Homebrew-installed mise;
+  `mise upgrade` moves them forward. Project
   version files and `packageManager` metadata can override defaults.
 - Links `config/uv/uv.toml` for uv-managed Python; Apple/Xcode Python stays
   untouched. Homebrew owns native apps, mise owns declared tools, and project
@@ -36,13 +39,16 @@ Behavior:
   into lazygit's config directory.
 - Machine/project-only Zsh overrides belong in ignored `config/zsh/local.zsh`
   or `config/zsh/local.d/*.zsh`, not tracked shared modules.
-- Uses MySQL 8.4 LTS through the keg-only `mysql@8.4` formula; Zsh adds its
+- Uses MySQL 8.4 LTS through the keg-only `mysql@8.4` formula in the
+  `dev-extras` group; when installed, Zsh adds its
   client and server binaries to `PATH`. Bootstrap installs or verifies the
   formula but leaves the Homebrew service state unchanged.
-- Pass `--upgrade-packages` to intentionally upgrade outdated Brewfile entries
-  during bootstrap.
-- Keeps interactive system defaults separate from bootstrap; run them explicitly
-  with `zsh ~/.dotfiles/install/platforms/macos/settings.zsh`.
+- Pass `--upgrade-packages` to intentionally upgrade outdated entries in the
+  selected groups during bootstrap.
+- Applies macOS defaults (Finder, Dock, trackpad) only when asked: pass
+  `--macos-settings` to bootstrap, or run
+  `zsh ~/.dotfiles/install/platforms/macos/settings.zsh` interactively. Caps
+  Lock -> Control is a manual System Settings step.
 - Leaves Alfred workflow and theme imports to the user. See [Alfred setup](ALFRED.md).
 
 ## Windows (secondary, host applications and WSL)
