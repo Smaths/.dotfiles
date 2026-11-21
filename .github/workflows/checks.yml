@@ -22,7 +22,7 @@ jobs:
       - name: Install shell tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends shellcheck zsh
+          sudo apt-get install -y --no-install-recommends jq shellcheck zsh
 
           # Noble's shfmt cannot parse the repo's Zsh files. Use the pinned
           # upstream release so local and CI formatting rules agree.

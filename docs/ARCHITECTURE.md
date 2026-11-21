@@ -35,6 +35,10 @@ explicit manifests. The map below identifies those paths and exceptions.
 - `config/alfred/` contains a theme and workflow for manual import, not links.
   Alfred keeps the selected vault in its ignored live `prefs.plist`. See
   [Alfred setup](ALFRED.md).
+- `config/rectangle/RectangleConfig.json` contains curated Rectangle preferences
+  for manual import, not a live plist link. Homebrew owns the app; Accessibility
+  permission, login-item registration, native tiling, and Voyager modifier swaps
+  remain per-machine setup. See [Rectangle setup](RECTANGLE.md).
 - `install/platforms/macos/packages/` holds one Brewfile per package group
   and a `profiles` file naming the groups each profile installs. Bootstrap
   resolves `--profile`, `--with`, and `--without` with `install/lib/packages.sh`,
