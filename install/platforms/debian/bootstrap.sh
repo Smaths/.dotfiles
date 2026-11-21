@@ -1,43 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# -----------------------------------------------------------------------------
-# Dotfiles Bootstrap (Debian)
-#
-# Purpose:
-# - Set up a Debian server bash shell using this dotfiles repo.
-# - Keep reruns safe and idempotent, with backups before relinking.
-#
-# What this script does:
-# 1) Validates Debian/bash runtime prerequisites
-# 2) Optionally installs CLI packages from install/platforms/debian/apt-packages.txt
-# 3) Safely links ~/.bashrc to this repo
-# 4) Verifies the resulting link
-# 5) Safely links ~/.tmux.conf to this repo when available
-# 6) Optionally changes the login shell to bash with --force-shell
-#
-# Safety behavior:
-# - Existing ~/.bashrc and ~/.tmux.conf are backed up with timestamp suffixes
-#   before replacement.
-# - --dry-run prints commands and planned changes without modifying the system.
-# - Changing the login shell requires explicit --force-shell.
-# -----------------------------------------------------------------------------
+# Install CLI packages and link Bash/tmux config on Debian and Ubuntu.
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 SCRIPT_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
+REPO_DIR="$(CDPATH='' cd -- "$SCRIPT_DIR/../../.." && pwd)"
 APT_MANIFEST="$SCRIPT_DIR/apt-packages.txt"
-BASHRC_TARGET="$DOTFILES_DIR/config/bash/.bashrc"
+BASHRC_TARGET="$REPO_DIR/config/bash/.bashrc"
 BASHRC_LINK_PATH="$HOME/.bashrc"
-TMUX_CONFIG_TARGET="$DOTFILES_DIR/config/tmux/tmux.conf"
+TMUX_CONFIG_TARGET="$REPO_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
-COMMON_LIB="$DOTFILES_DIR/install/lib/common.sh"
-UI_LIB="$DOTFILES_DIR/install/lib/ui.sh"
+COMMON_LIB="$REPO_DIR/install/lib/common.sh"
+UI_LIB="$REPO_DIR/install/lib/ui.sh"
 DRY_RUN=0
 YES=0
 SKIP_PACKAGES=0
 FORCE_SHELL=0
 VERBOSE=0
-TOTAL_STEPS=6
+TOTAL_STEPS=5
 
 usage() {
   cat <<'EOF'
@@ -85,12 +65,12 @@ run_as_root() {
     return
   fi
 
-  if command -v sudo >/dev/null 2>&1; then
+  if ((DRY_RUN)) || command -v sudo >/dev/null 2>&1; then
     run_cmd sudo "$@"
     return
   fi
 
-  echo "ERROR: '$*' requires root. Re-run as root or install sudo." >&2
+  echo "ERROR: Package installation requires sudo. Set up sudo for this user or pass --skip-packages." >&2
   exit 1
 }
 
@@ -123,7 +103,7 @@ find_missing_packages() {
   MISSING_PACKAGES=()
 
   for package in "${PACKAGES[@]}"; do
-    if dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then
+    if [[ "$(dpkg-query -W -f='${db:Status-Eflag} ${db:Status-Status}' "$package" 2>/dev/null)" == "ok installed" ]]; then
       if ((VERBOSE)); then
         echo "      package already installed: $package"
       fi
@@ -198,21 +178,20 @@ ui_print_header
 ui_start
 
 ui_step_start "Validate Debian runtime"
-require_cmd uname "Install core system tools and retry."
-require_cmd bash "Install bash and retry."
 if ! is_debian; then
   echo "ERROR: This bootstrap is intended for Debian or Debian-like systems." >&2
   exit 1
 fi
-if [[ ! -f "$APT_MANIFEST" ]]; then
-  echo "ERROR: Missing apt package manifest: $APT_MANIFEST" >&2
-  exit 1
+if ((! SKIP_PACKAGES)); then
+  require_cmd apt-get "This bootstrap expects apt-get on Debian."
+  require_cmd dpkg-query "This bootstrap expects dpkg-query on Debian."
+  if [[ ! -f "$APT_MANIFEST" ]]; then
+    echo "ERROR: Missing apt package manifest: $APT_MANIFEST" >&2
+    exit 1
+  fi
+  read_package_manifest
 fi
-if [[ ! -f "$BASHRC_TARGET" ]]; then
-  echo "ERROR: Missing bashrc target: $BASHRC_TARGET" >&2
-  exit 1
-fi
-read_package_manifest
+bash -n "$BASHRC_TARGET"
 ui_step_ok "Debian-compatible system"
 
 confirm_preflight
@@ -221,23 +200,22 @@ ui_step_start "Install apt packages"
 if ((SKIP_PACKAGES)); then
   ui_step_skip "skipped (--skip-packages)"
 else
-  require_cmd apt-get "This bootstrap expects apt-get on Debian."
-  require_cmd dpkg-query "This bootstrap expects dpkg-query on Debian."
-  if ((${#PACKAGES[@]} == 0)); then
-    ui_step_skip "manifest empty"
-  else
-    find_missing_packages
-  fi
-
-  if ((${#PACKAGES[@]} > 0 && ${#MISSING_PACKAGES[@]} == 0)); then
+  find_missing_packages
+  if ((${#MISSING_PACKAGES[@]} == 0)); then
     ui_step_skip "all packages already installed"
-  elif ((${#MISSING_PACKAGES[@]} > 0)); then
+  else
     echo "  missing packages: ${MISSING_PACKAGES[*]}"
-    echo "  running: apt-get update"
-    run_as_root apt-get update
-    echo "  running: apt-get install -y ${MISSING_PACKAGES[*]}"
-    run_as_root apt-get install -y "${MISSING_PACKAGES[@]}"
-    ui_step_ok "${#MISSING_PACKAGES[@]} missing packages installed"
+    run_as_root apt-get update --error-on=any
+    install_cmd=(apt-get install -y --no-remove "${MISSING_PACKAGES[@]}")
+    if ((YES)); then
+      install_cmd=(env DEBIAN_FRONTEND=noninteractive "${install_cmd[@]}")
+    fi
+    run_as_root "${install_cmd[@]}"
+    if ((DRY_RUN)); then
+      ui_step_ok "planned"
+    else
+      ui_step_ok "${#MISSING_PACKAGES[@]} missing packages installed"
+    fi
   fi
 fi
 
@@ -246,18 +224,7 @@ link_with_backup "$BASHRC_TARGET" "$BASHRC_LINK_PATH"
 if ((DRY_RUN)); then
   ui_step_ok "planned"
 else
-  ui_step_ok "linked/verified"
-fi
-
-ui_step_start "Verify bash config"
-if ((DRY_RUN)); then
-  ui_step_skip "dry-run"
-elif [[ "$(readlink "$BASHRC_LINK_PATH")" == "$BASHRC_TARGET" ]]; then
-  bash -n "$BASHRC_TARGET"
   ui_step_ok "$BASHRC_LINK_PATH -> $BASHRC_TARGET"
-else
-  echo "ERROR: Expected $BASHRC_LINK_PATH to link to $BASHRC_TARGET" >&2
-  exit 1
 fi
 
 ui_step_start "Link tmux config"
@@ -266,7 +233,7 @@ if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
   if ((DRY_RUN)); then
     ui_step_ok "planned"
   else
-    ui_step_ok "linked/verified"
+    ui_step_ok "$TMUX_CONFIG_LINK_PATH -> $TMUX_CONFIG_TARGET"
   fi
 else
   ui_step_skip "target missing"
@@ -290,4 +257,4 @@ fi
 
 ui_summary
 echo "Optional local overrides:"
-echo "  cp ~/.dotfiles/config/bash/local.example.bash ~/.dotfiles/config/bash/local.bash"
+printf '  cp %q %q\n' "$REPO_DIR/config/bash/local.example.bash" "$REPO_DIR/config/bash/local.bash"

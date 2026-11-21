@@ -1,5 +1,5 @@
-# Debian server packages managed by install/platforms/debian/bootstrap.sh.
-# Keep this list CLI-only and broadly available in Debian stable.
+# CLI packages for the Debian/Ubuntu bootstrap.
+# Use the distro's existing root access or sudo setup for installation.
 
 bash
 bat
@@ -15,5 +15,4 @@ ncurses-term
 neovim
 ripgrep
 rsync
-sudo
 tmux

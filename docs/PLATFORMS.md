@@ -74,26 +74,30 @@ Behavior:
   WSL packages. Manage those in the Linux setup or project. Winget does not
   track bootstrap ownership, so review each package ID before uninstalling.
 
-## Debian server (secondary)
+## Debian and Ubuntu (secondary)
 
-Debian server bootstrap is available for bash-first, CLI-only server setup.
-
-Supported target: Debian stable or Debian-like systems with `apt-get`.
+Bash and tmux setup for servers and WSL. CI tests Debian 12 and 13 and Ubuntu
+22.04, 24.04, and 26.04 LTS. Other Debian derivatives are not tested.
 
 Prerequisites:
 
-- `bash`, `apt-get`, and core GNU userland.
-- Root access for package installation, either directly or through `sudo`.
-- Internet access for apt repositories when package installation is enabled.
+- Bash and the standard GNU userland; Git to clone the repo.
+- For packages: apt, working distro repositories (including Universe on
+  Ubuntu), and root or an existing `sudo` setup. No third-party repositories
+  are added.
+- Run as the user whose config you want to link, not with `sudo sh`. Use
+  `--skip-packages` if you only want the shell config.
 
 Behavior:
 
-- `install/bootstrap.sh` dispatches to `install/platforms/debian/bootstrap.sh`, which validates the platform before mutation.
-- Installs missing packages from `install/platforms/debian/apt-packages.txt` unless `--skip-packages` is passed.
-- Skips `apt-get update` and `apt-get install` when all manifest packages are already installed.
-- Links `~/.bashrc` to `config/bash/.bashrc` after backing up an existing file.
-- Keeps the current login shell unchanged unless `--force-shell` is passed.
-- Does not install GUI packages or apply desktop settings.
+- `install/bootstrap.sh` dispatches to `install/platforms/debian/bootstrap.sh`,
+  using the checkout that contains the script.
+- Apt installs only missing manifest entries and their dependencies. When the
+  manifest is already satisfied, bootstrap does not refresh apt metadata.
+- Links `~/.bashrc` and `~/.tmux.conf` after backing up existing files. Open a
+  new Bash session to load the config.
+- Leaves the login shell alone unless you pass `--force-shell`.
+- Does not apply desktop settings.
 
 ## Other Linux (config reuse only)
 

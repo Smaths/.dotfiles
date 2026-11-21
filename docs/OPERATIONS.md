@@ -223,14 +223,22 @@ sh install/bootstrap.sh --skip-packages
 
 Without `--skip-packages`, Debian bootstrap checks `install/platforms/debian/apt-packages.txt`
 first and skips `apt-get update`/`apt-get install` when every manifest package
-is already installed. If packages are missing, it updates apt metadata and
-installs only the missing package names.
+is already installed, including packages on hold. If packages are missing,
+it refreshes apt metadata and asks apt to install the missing names without
+removing other packages. With `--yes`, package configuration uses debconf's
+noninteractive mode.
+`sudo` may still ask for authentication; an unattended run needs root or
+sudo authorization that doesn't require a prompt.
 
 ## Health checks
 
 Run `bash tests/check.sh` for static and helper checks, including Rectangle JSON
 schema validation with `jq` (installed by the macOS `core` group). CI also verifies a
 pinned `shfmt` binary because Ubuntu's package cannot parse this repo's Zsh.
+CI runs `tests/install/debian_smoke_test.sh` as root in disposable Docker
+containers to check real apt installs, backups, Bash and tmux startup, and
+idempotent reruns; Docker is not required for bootstrap.
+
 On an installed machine, check the relevant paths and tools:
 
 ```zsh

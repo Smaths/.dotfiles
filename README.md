@@ -8,7 +8,7 @@ Personal dotfiles for a reproducible development shell and workstation setup, ce
 | --- | --- | --- | --- |
 | macOS 14+ | Primary | `install/bootstrap.sh` | Core workstation packages, Zsh config and runtimes |
 | Windows | Secondary | `install/bootstrap.ps1` | Windows host applications via winget; shell setup is in WSL |
-| Debian stable / Debian-like | Secondary | `install/bootstrap.sh` | CLI packages and Bash/tmux config |
+| Debian / Ubuntu LTS | Secondary | `install/bootstrap.sh` | CLI packages and Bash/tmux config on servers or WSL |
 | Other Linux | Config reuse only | None | No generic bootstrap |
 
 See [platform details](docs/PLATFORMS.md).
@@ -38,13 +38,17 @@ git clone https://github.com/Smaths/.dotfiles.git $HOME/.dotfiles
 powershell -ExecutionPolicy Bypass -File $HOME/.dotfiles/install/bootstrap.ps1
 ```
 
-For Windows shell tools, install/use Debian or Ubuntu in WSL, clone the repo inside the Linux filesystem (not `/mnt/c`), then run the Unix commands below. For a Debian server:
+On a Debian or Ubuntu server, or inside Debian or Ubuntu on WSL, run this as the
+user whose shell you want to configure. On WSL, clone inside the Linux filesystem
+(not `/mnt/c`). Bootstrap uses `sudo` only for apt if needed:
 
 ```sh
 git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
 sh ~/.dotfiles/install/bootstrap.sh --dry-run
 sh ~/.dotfiles/install/bootstrap.sh
 ```
+
+Use `--skip-packages` to link Bash and tmux config without needing apt or `sudo`.
 
 ## Safety defaults
 
@@ -55,8 +59,9 @@ missing winget IDs. Unattended installs require `--yes`.
 - **Your files:** Existing shell config files are backed up before being
   replaced; correct symlinks are left alone. Backups get unique timestamps on
   repeated runs.
-- **Updates:** Packages are added without upgrades by default. macOS package
+- **Updates:** Bootstrap doesn't run a general package upgrade. macOS package
   upgrades need `--upgrade-packages`; Windows installs only missing exact IDs.
+  Debian/Ubuntu installs missing manifest packages and lets apt resolve dependencies.
   Zsh plugins are pinned to commits with verified origins and advance only with
   `--upgrade-plugins`, not package upgrades. See [pin review](docs/OPERATIONS.md#plugin-pin-review).
 - **System settings:** macOS settings are optional: run `settings.zsh` or pass
