@@ -3,7 +3,7 @@
 brew "azure-cli"
 brew "git-filter-repo"
 brew "herdr"
-brew "mysql"
+brew "mysql@8.4"
 brew "pkgconf"
 cask "android-platform-tools"
 cask "dotnet-sdk"

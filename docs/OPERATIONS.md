@@ -49,10 +49,10 @@ group. `packages/profiles` names the groups each profile installs:
 | `dev` | Docker Desktop, GitHub Desktop, VS Code, Zed | yes | yes |
 | `utilities` | pandoc, Keka, Hex | yes | yes |
 | `ai` | ChatGPT, Claude, Claude Code, Codex, OpenAI CLI, OpenCode | | yes |
-| `dev-extras` | Cloud CLIs, SDKs, MySQL, Herd, secondary editors and clients | | yes |
+| `dev-extras` | Cloud CLIs, SDKs, MySQL 8.4, Herd, secondary editors and clients | | yes |
 | `media` | ffmpeg, ImageMagick, Ghostscript, wimlib, ImageOptim, VLC | | yes |
 | `network` | nmap, mosh, lftp, rsync, tcping | | yes |
-| `desktop` | Alfred, BetterTouchTool, Rectangle, Shottr, iStat Menus, Obsidian, Chrome, and more | | yes |
+| `desktop` | Alfred, BetterTouchTool, Rectangle, Shottr, iStat Menus 6, Obsidian, Chrome, and more | | yes |
 | `personal` | 1Password, KeePassXC, ProtonVPN, LuLu, Synology Drive, Transmission | | yes |
 | `creative` | Creative and audio apps, Unity Hub | | |
 
@@ -82,16 +82,6 @@ not Homebrew's rolling `unity` editor; use each project's
 `brew bundle cleanup` against one group file treats every other group's
 packages as unlisted. Preview cleanup against all the groups you use before
 considering `--force`.
-
-### macOS package migrations
-
-The manifests now use `mysql` and `istat-menus` rather than `mysql@8.4` and
-`istat-menus@6`. Bootstrap does not remove the previous packages or switch
-MySQL services. Before switching MySQL versions, back up your databases and
-review Homebrew's upgrade caveats (`brew info mysql`). The iStat Menus casks
-conflict; review your license and preferences before replacing the old cask.
-To defer either migration, omit its group with `--without dev-extras` for
-MySQL or `--without desktop` for iStat Menus when using the `full` profile.
 
 ### macOS settings
 

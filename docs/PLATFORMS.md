@@ -39,9 +39,10 @@ Behavior:
   into lazygit's config directory.
 - Machine/project-only Zsh overrides belong in ignored `config/zsh/local.zsh`
   or `config/zsh/local.d/*.zsh`, not tracked shared modules.
-- Uses Homebrew's current `mysql` formula in the `dev-extras` group and the
-  current `istat-menus` cask in `desktop`. Review the [migration notes](OPERATIONS.md#macos-package-migrations)
-  if you have the previous versioned formula or cask installed.
+- Uses MySQL 8.4 LTS via Homebrew's `mysql@8.4` formula in `dev-extras` and
+  iStat Menus 6 via `istat-menus@6` in `desktop`. Zsh adds the keg-only MySQL
+  binaries to `PATH` when installed. Bootstrap does not change MySQL service
+  state.
 - Pass `--upgrade-packages` to intentionally upgrade outdated entries in the
   selected groups during bootstrap.
 - Applies macOS defaults (Finder, Dock, trackpad) only when asked: pass

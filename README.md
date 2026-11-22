@@ -67,9 +67,10 @@ missing winget IDs. Unattended installs require `--yes`.
 - **Your files:** Existing shell config files are backed up before being
   replaced; correct symlinks are left alone. Backups get unique timestamps on
   repeated runs.
-- **Updates:** Fresh installs use current versions from the platform's
-  package sources. Bootstrap doesn't run a general package upgrade: macOS
-  package upgrades need `--upgrade-packages`; Windows installs only missing
+- **Updates:** Fresh installs use current versions from the platform's package
+  sources, with two macOS exceptions: MySQL 8.4 LTS and iStat Menus 6.
+  Bootstrap doesn't run a general package upgrade: macOS package upgrades
+  need `--upgrade-packages`; Windows installs only missing
   exact IDs; Debian/Ubuntu lets apt resolve missing packages and dependencies.
   Zsh plugins start at their upstream default branch tips and advance only with
   `--upgrade-plugins`. See [plugin updates](docs/OPERATIONS.md#zsh-plugin-updates).
