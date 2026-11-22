@@ -5,6 +5,23 @@
 Keep installs repeatable and preserve user files. Windows changes manage host
 apps only; shell setup belongs in Debian/Ubuntu WSL or the Debian bootstrap.
 
+## Working on main
+
+For small edits, review the diff, run the relevant checks, and push directly
+to `main`. For larger changes or concurrent work, use topic branches and
+separate worktrees. Review and test each branch, then merge it locally before
+pushing `main`. Worktrees isolate working directories; they don't require PRs.
+
+The GitHub ruleset for `main` blocks force pushes and branch deletion with
+no bypass actors. It does not require PRs, reviews, signed commits, a merge
+queue, or passing status checks. The `checks` workflow still runs on every
+push. Keep outside collaborator access disabled by not granting access or
+sending invitations.
+
+If agents start merging unattended, consider requiring PRs with zero required
+approvals and a few fast CI checks. That would give automation a check before
+merging without requiring you to approve your own changes.
+
 ## Standards
 
 - Prefer `zsh` (existing scripts) or POSIX `sh` when portability is required.
