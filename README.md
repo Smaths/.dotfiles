@@ -67,11 +67,12 @@ missing winget IDs. Unattended installs require `--yes`.
 - **Your files:** Existing shell config files are backed up before being
   replaced; correct symlinks are left alone. Backups get unique timestamps on
   repeated runs.
-- **Updates:** Bootstrap doesn't run a general package upgrade. macOS package
-  upgrades need `--upgrade-packages`; Windows installs only missing exact IDs.
-  Debian/Ubuntu installs missing manifest packages and lets apt resolve dependencies.
-  Zsh plugins are pinned to commits with verified origins and advance only with
-  `--upgrade-plugins`, not package upgrades. See [pin review](docs/OPERATIONS.md#plugin-pin-review).
+- **Updates:** Fresh installs use current versions from the platform's
+  package sources. Bootstrap doesn't run a general package upgrade: macOS
+  package upgrades need `--upgrade-packages`; Windows installs only missing
+  exact IDs; Debian/Ubuntu lets apt resolve missing packages and dependencies.
+  Zsh plugins start at their upstream default branch tips and advance only with
+  `--upgrade-plugins`. See [plugin updates](docs/OPERATIONS.md#zsh-plugin-updates).
 - **System settings:** macOS settings are optional: run `settings.zsh` or pass
   `--macos-settings` to bootstrap.
   Debian's login shell changes only with `--force-shell`.
@@ -95,7 +96,7 @@ Debian/Ubuntu uses the same Zsh and tmux config in WSL or on a server.
   `install/platforms/debian/apt-packages.txt`.
 - **Shell and app config:** macOS links Zsh, tmux, Ghostty, Git delta/lazygit,
   mise, and uv config. Debian links `.zshrc` and `.zprofile` under `ZDOTDIR`
-  (or home), links tmux config, and installs the same pinned Zsh plugins as macOS.
+  (or home), links tmux config, and installs the same Zsh plugins as macOS.
   Windows does not link native Zsh files. The only `~/.gitconfig` change is
   a single delta `include.path` entry.
 - **Tool ownership:** mise supplies Go, Node.js, Pi, and pnpm on macOS from

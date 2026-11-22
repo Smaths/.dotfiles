@@ -22,27 +22,26 @@ Behavior:
   project-specific editor versions come from Hub or Unity CLI.
 - Runs Homebrew, Brew Bundle, and mise in the foreground. The Homebrew installer
   runs from a temporary file so confirmation and `sudo` prompts work.
-- Installs Go, Node.js, and pnpm on `latest` and Pi on `1.5` via
-  Homebrew-installed mise. `mise upgrade` updates within those selections.
-  Project version files and `packageManager` metadata can override defaults.
+- Installs Go, Node.js, pnpm, and Pi on `latest` via Homebrew-installed
+  mise. `mise upgrade` updates installed tools. Project version files and
+  `packageManager` metadata can override defaults.
 - Links `config/uv/uv.toml` for uv-managed Python; Apple/Xcode Python stays
   untouched. Homebrew owns native apps, mise owns declared tools, and project
   dependencies stay in project manifests.
 - Loads Prompt Purification from the vendored Zsh source in this repository;
   bootstrap performs no prompt-specific download and validates the source
   before linking `~/.zshrc`.
-- Installs missing Zsh plugins at exact commit pins. Existing clones are
-  checked for origin and cleanliness, then advanced only with
-  `--upgrade-plugins`, not `--upgrade-packages`. See [plugin updates](OPERATIONS.md#plugin-pin-review).
+- Installs missing Zsh plugins from their upstream default branches. Existing
+  clones are checked for origin and cleanliness and advance only with
+  `--upgrade-plugins`, not `--upgrade-packages`. See [plugin updates](OPERATIONS.md#zsh-plugin-updates).
 - Links `config/git/delta.gitconfig` and adds a single `include.path` entry to
   the otherwise unmanaged `~/.gitconfig`, and links `config/lazygit/config.yml`
   into lazygit's config directory.
 - Machine/project-only Zsh overrides belong in ignored `config/zsh/local.zsh`
   or `config/zsh/local.d/*.zsh`, not tracked shared modules.
-- Uses MySQL 8.4 LTS through the keg-only `mysql@8.4` formula in the
-  `dev-extras` group; when installed, Zsh adds its
-  client and server binaries to `PATH`. Bootstrap installs or verifies the
-  formula but leaves the Homebrew service state unchanged.
+- Uses Homebrew's current `mysql` formula in the `dev-extras` group and the
+  current `istat-menus` cask in `desktop`. Review the [migration notes](OPERATIONS.md#macos-package-migrations)
+  if you have the previous versioned formula or cask installed.
 - Pass `--upgrade-packages` to intentionally upgrade outdated entries in the
   selected groups during bootstrap.
 - Applies macOS defaults (Finder, Dock, trackpad) only when asked: pass
@@ -83,7 +82,7 @@ derivatives are not tested.
 Prerequisites:
 
 - Bash and the standard GNU userland to run bootstrap. Git and GitHub access
-  are needed to clone the repo and sync pinned Zsh plugins.
+  are needed to clone the repo and sync Zsh plugins.
 - For packages: apt, working distro repositories (including Universe on
   Ubuntu), and root or an existing `sudo` setup. No third-party apt repositories
   are added. Mise and Pi downloads also require internet access.
@@ -112,7 +111,7 @@ Behavior:
 - Links `~/.tmux.conf`. Existing configs at linked paths are backed up; Bash
   files (including old bootstrap links) stay untouched. Port wanted Bash-only
   customizations to `config/zsh/local.zsh` using Zsh syntax.
-- Uses the same vendored prompt, aliases, and pinned plugins as macOS.
+- Uses the same vendored prompt, aliases, and plugins as macOS.
   Debian/Ubuntu's `fdfind` and `batcat` names are handled by the shared Zsh config.
 - Leaves the login shell alone unless you pass `--force-shell`. After changing
   it, start a new login session (reconnect over SSH or reopen WSL). Use

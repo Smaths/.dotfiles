@@ -86,7 +86,7 @@ rerun=$("${bootstrap[@]}" --yes </dev/null)
 printf '%s\n' "$rerun"
 grep -Fq 'all packages already installed' <<<"$rerun"
 grep -Fq "mise: reuse $HOME/.local/bin/mise" <<<"$rerun"
-grep -Fq '0 cloned, 0 updated, 3 current' <<<"$rerun"
+grep -Fq '0 cloned, 0 updated, 3 unchanged' <<<"$rerun"
 shopt -s nullglob
 bash_backups=("$HOME"/.bashrc.bak.*)
 [[ ${#bash_backups[@]} == 0 && ! -L "$HOME/.bashrc" && $(<"$HOME/.bashrc") == 'original .bashrc' ]]
@@ -139,7 +139,7 @@ HOME="$offline_home" XDG_DATA_HOME='relative' zsh -lic '
 [[ $(readlink -f "$(login_shell)") == "$(readlink -f "$(command -v zsh)")" ]]
 rerun=$("${bootstrap[@]}" --yes --skip-packages --force-shell --upgrade-plugins </dev/null)
 grep -Fq "already $(login_shell)" <<<"$rerun"
-grep -Fq '0 cloned, 0 updated, 3 current' <<<"$rerun"
+grep -Eq '0 cloned, [0-3] updated, [0-3] unchanged, 0 unmanaged' <<<"$rerun"
 
 # Isolate tmux from any other server and verify it read the linked config.
 tmux -S "$HOME/tmux.sock" new-session -d

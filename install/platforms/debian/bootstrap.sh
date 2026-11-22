@@ -41,7 +41,7 @@ Options:
   --skip-packages    Skip apt, mise, and Pi installs (Zsh must already be installed)
   --skip-mise        Skip mise and Pi setup, but still install apt packages
   --skip-plugins     Skip plugin sync (no Git or network access needed for this step)
-  --upgrade-plugins  Fast-forward Zsh plugins to the manifest's pinned commits
+  --upgrade-plugins  Fast-forward Zsh plugins to their upstream default branches
   --force-shell      Change the current user's login shell to Zsh
   -h, --help         Show this help
 EOF
@@ -182,9 +182,9 @@ print_preflight_plan() {
   if ((SKIP_PLUGINS)); then
     printf '  Zsh plugins: skipped (--skip-plugins)\n'
   else
-    printf '  Zsh plugins: install missing pins in %s\n' "$ZSH_PLUGIN_ROOT"
+    printf '  Zsh plugins: install missing plugins in %s\n' "$ZSH_PLUGIN_ROOT"
     if ((UPGRADE_PLUGINS)); then
-      printf '               fast-forward existing clones to their pins\n'
+      printf '               fast-forward existing clones to upstream HEAD\n'
     fi
   fi
   if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
@@ -360,7 +360,7 @@ else
   if ((DRY_RUN)); then
     ui_step_ok "planned"
   else
-    ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UPDATED updated, $ZSH_PLUGINS_CURRENT current, $ZSH_PLUGINS_UNMANAGED unmanaged, $ZSH_PLUGINS_PENDING pending"
+    ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UPDATED updated, $ZSH_PLUGINS_UNCHANGED unchanged, $ZSH_PLUGINS_UNMANAGED unmanaged"
   fi
 fi
 

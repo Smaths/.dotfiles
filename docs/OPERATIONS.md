@@ -18,7 +18,7 @@ Available bootstrap flags:
 - `--upgrade-packages` (macOS only): upgrade outdated entries in the selected
   groups during bootstrap.
 - `--upgrade-plugins` (macOS and Debian): fast-forward existing Zsh plugin
-  clones to the exact manifest pins, independently of package upgrades.
+  clones to their upstream default branch tips, independently of package upgrades.
 - `--skip-packages`: skip package installs (`brew bundle` on macOS, `winget`
   on Windows, apt and mise/Pi on Debian). On macOS, `git` and `mise` must
   already be installed, and the flag cannot be combined with the package
@@ -49,7 +49,7 @@ group. `packages/profiles` names the groups each profile installs:
 | `dev` | Docker Desktop, GitHub Desktop, VS Code, Zed | yes | yes |
 | `utilities` | pandoc, Keka, Hex | yes | yes |
 | `ai` | ChatGPT, Claude, Claude Code, Codex, OpenAI CLI, OpenCode | | yes |
-| `dev-extras` | Cloud CLIs, SDKs, MySQL 8.4, Herd, secondary editors and clients | | yes |
+| `dev-extras` | Cloud CLIs, SDKs, MySQL, Herd, secondary editors and clients | | yes |
 | `media` | ffmpeg, ImageMagick, Ghostscript, wimlib, ImageOptim, VLC | | yes |
 | `network` | nmap, mosh, lftp, rsync, tcping | | yes |
 | `desktop` | Alfred, BetterTouchTool, Rectangle, Shottr, iStat Menus, Obsidian, Chrome, and more | | yes |
@@ -82,6 +82,16 @@ not Homebrew's rolling `unity` editor; use each project's
 `brew bundle cleanup` against one group file treats every other group's
 packages as unlisted. Preview cleanup against all the groups you use before
 considering `--force`.
+
+### macOS package migrations
+
+The manifests now use `mysql` and `istat-menus` rather than `mysql@8.4` and
+`istat-menus@6`. Bootstrap does not remove the previous packages or switch
+MySQL services. Before switching MySQL versions, back up your databases and
+review Homebrew's upgrade caveats (`brew info mysql`). The iStat Menus casks
+conflict; review your license and preferences before replacing the old cask.
+To defer either migration, omit its group with `--without dev-extras` for
+MySQL or `--without desktop` for iStat Menus when using the `full` profile.
 
 ### macOS settings
 
@@ -138,39 +148,27 @@ Bootstrap also links `config/uv/uv.toml`. uv uses its own Python interpreters
 without altering Apple/Xcode Python or its user-package PATH. Homebrew owns
 native standalone apps such as the OpenAI CLI.
 
-Zsh plugins are pinned by full commit SHA in `install/lib/zsh-plugins.sh`.
-Missing plugins are fetched at that exact commit and installed with detached
-HEAD; bootstrap never checks out a floating upstream branch. Existing clones
-are checked for the expected origin URL and a clean worktree (including
-untracked files). A mismatched pin is reported, not silently updated.
-`--upgrade-packages` does not advance existing plugins. To apply a reviewed pin
-change, use:
+### Zsh plugin updates
+
+`install/lib/zsh-plugins.sh` lists upstream URLs, not revisions. Missing
+plugins install from the current default branch tip with detached HEAD.
+Reruns check origin URLs and worktree cleanliness without contacting upstream
+for existing clones. Use `--upgrade-plugins` to check for and apply updates;
+`--upgrade-packages` does not advance plugins:
 
 ```zsh
 sh install/bootstrap.sh --dry-run --upgrade-plugins
 sh install/bootstrap.sh --upgrade-plugins
 ```
 
-Updates verify the fetched commit and require the installed HEAD to be an
-ancestor of the pin. Shallow clones fetch the target's history to prove this.
-Divergent/ahead commits, dirty worktrees, and unexpected or multiple origin URLs
-fail without resetting or discarding files. Non-clone directories and symlinks
-are reported and left untouched. Dry runs do not fetch or modify clones; the
-ancestry check is deferred until the real run. An already-current pin needs no
-network access.
+Updates fetch upstream HEAD and advance only if the installed commit is an
+ancestor, including clones from the old pinned setup. Shallow clones fetch
+ancestry as needed. Divergent or ahead commits, dirty worktrees, and unexpected
+or multiple origin URLs fail without resetting or discarding files. Non-clone
+directories and symlinks are left untouched. Dry runs don't fetch or modify
+clones. These checks protect local state; they do not audit upstream code.
 
-### Plugin pin review
-
-The pins in `install/lib/zsh-plugins.sh` preserve a clean installed baseline
-with verified origins rather than selecting newer upstream commits. That
-baseline check is not a full security audit of upstream code.
-For future updates, fetch the candidate into a separate review clone, inspect
-`git diff OLD_SHA NEW_SHA` (especially sourced files, subprocesses, and network
-or build hooks), and test it before recording the full SHA in the manifest.
-Commit the manifest change with review notes, run `bash tests/check.sh`, then
-explicitly apply it with `--upgrade-plugins`. Never use branch names or tags as
-pins. Backward or divergent pin changes need manual review and relocation of
-the old clone before reinstalling; bootstrap never forces them.
+### Package and runtime upgrades
 
 To intentionally upgrade outdated Homebrew packages and casks during bootstrap:
 
@@ -184,10 +182,9 @@ For unattended maintenance, pass `--yes` explicitly:
 sh install/bootstrap.sh --yes
 ```
 
-`config/mise/config.toml` tracks `latest` for Go, Node.js, and pnpm and `1.5`
-for Pi. Pi stays on the 1.5 release series until you change the selector. A
-Homebrew upgrade does not update mise-managed versions; use mise to check for
-and apply updates:
+`config/mise/config.toml` tracks `latest` for Go, Node.js, pnpm, and Pi.
+A Homebrew upgrade does not update mise-managed versions; use mise to check
+for and apply updates:
 
 ```zsh
 mise outdated

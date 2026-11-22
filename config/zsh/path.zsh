@@ -17,8 +17,6 @@ MISE_SHIMS_DIR="${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shim
 typeset -ga DOTFILES_PATH_PREFIXES
 [[ -d "$MISE_SHIMS_DIR" ]] && DOTFILES_PATH_PREFIXES+=("$MISE_SHIMS_DIR")
 [[ -d "$HOME/.unity/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/.unity/bin")
-[[ -d /opt/homebrew/opt/mysql@8.4/bin ]] && DOTFILES_PATH_PREFIXES+=(/opt/homebrew/opt/mysql@8.4/bin)
-[[ -d /usr/local/opt/mysql@8.4/bin ]] && DOTFILES_PATH_PREFIXES+=(/usr/local/opt/mysql@8.4/bin)
 [[ -d "$HOME/Library/Application Support/Herd/bin" ]] && DOTFILES_PATH_PREFIXES+=("$HOME/Library/Application Support/Herd/bin")
 [[ -d /opt/homebrew/bin ]] && DOTFILES_PATH_PREFIXES+=(/opt/homebrew/bin /opt/homebrew/sbin)
 [[ -d /usr/local/bin ]] && DOTFILES_PATH_PREFIXES+=(/usr/local/bin /usr/local/sbin)

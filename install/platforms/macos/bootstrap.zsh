@@ -89,7 +89,7 @@ Options:
   --yes                Run without interactive confirmation
   --verbose            Show more command details
   --upgrade-packages   Upgrade outdated selected packages during bootstrap
-  --upgrade-plugins    Fast-forward Zsh plugins to the manifest's pinned commits
+  --upgrade-plugins    Fast-forward Zsh plugins to their upstream default branches
   -h, --help           Show this help
 
 Package groups live in packages/<group>.Brewfile.
@@ -272,9 +272,9 @@ print_preflight_plan() {
   echo "  Shell links: ~/.zshrc and ~/.zprofile"
   echo "  Zsh prompt: vendored Prompt Purification"
   if ((UPGRADE_PLUGINS)); then
-    echo "  Zsh plugins: install missing pins and fast-forward existing clones to pins in $ZSH_PLUGIN_ROOT"
+    echo "  Zsh plugins: install missing plugins and fast-forward existing clones in $ZSH_PLUGIN_ROOT"
   else
-    echo "  Zsh plugins: install missing pins and verify existing clones in $ZSH_PLUGIN_ROOT"
+    echo "  Zsh plugins: install missing plugins and verify existing clones in $ZSH_PLUGIN_ROOT"
   fi
   if [[ -f "$GHOSTTY_CONFIG_TARGET" ]]; then
     echo "  Ghostty link: $GHOSTTY_CONFIG_LINK_PATH"
@@ -621,18 +621,16 @@ else
 fi
 
 # Package upgrades never advance plugin code. Only --upgrade-plugins permits
-# fast-forwarding existing clones to the reviewed manifest pins.
+# fast-forwarding existing clones to their upstream default branches.
 ui_step_start "Install Zsh plugins ($(zsh_plugin_count))"
 require_cmd git "git is required to clone the Zsh plugins."
 sync_zsh_plugins "$ZSH_PLUGIN_ROOT" "$UPGRADE_PLUGINS"
 if ((DRY_RUN)); then
   ui_step_ok "planned"
-elif ((ZSH_PLUGINS_UNMANAGED > 0 || ZSH_PLUGINS_PENDING > 0)); then
-  ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UNMANAGED unmanaged, $ZSH_PLUGINS_PENDING pending pins"
-elif ((ZSH_PLUGINS_CLONED > 0 || ZSH_PLUGINS_UPDATED > 0)); then
-  ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UPDATED updated"
+elif ((ZSH_PLUGINS_CLONED > 0 || ZSH_PLUGINS_UPDATED > 0 || ZSH_PLUGINS_UNMANAGED > 0)); then
+  ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UPDATED updated, $ZSH_PLUGINS_UNMANAGED unmanaged"
 else
-  ui_step_skip "verified at pinned commits"
+  ui_step_skip "existing clones unchanged"
 fi
 
 # Link Ghostty config to XDG default path when present.

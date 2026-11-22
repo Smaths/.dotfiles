@@ -1,9 +1,9 @@
 [tools]
-# Follow the newest release of Go, Node.js, and pnpm. Pi stays on 1.5.x.
+# Follow the newest release of each tool.
 # Projects can select their own versions.
 go = "latest"
 node = "latest"
-pi = "1.5"
+pi = "latest"
 pnpm = "latest"
 
 [settings]

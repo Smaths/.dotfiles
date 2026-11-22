@@ -12,8 +12,8 @@ explicit manifests. The map below identifies those paths and exceptions.
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `config/mise/config.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`
-  (symlink on macOS). It tracks the latest Go, Node.js, and pnpm,
-  plus the Pi terminal agent on the 1.5 release series. Project mise configs,
+  (symlink on macOS). It tracks the latest Go, Node.js, pnpm, and Pi.
+  Project mise configs,
   `.nvmrc`, `.node-version`,
   and `packageManager` metadata can override the active versions. Linking it to
   the path mise reads by default avoids environment-variable selection drift.
@@ -142,9 +142,9 @@ temporary file and executes it with terminal input intact. This keeps the
 macOS bootstrap interactive without coupling installer stdin to `curl`.
 
 `install/lib/zsh-plugins.sh` owns the Zsh plugin manifest and its installer. It
-installs missing plugins at full commit SHA pins with detached HEAD, verifies
-origin URLs and clean worktrees, and fast-forwards existing clones to pins only
-with `--upgrade-plugins`. Non-clone directories and symlinks are reported rather
+installs missing plugins at their upstream default branch tips with detached
+HEAD, verifies origin URLs and clean worktrees, and fast-forwards existing
+clones only with `--upgrade-plugins`. Non-clone directories and symlinks are reported rather
 than rewritten. `tests/install/zsh_plugins_test.sh` exercises it in both Bash
 and Zsh against real local Git repositories, without network access.
 
@@ -156,7 +156,7 @@ and Zsh against real local Git repositories, without network access.
 - Zsh-linking bootstraps require the vendored Prompt Purification source before
   advertising or linking the managed Zsh configuration.
 - Existing Zsh plugin clones advance only under `--upgrade-plugins` and only
-  by fast-forward to manifest pins. Unexpected origins, dirty clones, and
+  by fast-forward to upstream HEAD. Unexpected origins, dirty clones, and
   non-clone directories are reported without overwriting them. Missing clones
   degrade the shell rather than breaking it.
 - `install/platforms/macos/settings.zsh` is interactive, standalone, and never
