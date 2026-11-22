@@ -11,8 +11,8 @@ repo_dir="$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)"
 bootstrap=(sh "$repo_dir/install/bootstrap.sh")
 home_dir="$(mktemp -d)"
 export HOME="$home_dir" TERM=xterm-256color TEST_REPO_DIR="$repo_dir"
-export XDG_DATA_HOME="$HOME/xdg-data"
-unset DEBIAN_FRONTEND DOTFILES_DIR ZDOTDIR
+export XDG_CONFIG_HOME="$HOME/xdg-config" XDG_DATA_HOME="$HOME/xdg-data"
+unset DEBIAN_FRONTEND DOTFILES_DIR ZDOTDIR MISE_CONFIG_DIR MISE_DATA_DIR MISE_GLOBAL_CONFIG_FILE
 trap 'rm -rf "$home_dir"' EXIT
 
 user=$(id -un)
@@ -33,6 +33,15 @@ for file in "${files[@]}"; do
   [[ ! -L "$HOME/$file" && $(<"$HOME/$file") == "original $file" ]]
 done
 
+# Preview the default dev setup on a clean machine without making changes.
+plan=$("${bootstrap[@]}" --dry-run)
+grep -Fq "mise: install from https://mise.run to $HOME/.local/bin/mise" <<<"$plan"
+grep -Fq "Pi: link $XDG_CONFIG_HOME/mise/conf.d/dotfiles-debian.toml" <<<"$plan"
+[[ ! -e "$HOME/.local" && ! -e "$XDG_CONFIG_HOME" && ! -e "$XDG_DATA_HOME" ]]
+plan=$("${bootstrap[@]}" --dry-run --skip-mise)
+grep -Fq 'apt packages: install missing entries only' <<<"$plan"
+grep -Fq 'mise and Pi: skipped' <<<"$plan"
+
 # Preview a custom startup directory without creating it.
 custom_dir="$HOME/custom Zsh"
 plan=$(ZDOTDIR="$custom_dir" "${bootstrap[@]}" --dry-run --skip-packages)
@@ -51,7 +60,12 @@ done
 # Slim images can exclude /usr/share/doc. Older fzf packages put their Zsh
 # bindings there; include those files to exercise the real legacy fallback.
 printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' >/etc/dpkg/dpkg.cfg.d/zz-dotfiles-test
-"${bootstrap[@]}" --yes </dev/null 2>&1 | tee "$HOME/install.log"
+# Keep existing global settings, and do not install tools from them or from
+# the caller's project. Pi must come from the managed baseline.
+mkdir -p "$XDG_CONFIG_HOME/mise" "$HOME/project"
+printf '[tools]\nnode = "22"\n' >"$XDG_CONFIG_HOME/mise/config.toml"
+printf '[tools]\npi = "0.1.0"\n' >"$HOME/project/mise.toml"
+(cd "$HOME/project" && "${bootstrap[@]}" --yes </dev/null) 2>&1 | tee "$HOME/install.log"
 if grep -Eq 'Configuring tzdata|debconf: (unable to initialize|falling back)' "$HOME/install.log"; then
   printf 'apt tried to use an interactive debconf frontend with --yes\n' >&2
   exit 1
@@ -60,12 +74,18 @@ fi
 [[ $(readlink "$HOME/.zshrc") == "$repo_dir/config/zsh/.zshrc" ]]
 [[ $(readlink "$HOME/.zprofile") == "$repo_dir/config/zsh/.zprofile" ]]
 [[ $(readlink "$HOME/.tmux.conf") == "$repo_dir/config/tmux/tmux.conf" ]]
+[[ -x "$HOME/.local/bin/mise" ]]
+[[ $(readlink "$XDG_CONFIG_HOME/mise/conf.d/dotfiles-debian.toml") == "$repo_dir/install/platforms/debian/mise.toml" ]]
+[[ ! -L "$XDG_CONFIG_HOME/mise/config.toml" ]]
+grep -Fxq 'node = "22"' "$XDG_CONFIG_HOME/mise/config.toml"
+[[ $(find "$XDG_DATA_HOME/mise/installs" -mindepth 1 -maxdepth 1 -type d -printf '%f\n') == pi ]]
 
 # A held package is still installed and must not trigger another apt run.
 printf 'fzf hold\n' | dpkg --set-selections
 rerun=$("${bootstrap[@]}" --yes </dev/null)
 printf '%s\n' "$rerun"
 grep -Fq 'all packages already installed' <<<"$rerun"
+grep -Fq "mise: reuse $HOME/.local/bin/mise" <<<"$rerun"
 grep -Fq '0 cloned, 0 updated, 3 current' <<<"$rerun"
 shopt -s nullglob
 bash_backups=("$HOME"/.bashrc.bak.*)
@@ -76,9 +96,12 @@ for file in .zprofile .zshrc .tmux.conf; do
 done
 
 # Live startup from a non-default checkout, with shared tools and plugins loaded.
-mkdir -p "$HOME/.local/bin"
 zsh -lic '
   [[ $DOTFILES_DIR == "$TEST_REPO_DIR" && $path[(Ie)$HOME/.local/bin] -gt 0 ]] || exit 1
+  [[ $(command -v mise) == "$HOME/.local/bin/mise" ]] || exit 1
+  [[ $(command -v pi) == "$XDG_DATA_HOME/mise/shims/pi" ]] || exit 1
+  pi_version=$(pi --version) || exit 1
+  [[ -n "$pi_version" && "$pi_version" == "$(mise current pi)" && "$pi_version" != 0.1.0 ]] || exit 1
   (( $+aliases[ll] && $+functions[fcd] )) || exit 1
   whence -w z >/dev/null || exit 1
   (( $+functions[prompt_purification_setup] && $+functions[_zsh_autosuggest_start] )) || exit 1
@@ -99,9 +122,9 @@ offline_home="$HOME/offline"
 offline_zdotdir="$offline_home/custom Zsh"
 mkdir -p "$offline_home"
 printf 'export ZDOTDIR=%q\n' "$offline_zdotdir" >"$offline_home/.zshenv"
-HOME="$offline_home" ZDOTDIR="$offline_zdotdir" XDG_DATA_HOME='' GIT_ALLOW_PROTOCOL='' \
+HOME="$offline_home" ZDOTDIR="$offline_zdotdir" XDG_CONFIG_HOME='' XDG_DATA_HOME='' GIT_ALLOW_PROTOCOL='' \
   "${bootstrap[@]}" --yes --skip-packages --skip-plugins </dev/null
-[[ ! -e "$offline_home/.local/share/zsh/plugins" ]]
+[[ ! -e "$offline_home/.local" && ! -e "$offline_home/.config/mise" ]]
 [[ ! -e "$offline_home/.zshrc" && ! -e "$offline_home/.zprofile" ]]
 [[ $(readlink "$offline_zdotdir/.zshrc") == "$repo_dir/config/zsh/.zshrc" ]]
 [[ $(readlink "$offline_zdotdir/.zprofile") == "$repo_dir/config/zsh/.zprofile" ]]

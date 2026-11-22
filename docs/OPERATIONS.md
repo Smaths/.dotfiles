@@ -20,10 +20,12 @@ Available bootstrap flags:
 - `--upgrade-plugins` (macOS and Debian): fast-forward existing Zsh plugin
   clones to the exact manifest pins, independently of package upgrades.
 - `--skip-packages`: skip package installs (`brew bundle` on macOS, `winget`
-  on Windows, `apt-get` on Debian). On macOS, `git` and `mise` must already be
-  installed, and the flag cannot be combined with the package selection flags
-  or `--upgrade-packages`. On Debian, `zsh` must already be installed, along
-  with `git` unless `--skip-plugins` is also used.
+  on Windows, apt and mise/Pi on Debian). On macOS, `git` and `mise` must
+  already be installed, and the flag cannot be combined with the package
+  selection flags or `--upgrade-packages`. On Debian, `zsh` must already be
+  installed, along with `git` unless `--skip-plugins` is also used.
+- `--skip-mise` (Debian only): skip installing mise and Pi and linking the
+  mise config fragment, but still install missing apt packages.
 - `--skip-plugins` (Debian only): skip plugin installs and updates; cannot be
   combined with `--upgrade-plugins`. Pass it with `--skip-packages` for an
   offline config-only install. Existing plugins are left in place and can
@@ -242,7 +244,9 @@ it refreshes apt metadata and asks apt to install the missing names without
 removing other packages. With `--yes`, package configuration uses debconf's
 noninteractive mode.
 `sudo` may still ask for authentication; an unattended run needs root or
-sudo authorization that doesn't require a prompt.
+sudo authorization that doesn't require a prompt. Rerunning bootstrap reuses
+mise and installs Pi if the configured version is missing. To update an
+existing Pi install to the latest release, run `mise upgrade pi` outside a project.
 
 ## Health checks
 
@@ -250,8 +254,8 @@ Run `bash tests/check.sh` for static and helper checks, including Rectangle JSON
 schema validation with `jq` (installed by the macOS `core` group). CI also verifies a
 pinned `shfmt` binary because Ubuntu's package cannot parse this repo's Zsh.
 CI runs `tests/install/debian_smoke_test.sh` as root in disposable Docker
-containers to check real apt and plugin installs, backups, Zsh and tmux
-startup, opt-in login-shell changes, and idempotent reruns. Docker is not
+containers to check real apt, mise/Pi, and plugin installs, backups, Zsh and
+tmux startup, opt-in login-shell changes, and idempotent reruns. Docker is not
 required for bootstrap.
 
 On an installed machine, check the relevant paths and tools:
@@ -316,6 +320,7 @@ Debian equivalents:
 test -L "${ZDOTDIR:-$HOME}/.zshrc" && readlink "${ZDOTDIR:-$HOME}/.zshrc"
 test -L "${ZDOTDIR:-$HOME}/.zprofile" && readlink "${ZDOTDIR:-$HOME}/.zprofile"
 zsh -lic 'echo "$FZF_DEFAULT_COMMAND"; alias ll'
+zsh -lc 'mise --version && pi --version'
 getent passwd "$(id -un)" | cut -d: -f7    # account login shell
 sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 ```

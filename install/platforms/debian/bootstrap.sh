@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Use the system Bash to bootstrap Zsh and tmux on Debian and Ubuntu.
+# Use system Bash to bootstrap Zsh, tmux, and Pi on Debian and Ubuntu.
 
 SCRIPT_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 REPO_DIR="$(CDPATH='' cd -- "$SCRIPT_DIR/../../.." && pwd)"
@@ -12,17 +12,23 @@ ZSH_STARTUP_DIR="${ZDOTDIR-$HOME}"
 PROMPT_TARGET="$ZSH_CONFIG_DIR/prompts/purification/prompt_purification_setup"
 TMUX_CONFIG_TARGET="$REPO_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
+MISE_INSTALLER_URL="https://mise.run"
+MISE_DEFAULT_BIN="$HOME/.local/bin/mise"
+MISE_CONFIG_TARGET="$SCRIPT_DIR/mise.toml"
+MISE_CONFIG_DIR_PATH="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}"
+MISE_CONFIG_LINK_PATH="$MISE_CONFIG_DIR_PATH/conf.d/dotfiles-debian.toml"
 COMMON_LIB="$REPO_DIR/install/lib/common.sh"
 UI_LIB="$REPO_DIR/install/lib/ui.sh"
 ZSH_PLUGINS_LIB="$REPO_DIR/install/lib/zsh-plugins.sh"
 DRY_RUN=0
 YES=0
 SKIP_PACKAGES=0
+SKIP_MISE=0
 SKIP_PLUGINS=0
 UPGRADE_PLUGINS=0
 FORCE_SHELL=0
 VERBOSE=0
-TOTAL_STEPS=6
+TOTAL_STEPS=7
 
 usage() {
   cat <<'EOF'
@@ -32,7 +38,8 @@ Options:
   --dry-run          Print actions without changing anything
   --yes              Run without interactive confirmation
   --verbose          Show more command details
-  --skip-packages    Skip apt package installation (Zsh must already be installed)
+  --skip-packages    Skip apt, mise, and Pi installs (Zsh must already be installed)
+  --skip-mise        Skip mise and Pi setup, but still install apt packages
   --skip-plugins     Skip plugin sync (no Git or network access needed for this step)
   --upgrade-plugins  Fast-forward Zsh plugins to the manifest's pinned commits
   --force-shell      Change the current user's login shell to Zsh
@@ -45,7 +52,11 @@ for arg in "$@"; do
     --dry-run) DRY_RUN=1 ;;
     --yes) YES=1 ;;
     --verbose) VERBOSE=1 ;;
-    --skip-packages) SKIP_PACKAGES=1 ;;
+    --skip-packages)
+      SKIP_PACKAGES=1
+      SKIP_MISE=1
+      ;;
+    --skip-mise) SKIP_MISE=1 ;;
     --skip-plugins) SKIP_PLUGINS=1 ;;
     --upgrade-plugins) UPGRADE_PLUGINS=1 ;;
     --force-shell) FORCE_SHELL=1 ;;
@@ -137,6 +148,17 @@ find_missing_packages() {
   done
 }
 
+install_mise() (
+  local destination="$1" installer
+  require_cmd curl "Install curl to download mise, or pass --skip-mise."
+  installer="$(mktemp)"
+  trap 'rm -f -- "$installer"' EXIT
+  curl --fail --silent --show-error --location --retry 3 --proto '=https' \
+    --output "$installer" "$MISE_INSTALLER_URL"
+  MISE_INSTALL_PATH="$destination" sh "$installer"
+  [[ -x "$destination" ]]
+)
+
 print_preflight_plan() {
   printf '\n'
   printf 'Bootstrap plan (Debian)\n'
@@ -145,6 +167,16 @@ print_preflight_plan() {
     printf '  apt packages: skipped (--skip-packages)\n'
   else
     printf '  apt packages: install missing entries only (%d listed)\n' "${#PACKAGES[@]}"
+  fi
+  if ((SKIP_MISE)); then
+    printf '  mise and Pi: skipped\n'
+  else
+    if [[ -n "$mise_bin" ]]; then
+      printf '  mise: reuse %s\n' "$mise_bin"
+    else
+      printf '  mise: install from %s to %s\n' "$MISE_INSTALLER_URL" "$MISE_DEFAULT_BIN"
+    fi
+    printf '  Pi: link %s and install the configured version\n' "$MISE_CONFIG_LINK_PATH"
   fi
   printf '  Zsh links: %s and %s -> %s\n' "$ZSH_STARTUP_DIR/.zshrc" "$ZSH_STARTUP_DIR/.zprofile" "$ZSH_CONFIG_DIR"
   if ((SKIP_PLUGINS)); then
@@ -223,6 +255,24 @@ if ((! SKIP_PACKAGES)); then
   fi
   read_package_manifest
 fi
+if ((! SKIP_MISE)); then
+  if [[ ! -f "$MISE_CONFIG_TARGET" ]]; then
+    printf 'ERROR: Missing mise config: %s\n' "$MISE_CONFIG_TARGET" >&2
+    exit 1
+  fi
+  if [[ -n "${MISE_GLOBAL_CONFIG_FILE:-}" || "$MISE_CONFIG_DIR_PATH" != /* ]]; then
+    printf 'ERROR: Pi setup requires an absolute mise config directory with no MISE_GLOBAL_CONFIG_FILE override. Correct the environment or pass --skip-mise.\n' >&2
+    exit 1
+  fi
+  mise_bin="$(type -P mise || true)"
+  # Bash may not have the standalone install on PATH yet.
+  if [[ -z "$mise_bin" && -f "$MISE_DEFAULT_BIN" && -x "$MISE_DEFAULT_BIN" ]]; then
+    mise_bin="$MISE_DEFAULT_BIN"
+  elif [[ -z "$mise_bin" && (-e "$MISE_DEFAULT_BIN" || -L "$MISE_DEFAULT_BIN") ]]; then
+    printf 'ERROR: Cannot install mise over %s. Move it aside or pass --skip-mise.\n' "$MISE_DEFAULT_BIN" >&2
+    exit 1
+  fi
+fi
 if [[ "$ZSH_STARTUP_DIR" != /* ]]; then
   printf 'ERROR: The Zsh startup directory (ZDOTDIR or HOME) must be absolute: %s\n' "$ZSH_STARTUP_DIR" >&2
   exit 1
@@ -276,6 +326,27 @@ if command -v zsh >/dev/null 2>&1; then
   for startup_file in "${zsh_startup_files[@]}"; do
     zsh -fn "$startup_file"
   done
+fi
+
+ui_step_start "Install mise and Pi"
+if ((SKIP_MISE)); then
+  ui_step_skip "skipped"
+else
+  if [[ -z "$mise_bin" ]]; then
+    mise_bin="$MISE_DEFAULT_BIN"
+    if ((! DRY_RUN)); then
+      install_mise "$mise_bin"
+    fi
+  fi
+  run_cmd mkdir -p -- "$MISE_CONFIG_DIR_PATH/conf.d"
+  link_with_backup "$MISE_CONFIG_TARGET" "$MISE_CONFIG_LINK_PATH"
+  # Only install Pi, and ignore the configuration of the calling project.
+  run_cmd env MISE_PARANOID=1 "$mise_bin" --cd / install --yes pi
+  if ((DRY_RUN)); then
+    ui_step_ok "planned"
+  else
+    ui_step_ok "Pi ready via mise"
+  fi
 fi
 
 ui_step_start "Install Zsh plugins"

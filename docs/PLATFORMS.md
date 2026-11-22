@@ -76,16 +76,17 @@ Behavior:
 
 ## Debian and Ubuntu (secondary)
 
-Zsh and tmux setup for servers and WSL. CI tests Debian 12 and 13 and Ubuntu
-22.04, 24.04, and 26.04 LTS. Other Debian derivatives are not tested.
+Slim development setup for servers and WSL: Zsh, tmux, and Pi via mise.
+CI tests Debian 12 and 13 and Ubuntu 22.04, 24.04, and 26.04 LTS. Other Debian
+derivatives are not tested.
 
 Prerequisites:
 
 - Bash and the standard GNU userland to run bootstrap. Git and GitHub access
   are needed to clone the repo and sync pinned Zsh plugins.
 - For packages: apt, working distro repositories (including Universe on
-  Ubuntu), and root or an existing `sudo` setup. No third-party repositories
-  are added.
+  Ubuntu), and root or an existing `sudo` setup. No third-party apt repositories
+  are added. Mise and Pi downloads also require internet access.
 - Run as the user whose config you want to link, not with `sudo sh`. Use
   `--skip-packages --skip-plugins` to link config offline with Zsh already
   installed.
@@ -96,6 +97,12 @@ Behavior:
   using the checkout that contains the script.
 - Apt installs only missing manifest entries and their dependencies. When the
   manifest is already satisfied, bootstrap does not refresh apt metadata.
+- Reuses existing `mise` or installs it under `~/.local/bin` using the official
+  HTTPS installer at `https://mise.run`, without `sudo`. Mise installs Pi's
+  latest standalone release. The Pi default lives in a `conf.d` fragment under
+  mise's global config directory, so an existing `config.toml` stays untouched.
+  Use `--skip-mise` to skip this step, including if you use a
+  `MISE_GLOBAL_CONFIG_FILE` override. `--skip-packages` also skips it.
 - Links the shared `.zshrc` and `.zprofile` into the absolute `ZDOTDIR` in
   bootstrap's environment, or `$HOME` if unset. Empty or relative values are
   rejected. If `.zshenv` sets a custom
@@ -110,7 +117,7 @@ Behavior:
 - Leaves the login shell alone unless you pass `--force-shell`. After changing
   it, start a new login session (reconnect over SSH or reopen WSL). Use
   `exec zsh -l` to start Zsh immediately without waiting for a new session.
-- Does not install mise/uv runtimes or apply desktop settings.
+- Does not install Go, Node.js, pnpm, or uv, or apply desktop settings.
 
 ## Other Linux (config reuse only)
 

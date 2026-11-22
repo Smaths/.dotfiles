@@ -19,6 +19,14 @@ explicit manifests. The map below identifies those paths and exceptions.
   the path mise reads by default avoids environment-variable selection drift.
   The managed Zsh login PATH adds the mise shims; GUI and arbitrary non-shell
   processes do not necessarily inherit that PATH.
+- `install/platforms/debian/mise.toml` -> `conf.d/dotfiles-debian.toml` under
+  `${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}` (symlink on
+  Debian/Ubuntu). This fragment selects `pi = "latest"` without replacing
+  the user's `config.toml`. Bootstrap installs only Pi from mise's global
+  configuration, outside the caller's project directory. If `mise` is missing,
+  bootstrap fetches the official installer with `curl` and runs it as the
+  current user to install `~/.local/bin/mise`. The existing Zsh login PATH
+  picks up both that binary and the Pi shim.
 - `config/uv/uv.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml`
   (symlink on macOS). It confines uv operations to uv-managed Python
   interpreters instead of Apple/Xcode or Homebrew Python.

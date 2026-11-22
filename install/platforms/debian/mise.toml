@@ -1,0 +1,3 @@
+[tools]
+# Pi's standalone release keeps this baseline free of extra runtimes.
+pi = "latest"
