@@ -9,6 +9,12 @@ if [[ "$OSTYPE" == darwin* ]]; then
   export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
 fi
 
+# Debian-family packages may expose bat as batcat and fd as fdfind.
+ZSH_BAT_COMMAND=bat
+if ((! $+commands[bat] && $+commands[batcat])); then
+  ZSH_BAT_COMMAND=batcat
+fi
+
 # fzf: Debian packages fd-find as fdfind; macOS and other platforms use fd.
 if (($+commands[fd])); then
   export FZF_FD_COMMAND=fd
@@ -28,7 +34,7 @@ export FZF_DEFAULT_OPTS="
   --cycle
   --info=inline
   --preview-window=down:60%:wrap
-  --preview 'p=\$([ -e {} ] && realpath {} || printf \"%s\" \"{}\"); printf \"%s\n\n\" \"\$p\"; [ -f {} ] && (bat --style=numbers --color=always --line-range :160 {} 2>/dev/null || sed -n \"1,160p\" {})'
+  --preview 'p=\$([ -e {} ] && realpath {} || printf \"%s\" {}); printf \"%s\n\n\" \"\$p\"; [ -f {} ] && ($ZSH_BAT_COMMAND --style=numbers --color=always --line-range :160 {} 2>/dev/null || sed -n \"1,160p\" {})'
   --header-first
   --header 'enter: open | ctrl-y: copy path'
 "

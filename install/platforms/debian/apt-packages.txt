@@ -16,3 +16,5 @@ neovim
 ripgrep
 rsync
 tmux
+zoxide
+zsh

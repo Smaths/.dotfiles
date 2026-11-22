@@ -44,6 +44,25 @@ PATH="$TEST_TMP_ROOT/fdfind-only" "$(command -v zsh)" -f -c '
   [[ "$(__fzf_fd_find d "$TEST_TMP_ROOT")" == "$TEST_TMP_ROOT/fdfind-result" ]]
 ' || fail 'fzf must use fdfind for picker helpers when fd is unavailable'
 
+# fzf substitutes a single-quoted argument for {}. A literal non-file
+# candidate must not be expanded a second time by the preview shell.
+check_preview() {
+  local -a opts
+  local preview candidate actual
+  opts=("${(@Q)${(z)1}}")
+  preview="${opts[$((${opts[(ie)--preview]} + 1))]}"
+  [[ -n "$preview" ]] || fail "missing $2 preview"
+  candidate='$DOTFILES_PREVIEW_TEST_VALUE (literal)'
+  actual="$(cd -- "$TEST_TMP_ROOT" &&
+    DOTFILES_PREVIEW_TEST_VALUE=expanded sh -c "${preview//\{\}/${(qq)candidate}}; :")"
+  [[ "$actual" == "$candidate" ]] || fail "$2 fzf preview must print non-file candidates literally"
+}
+
+zsh_opts="$(zsh -fc 'source "$REPO_DIR/config/zsh/env.zsh"; print -r -- "$FZF_DEFAULT_OPTS"')"
+check_preview "$zsh_opts" Zsh
+bash_opts="$(bash --noprofile --norc -ic 'source "$REPO_DIR/config/bash/.bashrc"; printf "%s" "$FZF_DEFAULT_OPTS"' 2>/dev/null)"
+check_preview "$bash_opts" Bash
+
 # Captured non-TTY -ic startup must remain quiet and retain non-ZLE config.
 zsh -fic 'source "$TEST_TMP_ROOT/integration.zsh"' </dev/null >"$TEST_TMP_ROOT/out" 2>"$TEST_TMP_ROOT/err"
 [[ "$(<"$TEST_TMP_ROOT/out")" == DONE && ! -s "$TEST_TMP_ROOT/err" ]] || fail 'non-TTY startup emitted unexpected output'

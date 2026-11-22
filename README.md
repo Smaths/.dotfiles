@@ -8,7 +8,7 @@ Personal dotfiles for a reproducible development shell and workstation setup, ce
 | --- | --- | --- | --- |
 | macOS 14+ | Primary | `install/bootstrap.sh` | Core workstation packages, Zsh config and runtimes |
 | Windows | Secondary | `install/bootstrap.ps1` | Windows host applications via winget; shell setup is in WSL |
-| Debian / Ubuntu LTS | Secondary | `install/bootstrap.sh` | CLI packages and Bash/tmux config on servers or WSL |
+| Debian / Ubuntu LTS | Secondary | `install/bootstrap.sh` | CLI packages and shared Zsh/tmux config on servers or WSL |
 | Other Linux | Config reuse only | None | No generic bootstrap |
 
 See [platform details](docs/PLATFORMS.md).
@@ -44,11 +44,15 @@ user whose shell you want to configure. On WSL, clone inside the Linux filesyste
 
 ```sh
 git clone https://github.com/Smaths/.dotfiles.git ~/.dotfiles
-sh ~/.dotfiles/install/bootstrap.sh --dry-run
-sh ~/.dotfiles/install/bootstrap.sh
+sh ~/.dotfiles/install/bootstrap.sh --dry-run --force-shell
+sh ~/.dotfiles/install/bootstrap.sh --force-shell
 ```
 
-Use `--skip-packages` to link Bash and tmux config without needing apt or `sudo`.
+`--force-shell` makes Zsh your login shell for new sessions. Omit it to keep
+Bash (or your current login shell) and try Zsh with `exec zsh -l`. Bootstrap
+leaves `~/.bashrc` and `~/.profile` untouched. For an offline config-only
+install with Zsh already installed, pass `--skip-packages --skip-plugins`.
+If you use a custom `ZDOTDIR`, see the [Debian platform notes](docs/PLATFORMS.md#debian-and-ubuntu-secondary).
 
 ## Safety defaults
 
@@ -75,7 +79,7 @@ missing winget IDs. Unattended installs require `--yes`.
 ## Managed scope
 
 macOS is the main workstation setup. Windows bootstrap installs host apps only;
-Debian/Ubuntu handles Bash and tmux in WSL or on a server.
+Debian/Ubuntu uses the same Zsh and tmux config in WSL or on a server.
 
 <details>
 <summary>What gets installed or linked</summary>
@@ -86,9 +90,10 @@ Debian/Ubuntu handles Bash and tmux in WSL or on a server.
   `install/platforms/windows/winget-packages.txt`; Debian CLI packages come from
   `install/platforms/debian/apt-packages.txt`.
 - **Shell and app config:** macOS links Zsh, tmux, Ghostty, Git delta/lazygit,
-  mise, and uv config. Debian links `~/.bashrc` and optionally tmux config.
-  Windows does not link native Zsh files. The only `~/.gitconfig` change is a
-  single delta `include.path` entry.
+  mise, and uv config. Debian links `.zshrc` and `.zprofile` under `ZDOTDIR`
+  (or home), links tmux config, and installs the same pinned Zsh plugins as macOS.
+  Windows does not link native Zsh files. The only `~/.gitconfig` change is
+  a single delta `include.path` entry.
 - **Tool ownership:** mise supplies the Go, Node.js, Pi, and pnpm versions in
   `config/mise/config.toml`; project declarations can override them. Its shims
   are on the managed Zsh login PATH, not automatically available to GUI or other

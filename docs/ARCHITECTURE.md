@@ -7,9 +7,8 @@ explicit manifests. The map below identifies those paths and exceptions.
 
 ## File-to-home mapping
 
-- `config/zsh/.zshrc` -> `~/.zshrc` (symlink)
-- `config/zsh/.zprofile` -> `~/.zprofile` (symlink)
-- `config/bash/.bashrc` -> `~/.bashrc` (symlink on Debian)
+- `config/zsh/.zshrc` and `config/zsh/.zprofile` -> `.zshrc` and `.zprofile`
+  in `$HOME` on macOS and `${ZDOTDIR-$HOME}` on Debian (symlinks)
 - `config/ghostty/config` -> `${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config` (symlink)
 - `config/tmux/tmux.conf` -> `~/.tmux.conf` (symlink on macOS and Debian)
 - `config/mise/config.toml` -> `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`
@@ -53,9 +52,11 @@ explicit manifests. The map below identifies those paths and exceptions.
 - `install/platforms/debian/apt-packages.txt` is consumed by Debian bootstrap via `apt-get install` after checking for missing packages.
 - Windows bootstrap manages host applications through winget and explains WSL
   setup. It does not link native Windows shell files; Debian/Ubuntu in WSL uses
-  the Debian Bash/tmux bootstrap.
+  the Debian Zsh/tmux bootstrap.
 
-`config/zsh/.zprofile` runs `brew shellenv` and then sources
+Both Zsh entrypoints find their checkout by resolving their symlinks unless
+`DOTFILES_DIR` is explicitly set. `config/zsh/.zprofile` runs `brew shellenv`
+when Homebrew is present at a standard macOS path, then sources
 `config/zsh/path.zsh`, once, for login shells. That order is load-bearing:
 `brew shellenv` prepends the Homebrew prefix to `PATH`, so running it after
 `path.zsh` would place Homebrew's runtimes ahead of the mise shims and defeat
@@ -67,14 +68,14 @@ that prompt before linking the Zsh entrypoints, so a partial checkout fails
 before changing shell files.
 
 Zsh plugins are not symlinked. `install/lib/zsh-plugins.sh` clones them into
-`${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins`, and `config/zsh/.zshrc`
-resolves that same path into `ZSH_PLUGIN_DIR`. Cloning rather than installing
+`$XDG_DATA_HOME/zsh/plugins`, falling back to `$HOME/.local/share/zsh/plugins`
+when `XDG_DATA_HOME` is unset, empty, or relative. `config/zsh/.zshrc` resolves
+that same path into `ZSH_PLUGIN_DIR`. Cloning rather than installing
 Homebrew formulae keeps one set of load paths valid on macOS and Linux; keeping
 the clones outside the repo keeps upstream history out of it.
 
-`config/bash/.bashrc` is intentionally standalone for Debian servers. It mirrors
-only portable shell defaults and small aliases instead of sourcing zsh modules.
-Zsh plugins, `eza`, and `zoxide` are not part of that Debian package set.
+`config/bash/.bashrc` remains available for manual reuse. Neither bootstrap
+links it or changes existing Bash files.
 
 ## Zsh module boundaries
 

@@ -1,6 +1,6 @@
 # Login-shell environment loader.
 # Initialize PATH once here; interactive child shells inherit it.
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+DOTFILES_DIR="${DOTFILES_DIR:-${${(%):-%x}:A:h:h:h}}"
 
 # Homebrew before path.zsh, deliberately. `brew shellenv` exports HOMEBREW_*,
 # INFOPATH, and the completions fpath entry, and runs path_helper so man pages

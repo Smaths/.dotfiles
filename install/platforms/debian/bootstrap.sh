@@ -1,35 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install CLI packages and link Bash/tmux config on Debian and Ubuntu.
+# Use the system Bash to bootstrap Zsh and tmux on Debian and Ubuntu.
 
 SCRIPT_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 REPO_DIR="$(CDPATH='' cd -- "$SCRIPT_DIR/../../.." && pwd)"
 APT_MANIFEST="$SCRIPT_DIR/apt-packages.txt"
-BASHRC_TARGET="$REPO_DIR/config/bash/.bashrc"
-BASHRC_LINK_PATH="$HOME/.bashrc"
+ZSH_CONFIG_DIR="$REPO_DIR/config/zsh"
+# Zsh falls back to HOME only if ZDOTDIR is unset.
+ZSH_STARTUP_DIR="${ZDOTDIR-$HOME}"
+PROMPT_TARGET="$ZSH_CONFIG_DIR/prompts/purification/prompt_purification_setup"
 TMUX_CONFIG_TARGET="$REPO_DIR/config/tmux/tmux.conf"
 TMUX_CONFIG_LINK_PATH="$HOME/.tmux.conf"
 COMMON_LIB="$REPO_DIR/install/lib/common.sh"
 UI_LIB="$REPO_DIR/install/lib/ui.sh"
+ZSH_PLUGINS_LIB="$REPO_DIR/install/lib/zsh-plugins.sh"
 DRY_RUN=0
 YES=0
 SKIP_PACKAGES=0
+SKIP_PLUGINS=0
+UPGRADE_PLUGINS=0
 FORCE_SHELL=0
 VERBOSE=0
-TOTAL_STEPS=5
+TOTAL_STEPS=6
 
 usage() {
   cat <<'EOF'
 Usage: bootstrap.sh [options]
 
 Options:
-  --dry-run         Print actions without changing anything
-  --yes             Run without interactive confirmation
-  --verbose         Show more command details
-  --skip-packages   Skip apt package installation
-  --force-shell     Change the current user's login shell to bash
-  -h, --help        Show this help
+  --dry-run          Print actions without changing anything
+  --yes              Run without interactive confirmation
+  --verbose          Show more command details
+  --skip-packages    Skip apt package installation (Zsh must already be installed)
+  --skip-plugins     Skip plugin sync (no Git or network access needed for this step)
+  --upgrade-plugins  Fast-forward Zsh plugins to the manifest's pinned commits
+  --force-shell      Change the current user's login shell to Zsh
+  -h, --help         Show this help
 EOF
 }
 
@@ -39,6 +46,8 @@ for arg in "$@"; do
     --yes) YES=1 ;;
     --verbose) VERBOSE=1 ;;
     --skip-packages) SKIP_PACKAGES=1 ;;
+    --skip-plugins) SKIP_PLUGINS=1 ;;
+    --upgrade-plugins) UPGRADE_PLUGINS=1 ;;
     --force-shell) FORCE_SHELL=1 ;;
     -h | --help)
       usage
@@ -52,12 +61,27 @@ for arg in "$@"; do
   esac
 done
 
+if ((SKIP_PLUGINS && UPGRADE_PLUGINS)); then
+  printf 'ERROR: --skip-plugins and --upgrade-plugins cannot be combined.\n' >&2
+  exit 1
+fi
+
 if [[ ! -f "$COMMON_LIB" ]]; then
   printf 'ERROR: Missing shared bootstrap helper: %s\n' "$COMMON_LIB" >&2
   exit 1
 fi
 # shellcheck source=install/lib/common.sh
 source "$COMMON_LIB"
+
+if ((! SKIP_PLUGINS)); then
+  if [[ ! -f "$ZSH_PLUGINS_LIB" ]]; then
+    printf 'ERROR: Missing Zsh plugin helper: %s\n' "$ZSH_PLUGINS_LIB" >&2
+    exit 1
+  fi
+  # shellcheck source=install/lib/zsh-plugins.sh
+  source "$ZSH_PLUGINS_LIB"
+  ZSH_PLUGIN_ROOT="$(zsh_plugin_root)"
+fi
 
 run_as_root() {
   if ((EUID == 0)); then
@@ -122,14 +146,22 @@ print_preflight_plan() {
   else
     printf '  apt packages: install missing entries only (%d listed)\n' "${#PACKAGES[@]}"
   fi
-  printf '  bash link: %s -> %s\n' "$BASHRC_LINK_PATH" "$BASHRC_TARGET"
+  printf '  Zsh links: %s and %s -> %s\n' "$ZSH_STARTUP_DIR/.zshrc" "$ZSH_STARTUP_DIR/.zprofile" "$ZSH_CONFIG_DIR"
+  if ((SKIP_PLUGINS)); then
+    printf '  Zsh plugins: skipped (--skip-plugins)\n'
+  else
+    printf '  Zsh plugins: install missing pins in %s\n' "$ZSH_PLUGIN_ROOT"
+    if ((UPGRADE_PLUGINS)); then
+      printf '               fast-forward existing clones to their pins\n'
+    fi
+  fi
   if [[ -f "$TMUX_CONFIG_TARGET" ]]; then
     printf '  tmux link: %s -> %s\n' "$TMUX_CONFIG_LINK_PATH" "$TMUX_CONFIG_TARGET"
   else
     printf '  tmux link: skipped (target missing)\n'
   fi
   if ((FORCE_SHELL)); then
-    printf '  login shell: change current user to bash if needed\n'
+    printf '  login shell: change current user to Zsh if needed\n'
   else
     printf '  login shell: unchanged (pass --force-shell to change)\n'
   fi
@@ -191,7 +223,24 @@ if ((! SKIP_PACKAGES)); then
   fi
   read_package_manifest
 fi
-bash -n "$BASHRC_TARGET"
+if [[ "$ZSH_STARTUP_DIR" != /* ]]; then
+  printf 'ERROR: The Zsh startup directory (ZDOTDIR or HOME) must be absolute: %s\n' "$ZSH_STARTUP_DIR" >&2
+  exit 1
+fi
+if [[ -e "$ZSH_STARTUP_DIR" && ! -d "$ZSH_STARTUP_DIR" ]]; then
+  printf 'ERROR: The Zsh startup path is not a directory: %s\n' "$ZSH_STARTUP_DIR" >&2
+  exit 1
+fi
+zsh_startup_files=(
+  "$ZSH_CONFIG_DIR"/{.zshrc,.zprofile,path.zsh,options.zsh,env.zsh,completion.zsh,plugins.zsh,aliases.zsh}
+  "$PROMPT_TARGET"
+)
+for startup_file in "${zsh_startup_files[@]}"; do
+  if [[ ! -f "$startup_file" ]]; then
+    printf 'ERROR: Missing Zsh startup file: %s\n' "$startup_file" >&2
+    exit 1
+  fi
+done
 ui_step_ok "Debian-compatible system"
 
 confirm_preflight
@@ -219,12 +268,41 @@ else
   fi
 fi
 
-ui_step_start "Link bash config"
-link_with_backup "$BASHRC_TARGET" "$BASHRC_LINK_PATH"
+# A clean system need not have Zsh or Git to preview bootstrap.
+if ((! DRY_RUN)); then
+  require_cmd zsh "Install Zsh with apt or rerun without --skip-packages."
+fi
+if command -v zsh >/dev/null 2>&1; then
+  for startup_file in "${zsh_startup_files[@]}"; do
+    zsh -fn "$startup_file"
+  done
+fi
+
+ui_step_start "Install Zsh plugins"
+if ((SKIP_PLUGINS)); then
+  ui_step_skip "skipped (--skip-plugins)"
+else
+  if ((! DRY_RUN)); then
+    require_cmd git "Install Git to sync Zsh plugins, or pass --skip-plugins."
+  fi
+  sync_zsh_plugins "$ZSH_PLUGIN_ROOT" "$UPGRADE_PLUGINS"
+  if ((DRY_RUN)); then
+    ui_step_ok "planned"
+  else
+    ui_step_ok "$ZSH_PLUGINS_CLONED cloned, $ZSH_PLUGINS_UPDATED updated, $ZSH_PLUGINS_CURRENT current, $ZSH_PLUGINS_UNMANAGED unmanaged, $ZSH_PLUGINS_PENDING pending"
+  fi
+fi
+
+ui_step_start "Link Zsh config"
+if [[ ! -d "$ZSH_STARTUP_DIR" ]]; then
+  run_cmd mkdir -p -- "$ZSH_STARTUP_DIR"
+fi
+link_with_backup "$ZSH_CONFIG_DIR/.zshrc" "$ZSH_STARTUP_DIR/.zshrc"
+link_with_backup "$ZSH_CONFIG_DIR/.zprofile" "$ZSH_STARTUP_DIR/.zprofile"
 if ((DRY_RUN)); then
   ui_step_ok "planned"
 else
-  ui_step_ok "$BASHRC_LINK_PATH -> $BASHRC_TARGET"
+  ui_step_ok "linked .zshrc and .zprofile"
 fi
 
 ui_step_start "Link tmux config"
@@ -241,20 +319,35 @@ fi
 
 ui_step_start "Set login shell"
 if ((FORCE_SHELL)); then
-  bash_path="$(command -v bash)"
-  current_shell="$(getent passwd "$(id -un)" | cut -d: -f7)"
-  bash_path_real="$(readlink -f "$bash_path" 2>/dev/null || printf '%s\n' "$bash_path")"
-  current_shell_real="$(readlink -f "$current_shell" 2>/dev/null || printf '%s\n' "$current_shell")"
-  if [[ "$current_shell_real" == "$bash_path_real" ]]; then
-    ui_step_skip "already $bash_path"
+  # Use a registered distro shell, not a user binary or shim on PATH.
+  zsh_path=""
+  for candidate in /usr/bin/zsh /bin/zsh; do
+    if [[ -x "$candidate" ]] && grep -Fxq "$candidate" /etc/shells; then
+      zsh_path="$candidate"
+      break
+    fi
+  done
+  if [[ -z "$zsh_path" ]]; then
+    if ((! DRY_RUN)); then
+      printf 'ERROR: No apt-installed Zsh login shell registered in /etc/shells.\n' >&2
+      exit 1
+    fi
+    zsh_path=/usr/bin/zsh
+  fi
+  user="$(id -un)"
+  passwd_entry="$(getent passwd "$user")"
+  current_shell="${passwd_entry##*:}"
+  if [[ -n "$current_shell" && "$(readlink -f "$current_shell")" == "$(readlink -f "$zsh_path")" ]]; then
+    ui_step_skip "already $current_shell"
   else
-    run_cmd chsh -s "$bash_path" "$(id -un)"
-    ui_step_ok "$bash_path"
+    run_cmd chsh -s "$zsh_path" "$user"
+    ui_step_ok "$zsh_path"
   fi
 else
   ui_step_skip "unchanged (pass --force-shell to change)"
 fi
 
 ui_summary
+echo "Start a Zsh login session with: exec zsh -l"
 echo "Optional local overrides:"
-printf '  cp %q %q\n' "$REPO_DIR/config/bash/local.example.bash" "$REPO_DIR/config/bash/local.bash"
+printf '  cp -n %q %q\n' "$ZSH_CONFIG_DIR/local.example.zsh" "$ZSH_CONFIG_DIR/local.zsh"

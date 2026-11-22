@@ -152,7 +152,7 @@ if ($wslDistros.Count -eq 0) {
   Write-Info "  git clone <repository-url> ~/.dotfiles"
   Write-Info "  sh ~/.dotfiles/install/bootstrap.sh --dry-run"
   Write-Info "  sh ~/.dotfiles/install/bootstrap.sh"
-  Write-Info "The supported WSL setup is Bash/tmux; native Windows Zsh links are not managed."
+  Write-Info "The supported WSL setup is Zsh/tmux; native Windows Zsh links are not managed."
   Step-Ok "printed supported WSL bootstrap guidance"
 }
 

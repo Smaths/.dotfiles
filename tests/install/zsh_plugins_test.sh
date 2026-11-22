@@ -33,6 +33,8 @@ assert_eq "$TEST_TMP_ROOT/xdg/zsh/plugins" \
   "$(XDG_DATA_HOME="$TEST_TMP_ROOT/xdg" zsh_plugin_root)" 'XDG plugin root'
 assert_eq "$TEST_TMP_ROOT/home/.local/share/zsh/plugins" \
   "$(HOME="$TEST_TMP_ROOT/home" XDG_DATA_HOME='' zsh_plugin_root)" 'default plugin root'
+assert_eq "$TEST_TMP_ROOT/home/.local/share/zsh/plugins" \
+  "$(HOME="$TEST_TMP_ROOT/home" XDG_DATA_HOME=relative zsh_plugin_root)" 'ignore a relative XDG data path'
 
 UPSTREAM="$TEST_TMP_ROOT/upstream"
 URL="file://$UPSTREAM"
@@ -64,8 +66,12 @@ ZSH_PLUGIN_SPECS="example|$URL|$SECOND"
 sync_zsh_plugins "$ROOT" 0
 assert_eq 1 "$ZSH_PLUGINS_PENDING" 'new pin needs separate opt-in'
 assert_eq "$FIRST" "$(git -C "$DEST" rev-parse HEAD)" 'default run preserves HEAD'
+# Make Git refresh a stat entry without changing the tracked contents.
+touch -t 200001010000 "$DEST/plugin.zsh"
+index_before="$(git hash-object "$DEST/.git/index")"
 DRY_RUN=1 sync_zsh_plugins "$ROOT" 1 >/dev/null
 DRY_RUN=0
+assert_eq "$index_before" "$(git hash-object "$DEST/.git/index")" 'dry upgrade must not rewrite the Git index'
 assert_eq "$FIRST" "$(git -C "$DEST" rev-parse HEAD)" 'dry upgrade preserves HEAD'
 if git -C "$DEST" cat-file -e "$SECOND" 2>/dev/null; then fail 'dry upgrade must not fetch'; fi
 sync_zsh_plugins "$ROOT" 1

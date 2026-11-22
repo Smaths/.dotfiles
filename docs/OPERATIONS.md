@@ -17,14 +17,21 @@ Available bootstrap flags:
   after linking config.
 - `--upgrade-packages` (macOS only): upgrade outdated entries in the selected
   groups during bootstrap.
-- `--upgrade-plugins` (macOS only): fast-forward existing Zsh plugin clones to
-  the exact manifest pins, independently of package upgrades.
+- `--upgrade-plugins` (macOS and Debian): fast-forward existing Zsh plugin
+  clones to the exact manifest pins, independently of package upgrades.
 - `--skip-packages`: skip package installs (`brew bundle` on macOS, `winget`
   on Windows, `apt-get` on Debian). On macOS, `git` and `mise` must already be
   installed, and the flag cannot be combined with the package selection flags
-  or `--upgrade-packages`.
+  or `--upgrade-packages`. On Debian, `zsh` must already be installed, along
+  with `git` unless `--skip-plugins` is also used.
+- `--skip-plugins` (Debian only): skip plugin installs and updates; cannot be
+  combined with `--upgrade-plugins`. Pass it with `--skip-packages` for an
+  offline config-only install. Existing plugins are left in place and can
+  still load at shell startup.
 - Windows does not support native shell linking; the retired `--link-windows-shell` option is rejected. Use the Debian/Ubuntu bootstrap inside WSL.
-- `--force-shell` (Debian only): change the current user's login shell to bash.
+- `--force-shell` (Debian only): make Zsh the current user's login shell via
+  `chsh`, which may prompt for the user's password. Without this flag, start
+  Zsh with `exec zsh -l` or leave the current shell in place.
 
 Interactive runs ask before changes. Unattended installs require `--yes`;
 use `--dry-run` to preview instead.
@@ -117,10 +124,11 @@ add missing entries without upgrading existing ones. Up to four formula installs
 can run in parallel, so output may interleave. Brew Bundle and mise run in the
 foreground with their normal output and signal handling.
 
-The vendored Prompt Purification needs no separate install; bootstrap validates
-it before linking `~/.zshrc`. Bootstrap links `config/mise/config.toml` at mise's
-standard XDG path, then runs `mise install` for the tools and versions in that
-file. Project mise files, `.nvmrc`, `.node-version`, and `packageManager`
+The vendored Prompt Purification needs no separate install; both Zsh bootstraps
+validate it before linking `.zshrc`. On macOS, bootstrap links
+`config/mise/config.toml` at mise's standard XDG path, then runs `mise install`
+for the tools and versions in that file. Project mise files, `.nvmrc`,
+`.node-version`, and `packageManager`
 metadata can select other versions. The managed Zsh login PATH exposes mise
 shims; GUI apps and unrelated processes may not inherit that PATH.
 
@@ -216,11 +224,16 @@ powershell -ExecutionPolicy Bypass -File install/bootstrap.ps1 --skip-packages
 
 Debian update flow:
 
-```bash
+```sh
 cd ~/.dotfiles
 git pull --ff-only
-sh install/bootstrap.sh --skip-packages
+sh install/bootstrap.sh
 ```
+
+If switching an existing Bash setup to Zsh, add `--force-shell` to change the
+login shell. Bootstrap leaves `~/.bashrc`, `~/.profile`, and Bash history in
+place; move the customizations you still want to `config/zsh/local.zsh` in Zsh
+syntax rather than sourcing Bash's startup files.
 
 Without `--skip-packages`, Debian bootstrap checks `install/platforms/debian/apt-packages.txt`
 first and skips `apt-get update`/`apt-get install` when every manifest package
@@ -237,8 +250,9 @@ Run `bash tests/check.sh` for static and helper checks, including Rectangle JSON
 schema validation with `jq` (installed by the macOS `core` group). CI also verifies a
 pinned `shfmt` binary because Ubuntu's package cannot parse this repo's Zsh.
 CI runs `tests/install/debian_smoke_test.sh` as root in disposable Docker
-containers to check real apt installs, backups, Bash and tmux startup, and
-idempotent reruns; Docker is not required for bootstrap.
+containers to check real apt and plugin installs, backups, Zsh and tmux
+startup, opt-in login-shell changes, and idempotent reruns. Docker is not
+required for bootstrap.
 
 On an installed machine, check the relevant paths and tools:
 
@@ -272,7 +286,7 @@ zsh -i -c '[[ -n $widgets[fzf-tab-complete] ]] && echo fzf-tab ok'
 zsh -i -c '[[ -n $widgets[fzf-history-widget] ]] && echo fzf-keybindings ok'
 zsh -i -c 'typeset -f _zsh_autosuggest_start >/dev/null && echo autosuggestions ok'
 zsh -i -c 'whence -w -- -fast-highlight-process >/dev/null && echo highlighting ok'
-zsh -i -c 'typeset -f z >/dev/null && echo zoxide ok'
+zsh -i -c 'whence -w z >/dev/null && echo zoxide ok'
 # Diff rendering.
 test -L ~/.config/git/delta.gitconfig && readlink ~/.config/git/delta.gitconfig
 git config --get core.pager
@@ -285,6 +299,9 @@ repair ownership/permissions rather than bypassing the audit. fzf's ZLE
 integration (including legacy fallbacks) loads only with interactive ZLE,
 terminal stdin/stdout, and a non-`dumb` terminal. Captured `zsh -i -c` commands
 still get `FZF_*` defaults and helper functions, but not fzf key bindings.
+Older Debian/Ubuntu fzf packages ship the key bindings in
+`/usr/share/doc/fzf/examples`; stripped images without those files still get
+fzf helpers and fzf-tab, but not the built-in fzf key bindings.
 
 Windows equivalents:
 
@@ -295,19 +312,20 @@ wsl -l -q
 
 Debian equivalents:
 
-```bash
-test -L ~/.bashrc && readlink ~/.bashrc
-bash -n ~/.dotfiles/config/bash/.bashrc
+```sh
+test -L "${ZDOTDIR:-$HOME}/.zshrc" && readlink "${ZDOTDIR:-$HOME}/.zshrc"
+test -L "${ZDOTDIR:-$HOME}/.zprofile" && readlink "${ZDOTDIR:-$HOME}/.zprofile"
+zsh -lic 'echo "$FZF_DEFAULT_COMMAND"; alias ll'
+getent passwd "$(id -un)" | cut -d: -f7    # account login shell
 sh ~/.dotfiles/install/bootstrap.sh --dry-run --skip-packages
 ```
 
-Check `mise current` against `config/mise/config.toml` and confirm `core.pager`
-is `delta`. `FZF_DEFAULT_COMMAND` should use `fd`, or Debian's `fdfind` when
-`fd` is absent. On Windows, a WSL distro should appear in `wsl -l -q`; run the
-Debian/Ubuntu bootstrap inside it. On Debian, an already-satisfied apt manifest
-should skip package installation and the login shell should stay unchanged
-without `--force-shell`. A missing plugin clone degrades interactive Zsh rather
-than preventing startup; check the clone list if a widget is absent.
+`FZF_DEFAULT_COMMAND` should use `fd`, or Debian's `fdfind` when `fd` is absent.
+An already-satisfied apt manifest should skip package installation and the
+login shell should stay unchanged without `--force-shell`. A missing plugin
+clone degrades interactive Zsh rather than preventing startup; check the clone
+list if a widget is absent. On Windows, a WSL distro should appear in `wsl -l -q`;
+run the Debian/Ubuntu bootstrap inside it.
 
 Smoke-test navigation helpers in an interactive shell:
 
@@ -353,15 +371,8 @@ else
 fi
 ```
 
-Debian bash example:
-
-```bash
-expected="$HOME/.dotfiles/config/bash/.bashrc"
-if [ -L "$HOME/.bashrc" ] && [ "$(readlink "$HOME/.bashrc")" = "$expected" ]; then
-  rm -- "$HOME/.bashrc"
-  mv ~/.bashrc.bak.20260224010101 ~/.bashrc
-  exec bash
-else
-  echo "Refusing to remove ~/.bashrc: it is not the expected managed link" >&2
-fi
-```
+On Debian, also check `.zprofile` and use your custom `ZDOTDIR` instead of
+`$HOME` when restoring files there. If you changed your login shell with
+`--force-shell`, switch back with
+`chsh -s /bin/bash` (or specify your previous shell), then start a new login
+session. Bootstrap did not remove or replace Bash startup files.

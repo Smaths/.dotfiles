@@ -25,7 +25,6 @@ config but have no supported bootstrap. See [platform details](docs/PLATFORMS.md
 - Diff rendering config: `config/git/delta.gitconfig`, `config/lazygit/config.yml`
 - Zsh startup chain: `config/zsh/.zprofile` -> `config/zsh/path.zsh`, then
   `config/zsh/.zshrc` -> interactive `config/zsh/*.zsh` modules
-- Debian bash entrypoint: `config/bash/.bashrc`
 - Alfred workflow and theme: `config/alfred/` (manual import)
 
 ## Non-negotiables
@@ -35,7 +34,7 @@ config but have no supported bootstrap. See [platform details](docs/PLATFORMS.md
 - Never commit secrets, tokens, keys, or credentials.
 - Keep network behavior within the documented tools (`brew`, `mise`, `uv`,
   `winget`, `apt-get`, `git`, `curl`); document and justify any proposed addition before implementation.
-- Windows bootstrap manages host apps only. Do not add native Windows Zsh linking; WSL shell setup uses Debian/Ubuntu Bash/tmux.
+- Windows bootstrap manages host apps only. Do not add native Windows Zsh linking; Run the Debian bootstrap inside WSL for Zsh/tmux.
 - Keep machine-specific/project-only shell modules in ignored `config/zsh/local.zsh` or `config/zsh/local.d/*.zsh`; do not add them to tracked shared modules.
 - macOS packages live in groups (`packages/<group>.Brewfile`); profiles in
   `packages/profiles` only name groups. Rules:

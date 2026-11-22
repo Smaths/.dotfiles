@@ -96,7 +96,7 @@ expected_prompt_blob="3b912f41672482c9c7da94ba930331182da799e8"
 }
 
 shell_files=()
-zsh_files=()
+zsh_files=(config/zsh/.zprofile config/zsh/.zshrc)
 while IFS= read -r -d '' path; do
   [[ -f "$path" ]] || continue
   case "$path" in

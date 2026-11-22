@@ -1,4 +1,4 @@
-# Core aliases for macOS and general development.
+# Core aliases for macOS and Linux development.
 _has() { command -v "$1" >/dev/null 2>&1; }
 
 # Listing
@@ -30,7 +30,7 @@ fi
 alias dev='cd "$HOME/Developer"'
 alias doc='cd "$HOME/Documents"'
 alias dow='cd "$HOME/Downloads"'
-alias dotfiles='cd "$HOME/.dotfiles"'
+alias dotfiles='cd "$DOTFILES_DIR"'
 alias config='cd "$HOME/.config"'
 if [[ "$OSTYPE" == darwin* ]]; then
   alias icloud='cd "$HOME/Library/Mobile Documents/"'
@@ -68,8 +68,9 @@ if _has nvim; then
   alias vi='nvim'
   alias nvimd='nvim --noplugin -u NONE'
 fi
-if _has bat; then
-  alias batl='bat --paging=never -l log'
+if _has "$ZSH_BAT_COMMAND"; then
+  [[ "$ZSH_BAT_COMMAND" == batcat ]] && alias bat='batcat'
+  alias batl="$ZSH_BAT_COMMAND --paging=never -l log"
 fi
 
 # Docker inspection and compose helpers; never remove or prune resources here.
@@ -124,4 +125,4 @@ if command -v gh >/dev/null 2>&1 && gh extension list 2>/dev/null | grep -q 'git
   alias 'gh?'='copilot gh'
 fi
 
-alias 'dot-shell-update'='sh ~/.dotfiles/install/bootstrap.sh'
+alias dot-shell-update='sh "$DOTFILES_DIR/install/bootstrap.sh"'

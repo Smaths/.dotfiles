@@ -1,4 +1,4 @@
-# Zsh plugin sources shared by the macOS bootstrap and its tests.
+# Zsh plugin sources shared by the macOS and Debian bootstraps.
 # Required caller inputs: DRY_RUN, VERBOSE, and run_cmd from common.sh.
 # Keep this file compatible with both Bash and Zsh.
 # shellcheck shell=bash
@@ -11,7 +11,12 @@ zsh-autosuggestions|https://github.com/zsh-users/zsh-autosuggestions.git|85919cd
 fast-syntax-highlighting|https://github.com/zdharma-continuum/fast-syntax-highlighting.git|3d574ccf48804b10dca52625df13da5edae7f553'
 
 zsh_plugin_root() {
-  printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
+  # Ignore relative XDG paths so startup never searches the working directory.
+  if [[ "${XDG_DATA_HOME:-}" == /* ]]; then
+    printf '%s\n' "$XDG_DATA_HOME/zsh/plugins"
+  else
+    printf '%s\n' "$HOME/.local/share/zsh/plugins"
+  fi
 }
 
 zsh_plugin_count() {
@@ -99,7 +104,8 @@ sync_zsh_plugins() {
     fi
 
     _zsh_plugin_verify_origin "$dest" "$url" || return 1
-    dirty="$(git -C "$dest" status --porcelain --untracked-files=all)" || return 1
+    # git status may refresh the index on disk even when the tree is clean.
+    dirty="$(GIT_OPTIONAL_LOCKS=0 git -C "$dest" status --porcelain --untracked-files=all)" || return 1
     if [[ -n "$dirty" ]]; then
       printf 'ERROR: plugin %s has local changes; left untouched\n' "$dest" >&2
       return 1

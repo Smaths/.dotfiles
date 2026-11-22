@@ -53,7 +53,7 @@ Behavior:
 
 ## Windows (secondary, host applications and WSL)
 
-Windows bootstrap manages Windows-host applications only. Shell setup is performed in Debian or Ubuntu under WSL, using the Debian Bash/tmux bootstrap.
+Windows bootstrap manages Windows-host applications only. Shell setup is performed in Debian or Ubuntu under WSL, using the Debian Zsh/tmux bootstrap.
 
 Prerequisites:
 
@@ -69,24 +69,26 @@ Behavior:
 - Does not create, replace, or remove native Windows Zsh links. `--link-windows-shell` is rejected.
 - Explains WSL setup. Clone the repo inside the Linux filesystem, not `/mnt/c`,
   and run `sh ~/.dotfiles/install/bootstrap.sh` there. Debian/Ubuntu in WSL
-  uses the Debian Bash/tmux setup, not Windows-host Zsh.
+  uses the Debian Zsh/tmux setup, not Windows-host Zsh.
 - Windows bootstrap does not manage language runtimes, project modules, or
   WSL packages. Manage those in the Linux setup or project. Winget does not
   track bootstrap ownership, so review each package ID before uninstalling.
 
 ## Debian and Ubuntu (secondary)
 
-Bash and tmux setup for servers and WSL. CI tests Debian 12 and 13 and Ubuntu
+Zsh and tmux setup for servers and WSL. CI tests Debian 12 and 13 and Ubuntu
 22.04, 24.04, and 26.04 LTS. Other Debian derivatives are not tested.
 
 Prerequisites:
 
-- Bash and the standard GNU userland; Git to clone the repo.
+- Bash and the standard GNU userland to run bootstrap. Git and GitHub access
+  are needed to clone the repo and sync pinned Zsh plugins.
 - For packages: apt, working distro repositories (including Universe on
   Ubuntu), and root or an existing `sudo` setup. No third-party repositories
   are added.
 - Run as the user whose config you want to link, not with `sudo sh`. Use
-  `--skip-packages` if you only want the shell config.
+  `--skip-packages --skip-plugins` to link config offline with Zsh already
+  installed.
 
 Behavior:
 
@@ -94,10 +96,21 @@ Behavior:
   using the checkout that contains the script.
 - Apt installs only missing manifest entries and their dependencies. When the
   manifest is already satisfied, bootstrap does not refresh apt metadata.
-- Links `~/.bashrc` and `~/.tmux.conf` after backing up existing files. Open a
-  new Bash session to load the config.
-- Leaves the login shell alone unless you pass `--force-shell`.
-- Does not apply desktop settings.
+- Links the shared `.zshrc` and `.zprofile` into the absolute `ZDOTDIR` in
+  bootstrap's environment, or `$HOME` if unset. Empty or relative values are
+  rejected. If `.zshenv` sets a custom
+  directory that the invoking shell doesn't export, pass it explicitly, e.g.
+  `ZDOTDIR="$HOME/.config/zsh" sh ~/.dotfiles/install/bootstrap.sh`.
+  Bootstrap doesn't modify `.zshenv` or set `ZDOTDIR` for future sessions.
+- Links `~/.tmux.conf`. Existing configs at linked paths are backed up; Bash
+  files (including old bootstrap links) stay untouched. Port wanted Bash-only
+  customizations to `config/zsh/local.zsh` using Zsh syntax.
+- Uses the same vendored prompt, aliases, and pinned plugins as macOS.
+  Debian/Ubuntu's `fdfind` and `batcat` names are handled by the shared Zsh config.
+- Leaves the login shell alone unless you pass `--force-shell`. After changing
+  it, start a new login session (reconnect over SSH or reopen WSL). Use
+  `exec zsh -l` to start Zsh immediately without waiting for a new session.
+- Does not install mise/uv runtimes or apply desktop settings.
 
 ## Other Linux (config reuse only)
 
@@ -110,7 +123,7 @@ or desktop bootstrap.
 - Uninstall is manual: verify repo-owned links, preserve regular user files,
   inspect backups, and review package removals individually. See
   [backup and restore](OPERATIONS.md#backup).
-- Shared Zsh aliases target macOS/general development; Debian Bash keeps a
-  minimal server-safe set. Put machine-specific commands in ignored local modules.
+- Zsh loads aliases and integrations for tools that are installed. Put
+  machine-specific commands in ignored local modules.
 - Homebrew paths vary by architecture (`/opt/homebrew` or `/usr/local`); macOS
   casks do not apply to other platforms.

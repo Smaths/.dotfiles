@@ -69,8 +69,8 @@ if _dotfiles_load_plugin fzf-tab; then
   else
     _fzf_tab_dir_cmd='ls -1 -- "$realpath"'
   fi
-  if command -v bat >/dev/null 2>&1; then
-    _fzf_tab_file_cmd='bat --style=numbers --color=always --line-range :160 -- "$realpath"'
+  if command -v "$ZSH_BAT_COMMAND" >/dev/null 2>&1; then
+    _fzf_tab_file_cmd="$ZSH_BAT_COMMAND --style=numbers --color=always --line-range :160 -- \"\$realpath\""
   else
     _fzf_tab_file_cmd='sed -n "1,160p" "$realpath"'
   fi

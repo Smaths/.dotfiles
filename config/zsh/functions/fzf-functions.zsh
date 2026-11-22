@@ -61,7 +61,7 @@ ffcd() {
     __fzf_fd_find f "$root" |
       fzf \
         --prompt='file> ' \
-        --preview 'bat --style=numbers --color=always --line-range :200 {} 2>/dev/null || sed -n "1,200p" {}'
+        --preview "${ZSH_BAT_COMMAND:-bat} --style=numbers --color=always --line-range :200 {} 2>/dev/null || sed -n '1,200p' {}"
   )" || return 1
 
   [[ -n "$selected" ]] || return 1
@@ -83,13 +83,13 @@ fview() {
     __fzf_fd_find f "$root" |
       fzf \
         --prompt='view> ' \
-        --preview 'bat --style=numbers --color=always --line-range :200 {} 2>/dev/null || sed -n "1,200p" {}'
+        --preview "${ZSH_BAT_COMMAND:-bat} --style=numbers --color=always --line-range :200 {} 2>/dev/null || sed -n '1,200p' {}"
   )" || return 1
 
   [[ -n "$selected" ]] || return 1
 
-  if command -v bat >/dev/null 2>&1; then
-    bat --style=numbers --color=always --line-range :200 "$selected"
+  if command -v "${ZSH_BAT_COMMAND:-bat}" >/dev/null 2>&1; then
+    "${ZSH_BAT_COMMAND:-bat}" --style=numbers --color=always --line-range :200 "$selected"
   elif command -v less >/dev/null 2>&1 && [[ -t 1 ]]; then
     less -- "$selected"
   else

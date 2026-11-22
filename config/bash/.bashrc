@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # Main bash entrypoint for this dotfiles repo.
-# This file is intended for Debian server shells and should be symlinked to ~/.bashrc.
+# Optional Bash config for manual reuse; bootstrap no longer links it.
 
 # Keep non-interactive shells quiet.
 case $- in
@@ -78,7 +78,7 @@ export FZF_DEFAULT_OPTS="
   --cycle
   --info=inline
   --preview-window=down:60%:wrap
-  --preview 'p=\$([ -e {} ] && realpath {} || printf \"%s\" \"{}\"); printf \"%s\n\n\" \"\$p\"; [ -f {} ] && ($_DOT_FZF_PREVIEW)'
+  --preview 'p=\$([ -e {} ] && realpath {} || printf \"%s\" {}); printf \"%s\n\n\" \"\$p\"; [ -f {} ] && ($_DOT_FZF_PREVIEW)'
   --header-first
   --header 'enter: open | ctrl-y: copy path'
 "
