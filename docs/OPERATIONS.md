@@ -119,8 +119,8 @@ foreground with their normal output and signal handling.
 
 The vendored Prompt Purification needs no separate install; bootstrap validates
 it before linking `~/.zshrc`. Bootstrap links `config/mise/config.toml` at mise's
-standard XDG path, then runs `mise install` for the latest Go, Node.js, Pi, and
-pnpm. Project mise files, `.nvmrc`, `.node-version`, and `packageManager`
+standard XDG path, then runs `mise install` for the tools and versions in that
+file. Project mise files, `.nvmrc`, `.node-version`, and `packageManager`
 metadata can select other versions. The managed Zsh login PATH exposes mise
 shims; GUI apps and unrelated processes may not inherit that PATH.
 
@@ -174,9 +174,10 @@ For unattended maintenance, pass `--yes` explicitly:
 sh install/bootstrap.sh --yes
 ```
 
-`config/mise/config.toml` tracks `latest` for Go, Node.js, Pi, and pnpm. mise
-resolves `latest` to the newest installed version, so a Homebrew upgrade or a
-new upstream release changes nothing until you upgrade on purpose:
+`config/mise/config.toml` tracks `latest` for Go, Node.js, and pnpm and `1.5`
+for Pi. Pi stays on the 1.5 release series until you change the selector. A
+Homebrew upgrade does not update mise-managed versions; use mise to check for
+and apply updates:
 
 ```zsh
 mise outdated

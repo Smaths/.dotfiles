@@ -1,10 +1,9 @@
 [tools]
-# Track the newest release of each tool. mise resolves "latest" to the newest
-# installed version, so nothing changes until `mise upgrade` (or `mise install`
-# on a fresh machine) fetches a newer one. Projects pin their own versions.
+# Follow the newest release of Go, Node.js, and pnpm. Pi stays on 1.5.x.
+# Projects can select their own versions.
 go = "latest"
 node = "latest"
-pi = "latest"
+pi = "1.5"
 pnpm = "latest"
 
 [settings]

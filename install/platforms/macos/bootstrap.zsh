@@ -14,7 +14,7 @@ set -euo pipefail
 # 3) Installs the package groups of the selected profile (default: full) from
 #    packages/, adjusted by --with/--without, unless --skip-packages
 # 4) Links config/mise/config.toml to the XDG path mise reads by default
-# 5) Installs the latest Go, Node.js, Pi, and pnpm with mise
+# 5) Installs Go, Node.js, Pi, and pnpm from the mise manifest
 # 6) Links uv configuration for isolated Python management
 # 7) Installs git via Homebrew when missing
 # 8) Safely links ~/.zshrc and ~/.zprofile to this repo
@@ -262,7 +262,7 @@ print_preflight_plan() {
     fi
   fi
   echo "  mise config link: $MISE_CONFIG_LINK_PATH"
-  echo "  mise tools: install the latest Go, Node.js, Pi, and pnpm if missing"
+  echo "  mise tools: install missing versions from config/mise/config.toml"
   echo "  uv config link: $UV_CONFIG_LINK_PATH"
   if ((SKIP_PACKAGES)); then
     echo "  Git: required; not installed by --skip-packages"
